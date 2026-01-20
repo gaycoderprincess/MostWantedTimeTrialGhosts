@@ -1,5 +1,5 @@
 void WriteLog(const std::string& str) {
-	static auto file = std::ofstream("NFSMWTimeTrials_gcp.log");
+	static auto file = std::ofstream("NFSMWTimeTrialGhosts_gcp.log");
 
 	file << str;
 	file << "\n";
@@ -15,10 +15,6 @@ bool IsInLoadingScreen() {
 
 bool IsInNIS() {
 	return INIS::mInstance && INIS::mInstance->IsPlaying();
-}
-
-bool IsInMovie() {
-	return gMoviePlayer;
 }
 
 IPlayer* GetLocalPlayer() {
@@ -112,6 +108,22 @@ void ValueEditorMenu(int& value) {
 	ChloeMenuLib::EndMenu();
 }
 
+void ValueEditorMenu(char* value, int len) {
+	ChloeMenuLib::BeginMenu();
+
+	static char inputString[1024] = {};
+	ChloeMenuLib::AddTextInputToString(inputString, 1024, false);
+	ChloeMenuLib::SetEnterHint("Apply");
+
+	if (DrawMenuOption(inputString + (std::string)"...", "", false, false) && inputString[0]) {
+		strcpy_s(value, len, inputString);
+		memset(inputString,0,sizeof(inputString));
+		ChloeMenuLib::BackOut();
+	}
+
+	ChloeMenuLib::EndMenu();
+}
+
 void QuickValueEditor(const char* name, float& value) {
 	if (DrawMenuOption(std::format("{} - {}", name, value))) { ValueEditorMenu(value); }
 }
@@ -124,23 +136,8 @@ void QuickValueEditor(const char* name, bool& value) {
 	if (DrawMenuOption(std::format("{} - {}", name, value))) { value = !value; }
 }
 
-void WriteStringToFile(std::ofstream& file, const char* string) {
-	int len  = lstrlen(string) + 1;
-	file.write((char*)&len, sizeof(len));
-	file.write(string, len);
-}
-
-std::string ReadStringFromFile(std::ifstream& file) {
-	int len = 0;
-	file.read((char*)&len, sizeof(len));
-	if (len <= 0) return "";
-
-	char* tmp = new char[len];
-	file.read(tmp, len);
-	std::string str = tmp;
-	delete[] tmp;
-
-	return str;
+void QuickValueEditor(const char* name, char* value, int len) {
+	if (DrawMenuOption(std::format("{} - {}", name, value))) { ValueEditorMenu(value, len); }
 }
 
 int GetRaceNumLaps() {

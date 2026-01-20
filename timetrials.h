@@ -8,7 +8,7 @@ enum eNitroType {
 int nNitroType = NITRO_ON;
 int nSpeedbreakerType = NITRO_ON;
 
-bool bTrackReversed = false;
+bool bTrackReversed = false; // todo
 const char* GetRaceName() {
 	auto status = GRaceStatus::fObj;
 	if (status && status->mRaceParms) return GRaceParameters::GetEventID(status->mRaceParms);
@@ -23,6 +23,8 @@ enum eGhostVisuals {
 	GHOST_HIDE_NEARBY,
 };
 eGhostVisuals nGhostVisuals = GHOST_SHOW;
+bool bShowInputsWhileDriving = false;
+char sPlayerNameOverride[32] = "";
 
 struct tReplayTick {
 	struct {
@@ -139,6 +141,29 @@ void RunGhost(IVehicle* veh, tReplayGhost* ghost) {
 }
 
 void RecordGhost(IVehicle* veh) {
+	switch (nNitroType) {
+		case NITRO_OFF:
+			veh->mCOMObject->Find<IEngine>()->ChargeNOS(-1);
+			break;
+		case NITRO_INF:
+			veh->mCOMObject->Find<IEngine>()->ChargeNOS(1);
+			break;
+	}
+	switch (nSpeedbreakerType) {
+		case NITRO_OFF:
+			veh->mCOMObject->Find<IPlayer>()->ResetGameBreaker(false);
+			break;
+		case NITRO_INF:
+			veh->mCOMObject->Find<IPlayer>()->ChargeGameBreaker(1);
+			break;
+	}
+
+	if (sPlayerNameOverride[0]) {
+		if (auto racer = GetRacerInfoFromHandle(GetLocalPlayerSimable()->GetOwnerHandle())) {
+			racer->mName = sPlayerNameOverride;
+		}
+	}
+
 	tReplayTick state;
 	state.Collect(veh);
 	aRecordingTicks.push_back(state);
@@ -173,21 +198,23 @@ std::string GetGhostFilename(const std::string& car, const std::string& track, i
 	}
 
 	// read tunings
-	path += "_up";
-	for (int i = 0; i < Physics::Upgrades::PUT_MAX; i++) {
-		int level = 0;
-		if (upgrades) level = upgrades->InstalledPhysics.Part[i];
-		path += std::format("{}", level);
-	}
-	path += std::format("_{:08X}", upgrades ? upgrades->InstalledPhysics.Junkman : 0);
-	path += "_tune";
-	for (int i = 0; i < Physics::Tunings::MAX_TUNINGS; i++) {
-		int level = 0;
-		if (upgrades) {
-			auto tune = &upgrades->Tunings[upgrades->ActiveTuning];
-			level = tune->Value[i] * 5;
+	if (!bChallengeSeriesMode) {
+		path += "_up";
+		for (int i = 0; i < Physics::Upgrades::PUT_MAX; i++) {
+			int level = 0;
+			if (upgrades) level = upgrades->InstalledPhysics.Part[i];
+			path += std::format("{}", level);
 		}
-		path += std::format("{}", level);
+		path += std::format("_{:08X}", upgrades ? upgrades->InstalledPhysics.Junkman : 0);
+		path += "_tune";
+		for (int i = 0; i < Physics::Tunings::MAX_TUNINGS; i++) {
+			int level = 0;
+			if (upgrades) {
+				auto tune = &upgrades->Tunings[upgrades->ActiveTuning];
+				level = tune->Value[i] * 5;
+			}
+			path += std::format("{}", level);
+		}
 	}
 
 	if (bTrackReversed) {
@@ -283,7 +310,7 @@ void LoadPB(tReplayGhost* ghost, const std::string& car, const std::string& trac
 	inFile.read((char*)&tmplaps, sizeof(tmplaps));
 	inFile.read((char*)&tmpphysics, sizeof(tmpphysics));
 	inFile.read((char*)&tmptuning, sizeof(tmptuning));
-	inFile.read((char*)tmpplayername, sizeof(tmpplayername));
+	inFile.read(tmpplayername, sizeof(tmpplayername));
 	tmpplayername[31] = 0;
 	if (tmpsize != sizeof(tReplayTick)) {
 		WriteLog("Outdated ghost for " + fileName);
@@ -377,6 +404,8 @@ void TimeTrialLoop() {
 
 	if (!ShouldGhostRun()) return;
 
+	ICopMgr::mDisableCops = true;
+
 	if (ply->IsStaging()) {
 		nGlobalReplayTimer = 0;
 		aRecordingTicks.clear();
@@ -404,4 +433,68 @@ void TimeTrialLoop() {
 		RecordGhost(ply);
 		nGlobalReplayTimer++;
 	}
+}
+
+auto gInputRGBBackground = NyaDrawing::CNyaRGBA32(215,215,215,255);
+auto gInputRGBHighlight = NyaDrawing::CNyaRGBA32(0,255,0,255);
+float fInputBaseXPosition = 0.2;
+float fInputBaseYPosition = 0.85;
+
+void DrawInputTriangle(float posX, float posY, float sizeX, float sizeY, float inputValue, bool invertValue) {
+	float minX = std::min(posX - sizeX, posX + sizeX);
+	float maxX = std::max(posX - sizeX, posX + sizeX);
+
+	DrawTriangle(posX, posY - sizeY, posX - sizeX, std::lerp(posY - sizeY, posY + sizeY, 0.5), posX,
+				 posY + sizeY, invertValue ? gInputRGBBackground : gInputRGBHighlight);
+
+	DrawTriangle(posX, posY - sizeY, posX - sizeX, std::lerp(posY - sizeY, posY + sizeY, 0.5), posX,
+				 posY + sizeY, invertValue ? gInputRGBHighlight : gInputRGBBackground, std::lerp(minX, maxX, inputValue), 0, 1, 1);
+}
+
+void DrawInputTriangleY(float posX, float posY, float sizeX, float sizeY, float inputValue, bool invertValue) {
+	float minY = std::min(posY - sizeY, posY + sizeY);
+	float maxY = std::max(posY - sizeY, posY + sizeY);
+
+	DrawTriangle(std::lerp(posX - sizeX, posX + sizeX, 0.5), posY - sizeY, posX - sizeX, posY + sizeY, posX + sizeX,
+				 posY + sizeY, invertValue ? gInputRGBBackground : gInputRGBHighlight);
+
+	DrawTriangle(std::lerp(posX - sizeX, posX + sizeX, 0.5), posY - sizeY, posX - sizeX, posY + sizeY, posX + sizeX,
+				 posY + sizeY, invertValue ? gInputRGBHighlight : gInputRGBBackground, 0, std::lerp(minY, maxY + 0.001, inputValue), 1, 1);
+}
+
+void DrawInputRectangle(float posX, float posY, float scaleX, float scaleY, float inputValue) {
+	DrawRectangle(posX - scaleX, posX + scaleX, posY - scaleY, posY + scaleY, gInputRGBBackground);
+	DrawRectangle(posX - scaleX, posX + scaleX, std::lerp(posY + scaleY, posY - scaleY, inputValue), posY + scaleY, gInputRGBHighlight);
+}
+
+void DisplayInputs(InputControls* inputs) {
+	DrawInputTriangle((fInputBaseXPosition - 0.005) * GetAspectRatioInv(), fInputBaseYPosition, 0.08 * GetAspectRatioInv(), 0.07, 1 - (-inputs->fSteering), true);
+	DrawInputTriangle((fInputBaseXPosition + 0.08) * GetAspectRatioInv(), fInputBaseYPosition, -0.08 * GetAspectRatioInv(), 0.07, inputs->fSteering, false);
+	DrawInputTriangleY((fInputBaseXPosition + 0.0375) * GetAspectRatioInv(), fInputBaseYPosition - 0.05, 0.035 * GetAspectRatioInv(), 0.045, 1 - inputs->fGas, true);
+	DrawInputTriangleY((fInputBaseXPosition + 0.0375) * GetAspectRatioInv(), fInputBaseYPosition + 0.05, 0.035 * GetAspectRatioInv(), -0.045, inputs->fBrake, false);
+
+	//DrawInputTriangleY((fInputBaseXPosition + 0.225) * GetAspectRatioInv(), fInputBaseYPosition - 0.04, 0.035 * GetAspectRatioInv(), 0.035, 1 - (inputs->keys[INPUT_GEAR_UP] / 128.0), true);
+	//DrawInputTriangleY((fInputBaseXPosition + 0.225) * GetAspectRatioInv(), fInputBaseYPosition + 0.04, 0.035 * GetAspectRatioInv(), -0.035, inputs->keys[INPUT_GEAR_DOWN] / 128.0, false);
+
+	DrawInputRectangle((fInputBaseXPosition + 0.325) * GetAspectRatioInv(), fInputBaseYPosition + 0.05, 0.03 * GetAspectRatioInv(), 0.03, inputs->fNOS);
+	DrawInputRectangle((fInputBaseXPosition + 0.425) * GetAspectRatioInv(), fInputBaseYPosition + 0.05, 0.03 * GetAspectRatioInv(), 0.03, inputs->fHandBrake);
+	DrawInputRectangle((fInputBaseXPosition + 0.525) * GetAspectRatioInv(), fInputBaseYPosition + 0.05, 0.03 * GetAspectRatioInv(), 0.03, inputs->fActionButton);
+}
+
+void DoConfigSave() {
+	std::ofstream file("CwoeeGhosts/config.sav", std::iostream::out | std::iostream::binary);
+	if (!file.is_open()) return;
+
+	file.write((char*)&nGhostVisuals, sizeof(nGhostVisuals));
+	file.write((char*)&bShowInputsWhileDriving, sizeof(bShowInputsWhileDriving));
+	file.write((char*)sPlayerNameOverride, sizeof(sPlayerNameOverride));
+}
+
+void DoConfigLoad() {
+	std::ifstream file("CwoeeGhosts/config.sav", std::iostream::in | std::iostream::binary);
+	if (!file.is_open()) return;
+
+	file.read((char*)&nGhostVisuals, sizeof(nGhostVisuals));
+	file.read((char*)&bShowInputsWhileDriving, sizeof(bShowInputsWhileDriving));
+	file.read((char*)sPlayerNameOverride, sizeof(sPlayerNameOverride));
 }

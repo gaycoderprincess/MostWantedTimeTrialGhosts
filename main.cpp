@@ -2,15 +2,33 @@
 #include <format>
 #include <fstream>
 
+#include "nya_dx9_hookbase.h"
 #include "nya_commonhooklib.h"
 #include "nya_commonmath.h"
-#include "nya_commontimer.h"
 #include "nfsmw.h"
 #include "chloemenulib.h"
 
+bool bChallengeSeriesMode = false;
+
 #include "util.h"
+#include "d3dhook.h"
 #include "timetrials.h"
 #include "hooks/carrender.h"
+#include "hooks/customevents.h"
+
+void SetChallengeSeriesMode(bool on) {
+	bChallengeSeriesMode = on;
+	if (on) {
+		bViewReplayMode = false;
+		bOpponentsOnly = true;
+		nNitroType = NITRO_ON;
+		nSpeedbreakerType = NITRO_ON;
+		ApplyCustomEventsHooks();
+	}
+	else {
+		bOpponentsOnly = false;
+	}
+}
 
 ISimable* VehicleConstructHooked(Sim::Param params) {
 	auto vehicle = (VehicleParams*)params.mData;
@@ -20,6 +38,9 @@ ISimable* VehicleConstructHooked(Sim::Param params) {
 		vehicle->matched = nullptr;
 		vehicle->carType = player->GetVehicleKey();
 		vehicle->customization = (FECustomizationRecord*)player->GetCustomizations();
+
+		// do a config save in every loading screen
+		DoConfigSave();
 	}
 	return PVehicle::Construct(params);
 }
@@ -29,11 +50,42 @@ void DebugMenu() {
 
 	QuickValueEditor("UnlockAllThings", UnlockAllThings);
 
-	if (TheGameFlowManager.CurrentGameFlowState == GAMEFLOW_STATE_IN_FRONTEND) {
-		QuickValueEditor("Replay Viewer Mode", bViewReplayMode);
+	QuickValueEditor("Show Inputs While Driving", bShowInputsWhileDriving);
+	QuickValueEditor("Player Name Override", sPlayerNameOverride, 32);
+
+	if (!bChallengeSeriesMode && TheGameFlowManager.CurrentGameFlowState == GAMEFLOW_STATE_IN_FRONTEND) {
+		QuickValueEditor("Replay Viewer", bViewReplayMode);
 		QuickValueEditor("Opponent Ghosts Only", bOpponentsOnly);
 
 		if (bViewReplayMode) bOpponentsOnly = false;
+
+		if (DrawMenuOption("NOS")) {
+			ChloeMenuLib::BeginMenu();
+			if (DrawMenuOption("Off")) {
+				nNitroType = NITRO_OFF;
+			}
+			if (DrawMenuOption("On")) {
+				nNitroType = NITRO_ON;
+			}
+			if (DrawMenuOption("Infinite")) {
+				nNitroType = NITRO_INF;
+			}
+			ChloeMenuLib::EndMenu();
+		}
+
+		if (DrawMenuOption("Speedbreaker")) {
+			ChloeMenuLib::BeginMenu();
+			if (DrawMenuOption("Off")) {
+				nSpeedbreakerType = NITRO_OFF;
+			}
+			if (DrawMenuOption("On")) {
+				nSpeedbreakerType = NITRO_ON;
+			}
+			if (DrawMenuOption("Infinite")) {
+				nSpeedbreakerType = NITRO_INF;
+			}
+			ChloeMenuLib::EndMenu();
+		}
 	}
 
 	if (DrawMenuOption("Ghost Visuals")) {
@@ -66,6 +118,21 @@ void MainLoop() {
 	TimeTrialLoop();
 }
 
+void RenderLoop() {
+	if (TheGameFlowManager.CurrentGameFlowState != GAMEFLOW_STATE_RACING) return;
+	if (IsInLoadingScreen() || IsInNIS()) return;
+	if (!ShouldGhostRun()) return;
+
+	if (bViewReplayMode) {
+		if (PlayerPBGhost.aTicks.size() > nGlobalReplayTimer) {
+			DisplayInputs(&PlayerPBGhost.aTicks[nGlobalReplayTimer].inputs);
+		}
+	}
+	else if (bShowInputsWhileDriving) {
+		DisplayInputs(GetLocalPlayerInterface<IInput>()->GetControls());
+	}
+}
+
 auto Game_NotifyRaceFinished = (void(*)(ISimable*))0x6119F0;
 void OnEventFinished(ISimable* a1) {
 	Game_NotifyRaceFinished(a1);
@@ -73,6 +140,9 @@ void OnEventFinished(ISimable* a1) {
 	if (!a1 || a1 == GetLocalPlayerSimable()) {
 		DLLDirSetter _setdir;
 		OnFinishRace();
+
+		// do a config save when finishing a race
+		DoConfigSave();
 	}
 }
 
@@ -90,6 +160,9 @@ BOOL WINAPI DllMain(HINSTANCE, DWORD fdwReason, LPVOID) {
 
 			GetCurrentDirectoryW(MAX_PATH, gDLLDir);
 
+			NyaHooks::PlaceD3DHooks();
+			NyaHooks::D3DEndSceneHook::aFunctions.push_back(D3DHookMain);
+			NyaHooks::D3DResetHook::aFunctions.push_back(OnD3DReset);
 			NyaHooks::SimServiceHook::Init();
 			NyaHooks::SimServiceHook::aFunctions.push_back(MainLoop);
 			NyaHooks::LateInitHook::Init();
@@ -107,11 +180,20 @@ BOOL WINAPI DllMain(HINSTANCE, DWORD fdwReason, LPVOID) {
 
 			NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x439BBD, &TrafficDensityHooked);
 
+			// remove career mode
+			NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x544FEF, 0x57397D);
+
 			NyaHookLib::Fill(0x6876FB, 0x90, 5); // don't run PVehicle::UpdateListing when changing driver class
+
+			NyaHookLib::Patch(0x8F5CFC, 0); // replace all tollbooths with sprint races
 
 			ApplyCarRenderHooks();
 
 			ChloeMenuLib::RegisterMenu("Time Trial Ghosts", &DebugMenu);
+
+			DoConfigLoad();
+
+			SetChallengeSeriesMode(true);
 
 			WriteLog("Mod initialized");
 		} break;
