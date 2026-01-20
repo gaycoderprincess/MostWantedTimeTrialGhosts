@@ -1,0 +1,185 @@
+void WriteLog(const std::string& str) {
+	static auto file = std::ofstream("NFSMWTimeTrials_gcp.log");
+
+	file << str;
+	file << "\n";
+	file.flush();
+}
+
+bool IsInLoadingScreen() {
+	if (FadeScreen::IsFadeScreenOn()) return true;
+	if (cFEng::IsPackagePushed(cFEng::mInstance, "Loading.fng")) return true;
+	if (cFEng::IsPackagePushed(cFEng::mInstance, "WS_Loading.fng")) return true;
+	return false;
+}
+
+bool IsInNIS() {
+	return INIS::mInstance && INIS::mInstance->IsPlaying();
+}
+
+bool IsInMovie() {
+	return gMoviePlayer;
+}
+
+IPlayer* GetLocalPlayer() {
+	auto& list = PLAYER_LIST::GetList(PLAYER_LOCAL);
+	if (list.empty()) return nullptr;
+	return list[0];
+}
+
+ISimable* GetLocalPlayerSimable() {
+	auto ply = GetLocalPlayer();
+	if (!ply) return nullptr;
+	return ply->GetSimable();
+}
+
+template<typename T>
+T* GetLocalPlayerInterface() {
+	auto ply = GetLocalPlayerSimable();
+	if (!ply) return nullptr;
+	T* out;
+	if (!ply->QueryInterface<T>(&out)) return nullptr;
+	return out;
+}
+
+auto GetLocalPlayerVehicle() { return GetLocalPlayerInterface<IVehicle>(); }
+auto GetLocalPlayerEngine() { return GetLocalPlayerInterface<IEngine>(); }
+
+std::vector<IVehicle*> GetActiveVehicles(int driverClass = -1) {
+	auto& list = VEHICLE_LIST::GetList(VEHICLE_ALL);
+	std::vector<IVehicle*> cars;
+	for (int i = 0; i < list.size(); i++) {
+		if (!list[i]->IsActive()) continue;
+		if (list[i]->IsLoading()) continue;
+		if (driverClass >= 0 && list[i]->GetDriverClass() != driverClass) continue;
+		cars.push_back(list[i]);
+	}
+	return cars;
+}
+
+bool IsVehicleValidAndActive(IVehicle* vehicle) {
+	auto cars = GetActiveVehicles();
+	for (auto& car : cars) {
+		if (car == vehicle) return true;
+	}
+	return false;
+}
+
+IVehicle* GetClosestActiveVehicle(NyaVec3 toCoords) {
+	auto sourcePos = toCoords;
+	IVehicle* out = nullptr;
+	float distance = 99999;
+	auto cars = GetActiveVehicles();
+	for (auto& car : cars) {
+		auto targetPos = *car->GetPosition();
+		if ((sourcePos - targetPos).length() < distance) {
+			out = car;
+			distance = (sourcePos - targetPos).length();
+		}
+	}
+	return out;
+}
+
+void ValueEditorMenu(float& value) {
+	ChloeMenuLib::BeginMenu();
+
+	static char inputString[1024] = {};
+	ChloeMenuLib::AddTextInputToString(inputString, 1024, true);
+	ChloeMenuLib::SetEnterHint("Apply");
+
+	if (DrawMenuOption(inputString + (std::string)"...", "", false, false) && inputString[0]) {
+		value = std::stof(inputString);
+		memset(inputString,0,sizeof(inputString));
+		ChloeMenuLib::BackOut();
+	}
+
+	ChloeMenuLib::EndMenu();
+}
+
+void ValueEditorMenu(int& value) {
+	ChloeMenuLib::BeginMenu();
+
+	static char inputString[1024] = {};
+	ChloeMenuLib::AddTextInputToString(inputString, 1024, true);
+	ChloeMenuLib::SetEnterHint("Apply");
+
+	if (DrawMenuOption(inputString + (std::string)"...", "", false, false) && inputString[0]) {
+		value = std::stoi(inputString);
+		memset(inputString,0,sizeof(inputString));
+		ChloeMenuLib::BackOut();
+	}
+
+	ChloeMenuLib::EndMenu();
+}
+
+void QuickValueEditor(const char* name, float& value) {
+	if (DrawMenuOption(std::format("{} - {}", name, value))) { ValueEditorMenu(value); }
+}
+
+void QuickValueEditor(const char* name, int& value) {
+	if (DrawMenuOption(std::format("{} - {}", name, value))) { ValueEditorMenu(value); }
+}
+
+void QuickValueEditor(const char* name, bool& value) {
+	if (DrawMenuOption(std::format("{} - {}", name, value))) { value = !value; }
+}
+
+void WriteStringToFile(std::ofstream& file, const char* string) {
+	int len  = lstrlen(string) + 1;
+	file.write((char*)&len, sizeof(len));
+	file.write(string, len);
+}
+
+std::string ReadStringFromFile(std::ifstream& file) {
+	int len = 0;
+	file.read((char*)&len, sizeof(len));
+	if (len <= 0) return "";
+
+	char* tmp = new char[len];
+	file.read(tmp, len);
+	std::string str = tmp;
+	delete[] tmp;
+
+	return str;
+}
+
+int GetRaceNumLaps() {
+	auto race = GRaceStatus::fObj->mRaceParms;
+	if (!GRaceParameters::GetIsLoopingRace(race)) return 1;
+	if (GRaceParameters::GetIsPursuitRace(race)) return 1;
+	if (auto index = race->mIndex) {
+		return index->mNumLaps;
+	}
+	return *(uint8_t*)Attrib::Instance::GetAttributePointer(race->mRaceRecord, Attrib::StringHash32("NumLaps"), 0);
+}
+
+NyaVec3 WorldToRenderCoords(NyaVec3 world) {
+	return {world.z, -world.x, world.y};
+}
+
+NyaVec3 RenderToWorldCoords(NyaVec3 render) {
+	return {-render.y, render.z, render.x};
+}
+
+// todo this is probably bad
+GRacerInfo* GetRacerInfoFromHandle(HSIMABLE handle) {
+	auto race = GRaceStatus::fObj;
+	for (int i = 0; i < race->mRacerCount; i++) {
+		if (race->mRacerInfo[i].mhSimable == handle) return &race->mRacerInfo[i];
+	}
+	return nullptr;
+}
+
+wchar_t gDLLDir[MAX_PATH];
+class DLLDirSetter {
+public:
+	wchar_t backup[MAX_PATH];
+
+	DLLDirSetter() {
+		GetCurrentDirectoryW(MAX_PATH, backup);
+		SetCurrentDirectoryW(gDLLDir);
+	}
+	~DLLDirSetter() {
+		SetCurrentDirectoryW(backup);
+	}
+};
