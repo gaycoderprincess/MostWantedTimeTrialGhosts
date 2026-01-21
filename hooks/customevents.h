@@ -115,6 +115,10 @@ bool IsTuningAvailableHooked() {
 	return PauseMenu::IsTuningAvailable();
 }
 
+bool GetIsChallengeSeriesRace() {
+	return true;
+}
+
 void ApplyCustomEventsHooks() {
 	NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x7AE97F, &GetNumChallengeSeriesEvents);
 	NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x7AEA5E, &GetNumChallengeSeriesEvents);
@@ -125,15 +129,9 @@ void ApplyCustomEventsHooks() {
 	NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x7A4369, &GetChallengeSeriesEventDescription1);
 	NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x7A4375, &GetChallengeSeriesEventDescription2);
 	NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x7A437B, &GetChallengeSeriesEventDescription3);
+	NyaHookLib::PatchRelative(NyaHookLib::JMP, 0x5FC180, &GetIsChallengeSeriesRace);
 	NyaHookLib::PatchRelative(NyaHookLib::JMP, 0x7AE8A0, 0x51F120); // use UISafehouseRaceSheet::AddRace for correct event icons
 	NyaHookLib::Patch(0x51F1B6, 0x8B79D4); // make UISafehouseRaceSheet::AddRace use ChallengeDatum vtable
 	NyaHookLib::Patch<uint16_t>(0x7AE9E6, 0x9090); // don't check unlock states
 	NyaHookLib::Patch<uint8_t>(0x60AB66, 0xEB); // don't sabotage engine
-
-	NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x52B98A, &IsTuningAvailableHooked);
-	NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x52BA53, &IsTuningAvailableHooked);
-	NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x52BB4C, &IsTuningAvailableHooked);
-	NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x52BDF8, &IsTuningAvailableHooked);
-	NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x52BF30, &IsTuningAvailableHooked);
-	NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x52C210, &IsTuningAvailableHooked);
 }
