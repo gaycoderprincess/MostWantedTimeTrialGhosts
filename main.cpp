@@ -198,6 +198,8 @@ BOOL WINAPI DllMain(HINSTANCE, DWORD fdwReason, LPVOID) {
 
 			NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x439BBD, &TrafficDensityHooked);
 
+			NyaHookLib::Patch<uint8_t>(0x47DDD6, 0xEB); // disable CameraMover::MinGapCars
+
 			// remove career mode and multiplayer
 			NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x544FEF, 0x57397D);
 			NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x545103, 0x57397D);
