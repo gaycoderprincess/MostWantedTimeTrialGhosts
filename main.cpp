@@ -37,7 +37,18 @@ ISimable* VehicleConstructHooked(Sim::Param params) {
 		auto player = GetLocalPlayerVehicle();
 		vehicle->matched = nullptr;
 		vehicle->carType = player->GetVehicleKey();
-		vehicle->customization = (FECustomizationRecord*)player->GetCustomizations();
+		if (auto customization = player->GetCustomizations()) {
+			static FECustomizationRecord record;
+			record = *customization;
+			// force nos to be enabled for proper playback
+			if (vehicle->carType != Attrib::StringHash32("copcross") && record.InstalledPhysics.Part[Physics::Upgrades::PUT_NOS] <= 0) {
+				record.InstalledPhysics.Part[Physics::Upgrades::PUT_NOS] = 1;
+			}
+			vehicle->customization = &record;
+		}
+		else {
+			vehicle->customization = nullptr;
+		}
 
 		// do a config save in every loading screen
 		DoConfigSave();
@@ -137,7 +148,7 @@ auto Game_NotifyRaceFinished = (void(*)(ISimable*))0x6119F0;
 void OnEventFinished(ISimable* a1) {
 	Game_NotifyRaceFinished(a1);
 
-	if (!a1 || a1 == GetLocalPlayerSimable()) {
+	if ((!a1 || a1 == GetLocalPlayerSimable()) && !GetLocalPlayerVehicle()->IsDestroyed()) {
 		DLLDirSetter _setdir;
 		OnFinishRace();
 
@@ -148,6 +159,12 @@ void OnEventFinished(ISimable* a1) {
 
 float TrafficDensityHooked() {
 	return 0.0;
+}
+
+int GetNumOpponentsHooked(GRaceParameters* pThis) {
+	auto count = GRaceParameters::GetNumOpponents(pThis);
+	if (count < 1) return 1;
+	return count;
 }
 
 BOOL WINAPI DllMain(HINSTANCE, DWORD fdwReason, LPVOID) {
@@ -185,7 +202,14 @@ BOOL WINAPI DllMain(HINSTANCE, DWORD fdwReason, LPVOID) {
 
 			NyaHookLib::Fill(0x6876FB, 0x90, 5); // don't run PVehicle::UpdateListing when changing driver class
 
-			NyaHookLib::Patch(0x8F5CFC, 0); // replace all tollbooths with sprint races
+			//NyaHookLib::Patch(0x8F5CFC, 0); // tollbooth -> sprint
+			NyaHookLib::Patch(0x8F5CF4, 1); // lap knockout -> circuit
+			NyaHookLib::Patch(0x8F5D04, 0); // speedtrap -> sprint
+
+			//NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x426CA6, &GetNumOpponentsHooked);
+			//NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x431533, &GetNumOpponentsHooked);
+			//NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x611902, &GetNumOpponentsHooked);
+			//NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x61DCB7, &GetNumOpponentsHooked);
 
 			ApplyCarRenderHooks();
 

@@ -254,7 +254,9 @@ void SavePB(tReplayGhost* ghost, const std::string& car, const std::string& trac
 	outFile.write((char*)&lapCount, sizeof(lapCount));
 	outFile.write((char*)&upgrades->InstalledPhysics, sizeof(upgrades->InstalledPhysics));
 	outFile.write((char*)&upgrades->Tunings[upgrades->ActiveTuning], sizeof(upgrades->Tunings[upgrades->ActiveTuning]));
-	outFile.write(FEDatabase->mUserProfile->m_aProfileName, 32);
+	auto name = FEDatabase->mUserProfile->m_aProfileName;
+	if (sPlayerNameOverride[0]) name = sPlayerNameOverride;
+	outFile.write(name, 32);
 	int count = ghost->aTicks.size();
 	outFile.write((char*)&count, sizeof(count));
 	outFile.write((char*)&ghost->aTicks[0], sizeof(ghost->aTicks[0]) * count);
@@ -333,6 +335,10 @@ void LoadPB(tReplayGhost* ghost, const std::string& car, const std::string& trac
 	if (count <= 100) {
 		WriteLog("Invalid ghost length for " + fileName);
 		return;
+	}
+	// hack for my player name
+	if (bChallengeSeriesMode) {
+		if (!strcmp(tmpplayername, "woof")) strcpy_s(tmpplayername, 32, "Chloe");
 	}
 	ghost->sPlayerName = tmpplayername;
 	ghost->nFinishTime = tmptime;
@@ -487,7 +493,7 @@ void DoConfigSave() {
 
 	file.write((char*)&nGhostVisuals, sizeof(nGhostVisuals));
 	file.write((char*)&bShowInputsWhileDriving, sizeof(bShowInputsWhileDriving));
-	file.write((char*)sPlayerNameOverride, sizeof(sPlayerNameOverride));
+	file.write(sPlayerNameOverride, sizeof(sPlayerNameOverride));
 }
 
 void DoConfigLoad() {
@@ -496,5 +502,6 @@ void DoConfigLoad() {
 
 	file.read((char*)&nGhostVisuals, sizeof(nGhostVisuals));
 	file.read((char*)&bShowInputsWhileDriving, sizeof(bShowInputsWhileDriving));
-	file.read((char*)sPlayerNameOverride, sizeof(sPlayerNameOverride));
+	file.read(sPlayerNameOverride, sizeof(sPlayerNameOverride));
+	sPlayerNameOverride[31] = 0;
 }
