@@ -15,6 +15,7 @@ bool bChallengeSeriesMode = false;
 #include "timetrials.h"
 #include "hooks/carrender.h"
 #include "hooks/customevents.h"
+#include "hooks/fixes.h"
 
 void SetChallengeSeriesMode(bool on) {
 	bChallengeSeriesMode = on;
@@ -214,6 +215,7 @@ BOOL WINAPI DllMain(HINSTANCE, DWORD fdwReason, LPVOID) {
 			//NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x61DCB7, &GetNumOpponentsHooked);
 
 			ApplyCarRenderHooks();
+			ApplyGameFixes();
 
 			ChloeMenuLib::RegisterMenu("Time Trial Ghosts", &DebugMenu);
 
