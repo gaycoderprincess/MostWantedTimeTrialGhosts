@@ -42,7 +42,7 @@ ISimable* VehicleConstructHooked(Sim::Param params) {
 			static FECustomizationRecord record;
 			record = *customization;
 			// force nos to be enabled for proper playback
-			if (vehicle->carType != Attrib::StringHash32("copcross") && record.InstalledPhysics.Part[Physics::Upgrades::PUT_NOS] <= 0) {
+			if (vehicle->carType != Attrib::StringHash32("copcross") && vehicle->carType != Attrib::StringHash32("cs_clio_trafpizza") && record.InstalledPhysics.Part[Physics::Upgrades::PUT_NOS] <= 0) {
 				record.InstalledPhysics.Part[Physics::Upgrades::PUT_NOS] = 1;
 			}
 			vehicle->customization = &record;
