@@ -227,7 +227,7 @@ BOOL WINAPI DllMain(HINSTANCE, DWORD fdwReason, LPVOID) {
 
 			NyaHookLib::Fill(0x6876FB, 0x90, 5); // don't run PVehicle::UpdateListing when changing driver class
 
-			//NyaHookLib::Patch(0x8F5CFC, 0); // tollbooth -> sprint
+			NyaHookLib::Patch(0x8F5CFC, 0); // tollbooth -> sprint
 			NyaHookLib::Patch(0x8F5CF4, 1); // lap knockout -> circuit
 			NyaHookLib::Patch(0x8F5D04, 0); // speedtrap -> sprint
 			NyaHookLib::Patch<uint8_t>(0x60A7B0, 0xC3); // disable speedtrap trigger code

@@ -9,7 +9,6 @@ std::vector<tChallengeSeriesEvent> aNewChallengeSeries = {
 	//{"19.8.32", "CS_CAR_01"},
 	{"15.1.1", "CE_997S"},
 	{"15.1.2", "BL15"},
-	//{"19.8.52", "CS_CAR_PIZZA"},
 	{"14.1.1", "CS_CAR_02"},
 	{"14.2.4", "BL14"},
 	{"16.1.1", "OPM_MUSTANG_BOSS"},
@@ -36,6 +35,7 @@ std::vector<tChallengeSeriesEvent> aNewChallengeSeries = {
 	{"3.1.2.r", "BL3"},
 	{"1.5.2", "CASTROLGT"},
 	{"3.1.1.r", "BL2"},
+	{"19.8.52", "CS_CAR_PIZZA"},
 	{"1.2.3", "E3_DEMO_BMW"},
 	{"2.2.1.r", "COP_CROSS"},
 };
@@ -91,20 +91,47 @@ uint32_t __thiscall GetChallengeSeriesEventDescription2(cFrontendDatabase* pThis
 	return a2;
 }
 
+std::string GetCarName(const std::string& carModel) {
+	auto tmp = CreateStockCarRecord(carModel.c_str());
+	std::string carName = GetLocalizedString(FECarRecord::GetNameHash(&tmp));
+	if (carName == GetLocalizedString(0x9BB9CCC3)) { // unlocalized string
+		carName = carModel;
+		std::transform(carName.begin(), carName.end(), carName.begin(), [](char c){ return std::toupper(c); });
+	}
+	else {
+		if (carModel == "bmwm3gtr") carName += " (Street)";
+	}
+
+	if (carName == "CEMTR" || carName == "GRAB" || carName == "PICKUPA" || carName == "PIZZA" || carName == "TAXI") {
+		carName = "TRAF" + carName;
+	}
+	if (carName == "COPSPORT") carName = "COPCROSS";
+	return carName;
+}
+
+std::string GetTrackName(const std::string& eventId, uint32_t nameHash) {
+	if (eventId == "19.8.31") return "Burger King Challenge";
+
+	auto trackName = GetLocalizedString(nameHash);
+	if (trackName == GetLocalizedString(0x9BB9CCC3)) { // unlocalized string
+		return eventId;
+	}
+	return trackName;
+}
+
 const char* GetChallengeSeriesEventDescription3(uint32_t hash) {
 	DLLDirSetter _setdir;
 
 	nNumGhostsForEvent = 0;
 
-	auto trackName = GetLocalizedString(hash);
-	if (pSelectedEvent->sEventName == "19.8.31") trackName = "Burger King Challenge";
+	auto trackName = GetTrackName(pSelectedEvent->sEventName, hash);
 	static std::string str;
 	uint32_t pbTime = 0;
 	tReplayGhost targetTime;
 	auto carName = pSelectedEvent->sCarPreset;
 	if (auto preset = FindFEPresetCar(bStringHashUpper(carName.c_str()))) {
 		carName = preset->CarTypeName;
-		std::transform(carName.begin(), carName.end(), carName.begin(), [](wchar_t c){ return std::tolower(c); });
+		std::transform(carName.begin(), carName.end(), carName.begin(), [](char c){ return std::tolower(c); });
 
 		auto trackId = GRaceParameters::GetEventID(pSelectedEventParams);
 		if (carName == "copsport") carName = "copcross";
@@ -115,13 +142,11 @@ const char* GetChallengeSeriesEventDescription3(uint32_t hash) {
 
 		auto times = CollectReplayGhosts(carName, trackId, GRaceParameters::GetNumLaps(pSelectedEventParams), nullptr);
 		if (!times.empty()) targetTime = times[0];
-		nNumGhostsForEvent = times.size();
 
-		auto tmp = CreateStockCarRecord(carName.c_str());
-		carName = GetLocalizedString(FECarRecord::GetNameHash(&tmp));
-		if (pSelectedEvent->sCarPreset == "CE_GTRSTREET") carName += " (Street)";
+		nNumGhostsForEvent = times.size();
+		if (nNumGhostsForEvent < 1) nNumGhostsForEvent = 1;
 	}
-	str = std::format("Track: {}\nCar: {}", trackName, carName);
+	str = std::format("Track: {}\nCar: {}", GetTrackName(pSelectedEvent->sEventName, hash), GetCarName(carName));
 	if (targetTime.nFinishTime > 0) {
 		str += std::format("\nTarget Time: {}", GetTimeFromMilliseconds(targetTime.nFinishTime));
 		str.pop_back();
