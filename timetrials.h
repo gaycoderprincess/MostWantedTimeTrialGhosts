@@ -175,13 +175,16 @@ void RecordGhost(IVehicle* veh) {
 	aRecordingTicks.push_back(state);
 }
 
-std::string GetGhostFilename(const std::string& car, const std::string& track, int lapCount, int opponentId, const FECustomizationRecord* upgrades) {
+std::string GetGhostFilename(const std::string& car, const std::string& track, int lapCount, int opponentId, const FECustomizationRecord* upgrades, const char* folder = nullptr) {
 	std::string path = "CwoeeGhosts/";
 	if (bChallengeSeriesMode) {
-		path += opponentId == 0 ? "ChallengePBs/" : "Challenges/";
+		path += opponentId == 0 && !folder ? "ChallengePBs/" : "Challenges/";
 	}
 	else {
 		path += "Practice/";
+	}
+	if (folder) {
+		path += std::format("{}/", folder);
 	}
 	path += std::format("{}_{}", track, car);
 	if (lapCount > 1) {
@@ -276,11 +279,11 @@ void SavePB(tReplayGhost* ghost, const std::string& car, const std::string& trac
 	outFile.write((char*)&ghost->aTicks[0], sizeof(ghost->aTicks[0]) * count);
 }
 
-void LoadPB(tReplayGhost* ghost, const std::string& car, const std::string& track, int lapCount, int opponentId, const FECustomizationRecord* upgrades) {
+void LoadPB(tReplayGhost* ghost, const std::string& car, const std::string& track, int lapCount, int opponentId, const FECustomizationRecord* upgrades, const char* folder = nullptr) {
 	ghost->aTicks.clear();
 	ghost->nFinishTime = 0;
 
-	auto fileName = GetGhostFilename(car, track, lapCount, opponentId, upgrades);
+	auto fileName = GetGhostFilename(car, track, lapCount, opponentId, upgrades, folder);
 	auto inFile = std::ifstream(fileName, std::ios::in | std::ios::binary);
 	if (!inFile.is_open()) {
 		if (TheGameFlowManager.CurrentGameFlowState != GAMEFLOW_STATE_IN_FRONTEND) {
@@ -319,7 +322,7 @@ void LoadPB(tReplayGhost* ghost, const std::string& car, const std::string& trac
 	Physics::Upgrades::Package tmpphysics;
 	Physics::Tunings tmptuning;
 	char tmpplayername[32];
-	strcpy_s(tmpplayername, 32, opponentId ? "OPPONENT GHOST" : "PB GHOST");
+	strcpy_s(tmpplayername, opponentId ? "OPPONENT GHOST" : "PB GHOST");
 	auto tmpcar = ReadStringFromFile(inFile);
 	auto tmptrack = ReadStringFromFile(inFile);
 	inFile.read((char*)&tmptime, sizeof(tmptime));
@@ -329,8 +332,6 @@ void LoadPB(tReplayGhost* ghost, const std::string& car, const std::string& trac
 	inFile.read((char*)&tmpphysics, sizeof(tmpphysics));
 	inFile.read((char*)&tmptuning, sizeof(tmptuning));
 	inFile.read(tmpplayername, sizeof(tmpplayername));
-	//tmpplayername[31] = 0;
-	tmpplayername[16] = 0; // max 16 characters, even though the buffer is 32 (any higher and the racer names glitch out)
 	if (tmpsize != sizeof(tReplayTick)) {
 		WriteLog("Outdated ghost for " + fileName);
 		return;
@@ -357,10 +358,23 @@ void LoadPB(tReplayGhost* ghost, const std::string& car, const std::string& trac
 	}
 	// hack for my player name
 	if (bChallengeSeriesMode) {
-		if (!strcmp(tmpplayername, "woof")) strcpy_s(tmpplayername, 32, "Chloe");
+		if (!strcmp(tmpplayername, "woof")) strcpy_s(tmpplayername, "Chloe");
+	}
+	if (folder) {
+		strcpy_s(tmpplayername, folder);
+	}
+	if (TheGameFlowManager.CurrentGameFlowState == GAMEFLOW_STATE_IN_FRONTEND) {
+		tmpplayername[31] = 0;
+	}
+	else {
+		tmpplayername[15] = 0; // max 16 characters, even though the buffer is 32 (any higher and the racer names glitch out)
 	}
 	ghost->sPlayerName = tmpplayername;
 	ghost->nFinishTime = tmptime;
+
+	// don't needlessly load the full ghost data when previewing times in the menu
+	if (TheGameFlowManager.CurrentGameFlowState == GAMEFLOW_STATE_IN_FRONTEND) return;
+
 	ghost->aTicks.reserve(count);
 	for (int i = 0; i < count; i++) {
 		tReplayTick state;
@@ -391,28 +405,49 @@ void OnFinishRace() {
 	aRecordingTicks.clear();
 }
 
-tReplayGhost SelectTopGhost(const std::string& car, const std::string& track, int laps, const FECustomizationRecord* upgrades) {
-	tReplayGhost opponent;
+std::vector<tReplayGhost> CollectReplayGhosts(const std::string& car, const std::string& track, int laps, const FECustomizationRecord* upgrades) {
+	std::vector<tReplayGhost> ghosts;
 
-	tReplayGhost temp;
-	int numGhosts = nDifficulty != DIFFICULTY_NORMAL ? nMaxNumGhostsToCheck : 3;
-	for (int i = 0; i < numGhosts; i++) {
-		LoadPB(&temp, car, track, laps, i+1, upgrades);
-		if (!temp.nFinishTime) continue;
+	if (nDifficulty == DIFFICULTY_HARD) {
+		// check all subdirectories for community ghosts
+		std::vector<std::string> folders;
+		for (const auto& entry : std::filesystem::directory_iterator("CwoeeGhosts/Challenges")) {
+			if (!entry.is_directory()) continue;
 
-		if (nDifficulty == DIFFICULTY_EASY) {
-			if (!opponent.nFinishTime || temp.nFinishTime > opponent.nFinishTime) {
-				opponent = temp;
-			}
+			folders.push_back(entry.path().filename().string());
 		}
-		else {
-			if (!opponent.nFinishTime || temp.nFinishTime < opponent.nFinishTime) {
-				opponent = temp;
-			}
+		for (auto& folder : folders) {
+			tReplayGhost temp;
+			LoadPB(&temp, car, track, laps, 0, upgrades, folder.c_str());
+			if (!temp.nFinishTime) continue;
+			ghosts.push_back(temp);
 		}
 	}
 
-	return opponent;
+	int numGhosts = nDifficulty != DIFFICULTY_NORMAL ? nMaxNumGhostsToCheck : 3;
+	for (int i = 0; i < numGhosts; i++) {
+		tReplayGhost temp;
+		LoadPB(&temp, car, track, laps, i+1, upgrades);
+		if (!temp.nFinishTime) continue;
+		ghosts.push_back(temp);
+	}
+
+	std::sort(ghosts.begin(), ghosts.end(), [](const tReplayGhost& a, const tReplayGhost& b) {
+		if (nDifficulty == DIFFICULTY_EASY) {
+			return a.nFinishTime > b.nFinishTime;
+		}
+		else {
+			return a.nFinishTime < b.nFinishTime;
+		}
+	});
+
+	return ghosts;
+}
+
+tReplayGhost SelectTopGhost(const std::string& car, const std::string& track, int laps, const FECustomizationRecord* upgrades) {
+	auto ghosts = CollectReplayGhosts(car, track, laps, upgrades);
+	if (ghosts.empty()) return {};
+	return ghosts[0];
 }
 
 void TimeTrialLoop() {
@@ -464,6 +499,11 @@ void TimeTrialLoop() {
 
 	ICopMgr::mDisableCops = true;
 	FEDatabase->mUserProfile->TheOptionsSettings.TheGameplaySettings.JumpCam = false;
+	for (int i = 0; i < GRaceStatus::fObj->mRacerCount; i++) {
+		auto racer = &GRaceStatus::fObj->mRacerInfo[i];
+		racer->mSpeedTrapsCrossed = 0;
+		for (auto& speed : racer->mSpeedTrapSpeed) { speed = 0; }
+	}
 
 	if (ply->IsStaging()) {
 		nGlobalReplayTimer = 0;

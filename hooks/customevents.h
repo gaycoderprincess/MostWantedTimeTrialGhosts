@@ -34,6 +34,7 @@ std::vector<tChallengeSeriesEvent> aNewChallengeSeries = {
 	{"4.5.2", "BL4"},
 	{"3.3.1", "CS_CAR_16"},
 	{"3.1.2.r", "BL3"},
+	{"1.5.2", "CASTROLGT"},
 	{"3.1.1.r", "BL2"},
 	{"1.2.3", "E3_DEMO_BMW"},
 	{"2.2.1.r", "COP_CROSS"},
@@ -73,6 +74,7 @@ float __thiscall GetChallengeSeriesCarPerformance(GRaceParameters* pThis) {
 
 tChallengeSeriesEvent* pSelectedEvent = nullptr;
 GRaceParameters* pSelectedEventParams = nullptr;
+int nNumGhostsForEvent = 0;
 uint32_t __thiscall GetChallengeSeriesEventDescription1(GRaceParameters* pThis) {
 	pSelectedEventParams = pThis;
 	auto event = GRaceParameters::GetEventID(pThis);
@@ -92,6 +94,8 @@ uint32_t __thiscall GetChallengeSeriesEventDescription2(cFrontendDatabase* pThis
 const char* GetChallengeSeriesEventDescription3(uint32_t hash) {
 	DLLDirSetter _setdir;
 
+	nNumGhostsForEvent = 0;
+
 	auto trackName = GetLocalizedString(hash);
 	if (pSelectedEvent->sEventName == "19.8.31") trackName = "Burger King Challenge";
 	static std::string str;
@@ -109,7 +113,9 @@ const char* GetChallengeSeriesEventDescription3(uint32_t hash) {
 		LoadPB(&temp, carName, trackId, GRaceParameters::GetNumLaps(pSelectedEventParams), 0, nullptr);
 		pbTime = temp.nFinishTime;
 
-		targetTime = SelectTopGhost(carName, trackId, GRaceParameters::GetNumLaps(pSelectedEventParams), nullptr);
+		auto times = CollectReplayGhosts(carName, trackId, GRaceParameters::GetNumLaps(pSelectedEventParams), nullptr);
+		if (!times.empty()) targetTime = times[0];
+		nNumGhostsForEvent = times.size();
 
 		auto tmp = CreateStockCarRecord(carName.c_str());
 		carName = GetLocalizedString(FECarRecord::GetNameHash(&tmp));
@@ -143,10 +149,7 @@ uint32_t __thiscall GetChallengeSeriesEventIcon2(cFrontendDatabase* pThis, int a
 }
 
 int __thiscall GetNumOpponentsHooked(GRaceParameters* pThis) {
-	auto count = GRaceParameters::GetNumOpponents(pThis);
-	if (count < 1) return 1;
-	if (nDifficulty != DIFFICULTY_NORMAL) return 1; // only spawn one ghost for easy and hard difficulty
-	return count;
+	return nDifficulty == DIFFICULTY_NORMAL ? std::min(nNumGhostsForEvent, 3) : 1; // only spawn one ghost for easy and hard difficulty
 }
 
 void ApplyCustomEventsHooks() {
@@ -183,6 +186,9 @@ void ApplyCustomEventsHooks() {
 	NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x61DCB7, &GetNumOpponentsHooked);
 
 	NyaHookLib::Patch<uint16_t>(0x7AE9E6, 0x9090); // don't check unlock states
+
+	NyaHookLib::Patch<uint16_t>(0x5FD30C, 0x9090); // don't spawn boss characters
+	NyaHookLib::Patch<uint16_t>(0x5FD31A, 0x9090); // don't spawn boss characters
 
 	NyaHookLib::Patch<uint8_t>(0x60AB66, 0xEB); // don't sabotage engine
 }

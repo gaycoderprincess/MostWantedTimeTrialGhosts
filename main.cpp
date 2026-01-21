@@ -60,8 +60,6 @@ ISimable* VehicleConstructHooked(Sim::Param params) {
 void DebugMenu() {
 	ChloeMenuLib::BeginMenu();
 
-	QuickValueEditor("UnlockAllThings", UnlockAllThings);
-
 	QuickValueEditor("Show Inputs While Driving", bShowInputsWhileDriving);
 	QuickValueEditor("Player Name Override", sPlayerNameOverride, sizeof(sPlayerNameOverride));
 
@@ -121,9 +119,9 @@ void DebugMenu() {
 			if (DrawMenuOption("Normal")) {
 				nDifficulty = DIFFICULTY_NORMAL;
 			}
-			//if (DrawMenuOption("Hard")) {
-			//	nDifficulty = DIFFICULTY_HARD;
-			//}
+			if (DrawMenuOption("Hard")) {
+				nDifficulty = DIFFICULTY_HARD;
+			}
 			ChloeMenuLib::EndMenu();
 		}
 	}
@@ -232,6 +230,11 @@ BOOL WINAPI DllMain(HINSTANCE, DWORD fdwReason, LPVOID) {
 			//NyaHookLib::Patch(0x8F5CFC, 0); // tollbooth -> sprint
 			NyaHookLib::Patch(0x8F5CF4, 1); // lap knockout -> circuit
 			NyaHookLib::Patch(0x8F5D04, 0); // speedtrap -> sprint
+			NyaHookLib::Patch<uint8_t>(0x60A7B0, 0xC3); // disable speedtrap trigger code
+			NyaHookLib::Patch<uint8_t>(0x5F4E50, 0xC3); // remove speedtraps
+			NyaHookLib::Patch<uint8_t>(0x5DDCB6, 0xEB); // remove speedtraps
+
+			//NyaHookLib::Patch(0x892764, 0x4086B0); // disable ai
 
 			ApplyCarRenderHooks();
 			ApplyGameFixes();
@@ -245,6 +248,7 @@ BOOL WINAPI DllMain(HINSTANCE, DWORD fdwReason, LPVOID) {
 			// remove quick race
 			NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x54507B, 0x57397D);
 #else
+			UnlockAllThings = true;
 			// remove challenge series
 			NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x545037, 0x57397D);
 #endif
