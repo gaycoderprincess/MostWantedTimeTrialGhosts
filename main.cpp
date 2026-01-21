@@ -100,6 +100,34 @@ void DebugMenu() {
 		}
 	}
 
+	if (bChallengeSeriesMode && TheGameFlowManager.CurrentGameFlowState == GAMEFLOW_STATE_IN_FRONTEND) {
+		const char* currDifficulty = "NULL";
+		switch (nDifficulty) {
+			case DIFFICULTY_EASY:
+				currDifficulty = "Easy";
+				break;
+			case DIFFICULTY_NORMAL:
+				currDifficulty = "Normal";
+				break;
+			case DIFFICULTY_HARD:
+				currDifficulty = "Hard";
+				break;
+		}
+		if (DrawMenuOption(std::format("Difficulty - {}", currDifficulty))) {
+			ChloeMenuLib::BeginMenu();
+			if (DrawMenuOption("Easy")) {
+				nDifficulty = DIFFICULTY_EASY;
+			}
+			if (DrawMenuOption("Normal")) {
+				nDifficulty = DIFFICULTY_NORMAL;
+			}
+			//if (DrawMenuOption("Hard")) {
+			//	nDifficulty = DIFFICULTY_HARD;
+			//}
+			ChloeMenuLib::EndMenu();
+		}
+	}
+
 	if (DrawMenuOption("Ghost Visuals")) {
 		ChloeMenuLib::BeginMenu();
 		if (DrawMenuOption("Hidden")) {
@@ -162,12 +190,6 @@ float TrafficDensityHooked() {
 	return 0.0;
 }
 
-int GetNumOpponentsHooked(GRaceParameters* pThis) {
-	auto count = GRaceParameters::GetNumOpponents(pThis);
-	if (count < 1) return 1;
-	return count;
-}
-
 BOOL WINAPI DllMain(HINSTANCE, DWORD fdwReason, LPVOID) {
 	switch( fdwReason ) {
 		case DLL_PROCESS_ATTACH: {
@@ -210,11 +232,6 @@ BOOL WINAPI DllMain(HINSTANCE, DWORD fdwReason, LPVOID) {
 			//NyaHookLib::Patch(0x8F5CFC, 0); // tollbooth -> sprint
 			NyaHookLib::Patch(0x8F5CF4, 1); // lap knockout -> circuit
 			NyaHookLib::Patch(0x8F5D04, 0); // speedtrap -> sprint
-
-			//NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x426CA6, &GetNumOpponentsHooked);
-			//NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x431533, &GetNumOpponentsHooked);
-			//NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x611902, &GetNumOpponentsHooked);
-			//NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x61DCB7, &GetNumOpponentsHooked);
 
 			ApplyCarRenderHooks();
 			ApplyGameFixes();

@@ -96,7 +96,7 @@ const char* GetChallengeSeriesEventDescription3(uint32_t hash) {
 	if (pSelectedEvent->sEventName == "19.8.31") trackName = "Burger King Challenge";
 	static std::string str;
 	uint32_t pbTime = 0;
-	uint32_t targetTime = 0;
+	tReplayGhost targetTime;
 	auto carName = pSelectedEvent->sCarPreset;
 	if (auto preset = FindFEPresetCar(bStringHashUpper(carName.c_str()))) {
 		carName = preset->CarTypeName;
@@ -109,23 +109,19 @@ const char* GetChallengeSeriesEventDescription3(uint32_t hash) {
 		LoadPB(&temp, carName, trackId, GRaceParameters::GetNumLaps(pSelectedEventParams), 0, nullptr);
 		pbTime = temp.nFinishTime;
 
-		for (int i = 0; i < 3; i++) {
-			LoadPB(&temp, carName, trackId, GRaceParameters::GetNumLaps(pSelectedEventParams), i+1, nullptr);
-			if (!temp.nFinishTime) continue;
-
-			if (!targetTime || temp.nFinishTime < targetTime) {
-				targetTime = temp.nFinishTime;
-			}
-		}
+		targetTime = SelectTopGhost(carName, trackId, GRaceParameters::GetNumLaps(pSelectedEventParams), nullptr);
 
 		auto tmp = CreateStockCarRecord(carName.c_str());
 		carName = GetLocalizedString(FECarRecord::GetNameHash(&tmp));
 		if (pSelectedEvent->sCarPreset == "CE_GTRSTREET") carName += " (Street)";
 	}
 	str = std::format("Track: {}\nCar: {}", trackName, carName);
-	if (targetTime > 0) {
-		str += std::format("\nTarget Time: {}", GetTimeFromMilliseconds(targetTime));
+	if (targetTime.nFinishTime > 0) {
+		str += std::format("\nTarget Time: {}", GetTimeFromMilliseconds(targetTime.nFinishTime));
 		str.pop_back();
+		if (targetTime.sPlayerName[0]) {
+			str += std::format(" ({})", targetTime.sPlayerName);
+		}
 	}
 	if (pbTime > 0) {
 		str += std::format("\nBest Time: {}", GetTimeFromMilliseconds(pbTime));
@@ -144,6 +140,13 @@ uint32_t __thiscall GetChallengeSeriesEventIcon1(GRaceParameters* pThis) {
 
 uint32_t __thiscall GetChallengeSeriesEventIcon2(cFrontendDatabase* pThis, int a1, int a2) {
 	return cFrontendDatabase::GetRaceIconHash(pThis, a1);
+}
+
+int __thiscall GetNumOpponentsHooked(GRaceParameters* pThis) {
+	auto count = GRaceParameters::GetNumOpponents(pThis);
+	if (count < 1) return 1;
+	if (nDifficulty != DIFFICULTY_NORMAL) return 1; // only spawn one ghost for easy and hard difficulty
+	return count;
 }
 
 void ApplyCustomEventsHooks() {
@@ -173,6 +176,11 @@ void ApplyCustomEventsHooks() {
 	NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x7A4369, &GetChallengeSeriesEventDescription1);
 	NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x7A4375, &GetChallengeSeriesEventDescription2);
 	NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x7A437B, &GetChallengeSeriesEventDescription3);
+
+	NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x426CA6, &GetNumOpponentsHooked);
+	NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x431533, &GetNumOpponentsHooked);
+	NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x611902, &GetNumOpponentsHooked);
+	NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x61DCB7, &GetNumOpponentsHooked);
 
 	NyaHookLib::Patch<uint16_t>(0x7AE9E6, 0x9090); // don't check unlock states
 

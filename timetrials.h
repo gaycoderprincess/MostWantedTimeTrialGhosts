@@ -1,4 +1,5 @@
 const int nLocalReplayVersion = 1;
+const int nMaxNumGhostsToCheck = 16;
 
 enum eNitroType {
 	NITRO_OFF,
@@ -25,6 +26,12 @@ enum eGhostVisuals {
 eGhostVisuals nGhostVisuals = GHOST_SHOW;
 bool bShowInputsWhileDriving = false;
 char sPlayerNameOverride[32] = "";
+enum eDifficulty {
+	DIFFICULTY_EASY, // slowest ghost only for every track
+	DIFFICULTY_NORMAL, // first 3 ghosts in the folder
+	DIFFICULTY_HARD, // quickest ghost only for every track
+};
+eDifficulty nDifficulty = DIFFICULTY_NORMAL;
 
 struct tReplayTick {
 	struct {
@@ -384,6 +391,30 @@ void OnFinishRace() {
 	aRecordingTicks.clear();
 }
 
+tReplayGhost SelectTopGhost(const std::string& car, const std::string& track, int laps, const FECustomizationRecord* upgrades) {
+	tReplayGhost opponent;
+
+	tReplayGhost temp;
+	int numGhosts = nDifficulty != DIFFICULTY_NORMAL ? nMaxNumGhostsToCheck : 3;
+	for (int i = 0; i < numGhosts; i++) {
+		LoadPB(&temp, car, track, laps, i+1, upgrades);
+		if (!temp.nFinishTime) continue;
+
+		if (nDifficulty == DIFFICULTY_EASY) {
+			if (!opponent.nFinishTime || temp.nFinishTime > opponent.nFinishTime) {
+				opponent = temp;
+			}
+		}
+		else {
+			if (!opponent.nFinishTime || temp.nFinishTime < opponent.nFinishTime) {
+				opponent = temp;
+			}
+		}
+	}
+
+	return opponent;
+}
+
 void TimeTrialLoop() {
 	if (TheGameFlowManager.CurrentGameFlowState != GAMEFLOW_STATE_RACING) {
 		InvalidateGhost();
@@ -410,11 +441,20 @@ void TimeTrialLoop() {
 		LoadPB(&PlayerPBGhost, car, track, laps, 0, upgrades);
 
 		OpponentGhosts.clear();
-		int opponentCount = VEHICLE_LIST::GetList(VEHICLE_AIRACERS).size();
-		if (!bOpponentsOnly) opponentCount--;
-		for (int i = 0; i < opponentCount; i++) {
-			OpponentGhosts.push_back({});
-			LoadPB(&OpponentGhosts[i], car, track, laps, i+1, upgrades);
+
+		if (!bChallengeSeriesMode || nDifficulty == DIFFICULTY_NORMAL) {
+			int opponentCount = VEHICLE_LIST::GetList(VEHICLE_AIRACERS).size();
+			if (!bOpponentsOnly) opponentCount--;
+			for (int i = 0; i < opponentCount; i++) {
+				OpponentGhosts.push_back({});
+				LoadPB(&OpponentGhosts[i], car, track, laps, i+1, upgrades);
+			}
+		}
+		else {
+			auto opponent = SelectTopGhost(car, track, laps, upgrades);
+			if (opponent.nFinishTime != 0) {
+				OpponentGhosts.push_back(opponent);
+			}
 		}
 
 		bGhostsLoaded = true;
@@ -507,6 +547,7 @@ void DoConfigSave() {
 	file.write((char*)&nGhostVisuals, sizeof(nGhostVisuals));
 	file.write((char*)&bShowInputsWhileDriving, sizeof(bShowInputsWhileDriving));
 	file.write(sPlayerNameOverride, sizeof(sPlayerNameOverride));
+	file.write((char*)&nDifficulty, sizeof(nDifficulty));
 }
 
 void DoConfigLoad() {
@@ -517,4 +558,5 @@ void DoConfigLoad() {
 	file.read((char*)&bShowInputsWhileDriving, sizeof(bShowInputsWhileDriving));
 	file.read(sPlayerNameOverride, sizeof(sPlayerNameOverride));
 	sPlayerNameOverride[31] = 0;
+	file.read((char*)&nDifficulty, sizeof(nDifficulty));
 }
