@@ -103,7 +103,6 @@ uint32_t nGlobalReplayTimer = 0;
 bool ShouldGhostRun() {
 	if (!GRaceStatus::fObj) return false;
 	if (!GRaceStatus::fObj->mRaceParms) return false;
-	if (GRaceStatus::fObj->mRaceContext == kRaceContext_Career) return false;
 
 	auto ply = GetLocalPlayerVehicle();
 	if (!ply) return false;

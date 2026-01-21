@@ -134,35 +134,47 @@ const char* GetChallengeSeriesEventDescription3(uint32_t hash) {
 	return str.c_str();
 }
 
-bool IsTuningAvailableHooked() {
-	if (auto race = GRaceStatus::fObj->mRaceParms) {
-		auto event = GRaceParameters::GetEventID(race);
-		for (auto& challenge : aNewChallengeSeries) {
-			if (event == challenge.sEventName) {
-				return false;
-			}
-		}
-	}
-	return PauseMenu::IsTuningAvailable();
-}
-
 bool GetIsChallengeSeriesRace() {
 	return true;
 }
 
+uint32_t __thiscall GetChallengeSeriesEventIcon1(GRaceParameters* pThis) {
+	return GRaceParameters::GetRaceType(pThis);
+}
+
+uint32_t __thiscall GetChallengeSeriesEventIcon2(cFrontendDatabase* pThis, int a1, int a2) {
+	return cFrontendDatabase::GetRaceIconHash(pThis, a1);
+}
+
 void ApplyCustomEventsHooks() {
+	NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x6F48DB, &GetChallengeSeriesCarType);
+	//NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x6F4945, &GetChallengeSeriesCarPerformance);
+	NyaHookLib::PatchRelative(NyaHookLib::JMP, 0x5FC180, &GetIsChallengeSeriesRace);
+
+	// change event list
 	NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x7AE97F, &GetNumChallengeSeriesEvents);
 	NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x7AEA5E, &GetNumChallengeSeriesEvents);
 	NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x7AE997, &GetChallengeSeriesEventHash);
 	NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x7AE9F4, &IsChallengeSeriesEventUnlocked);
-	NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x6F48DB, &GetChallengeSeriesCarType);
-	//NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x6F4945, &GetChallengeSeriesCarPerformance);
+
+	// correct event icons up top
+	NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x7A42BB, &GetChallengeSeriesEventIcon1);
+	NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x7A42DE, &GetChallengeSeriesEventIcon2);
+	NyaHookLib::Patch<uint8_t>(0x7A42C2, 0xEB);
+
+	// correct event icons and event type names in the list
+	NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x7AE8C1, 0x5FAA20);
+	NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x7AE8DA, &GetChallengeSeriesEventIcon2);
+	NyaHookLib::Patch<uint8_t>(0x7AE8C8, 0xEB);
+	NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x7AE8FF, 0x5FAA20);
+	NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x7AE90B, 0x56E010);
+
+	// custom event descriptions
 	NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x7A4369, &GetChallengeSeriesEventDescription1);
 	NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x7A4375, &GetChallengeSeriesEventDescription2);
 	NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x7A437B, &GetChallengeSeriesEventDescription3);
-	NyaHookLib::PatchRelative(NyaHookLib::JMP, 0x5FC180, &GetIsChallengeSeriesRace);
-	NyaHookLib::PatchRelative(NyaHookLib::JMP, 0x7AE8A0, 0x51F120); // use UISafehouseRaceSheet::AddRace for correct event icons
-	NyaHookLib::Patch(0x51F1B6, 0x8B79D4); // make UISafehouseRaceSheet::AddRace use ChallengeDatum vtable
+
 	NyaHookLib::Patch<uint16_t>(0x7AE9E6, 0x9090); // don't check unlock states
+
 	NyaHookLib::Patch<uint8_t>(0x60AB66, 0xEB); // don't sabotage engine
 }
