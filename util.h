@@ -167,6 +167,29 @@ GRacerInfo* GetRacerInfoFromHandle(HSIMABLE handle) {
 	return nullptr;
 }
 
+uint32_t GetCarFEKey(uint32_t modelHash) {
+	auto collection = Attrib::FindCollection(Attrib::StringHash32("pvehicle"), modelHash);
+	if (!collection) return modelHash;
+
+	if (auto type = (uint32_t*)Attrib::Collection::GetData(collection, Attrib::StringHash32("frontend"), 0)) {
+		return type[1];
+	}
+	return modelHash;
+}
+
+FECarRecord CreateStockCarRecord(const char* carModel) {
+	uint32_t rideHash = Attrib::StringHash32(carModel);
+
+	FECarRecord car;
+	car.Handle = rideHash;
+	car.FEKey = GetCarFEKey(rideHash);
+	car.VehicleKey = rideHash;
+	car.FilterBits = 0x10001;
+	car.Customization = -1;
+	car.CareerHandle = -1;
+	return car;
+}
+
 wchar_t gDLLDir[MAX_PATH];
 class DLLDirSetter {
 public:

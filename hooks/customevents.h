@@ -70,12 +70,35 @@ float __thiscall GetChallengeSeriesCarPerformance(GRaceParameters* pThis) {
 	return GRaceParameters::GetPlayerCarPerformance(pThis);
 }
 
+tChallengeSeriesEvent* pSelectedEvent = nullptr;
 uint32_t __thiscall GetChallengeSeriesEventDescription1(GRaceParameters* pThis) {
+	auto event = GRaceParameters::GetEventID(pThis);
+	for (auto& challenge : aNewChallengeSeries) {
+		if (event == challenge.sEventName) {
+			pSelectedEvent = &challenge;
+			break;
+		}
+	}
 	return CalcLanguageHash("TRACKNAME_", pThis);
 }
 
 uint32_t __thiscall GetChallengeSeriesEventDescription2(cFrontendDatabase* pThis, uint32_t a2) {
 	return a2;
+}
+
+const char* GetChallengeSeriesEventDescription3(uint32_t hash) {
+	auto trackName = GetLocalizedString(hash);
+	static std::string str;
+	auto carName = pSelectedEvent->sCarPreset;
+	if (auto preset = FindFEPresetCar(bStringHashUpper(carName.c_str()))) {
+		carName = preset->CarTypeName;
+		std::transform(carName.begin(), carName.end(), carName.begin(), [](wchar_t c){ return std::tolower(c); });
+		auto tmp = CreateStockCarRecord(carName.c_str());
+		carName = GetLocalizedString(FECarRecord::GetNameHash(&tmp));
+		if (pSelectedEvent->sCarPreset == "CE_GTRSTREET") carName += " (Street)";
+	}
+	str = std::format("Track: {}\nCar: {}", trackName, carName);
+	return str.c_str();
 }
 
 bool IsTuningAvailableHooked() {
@@ -99,6 +122,7 @@ void ApplyCustomEventsHooks() {
 	//NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x6F4945, &GetChallengeSeriesCarPerformance);
 	NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x7A4369, &GetChallengeSeriesEventDescription1);
 	NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x7A4375, &GetChallengeSeriesEventDescription2);
+	NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x7A437B, &GetChallengeSeriesEventDescription3);
 	NyaHookLib::PatchRelative(NyaHookLib::JMP, 0x7AE8A0, 0x51F120); // use UISafehouseRaceSheet::AddRace for correct event icons
 	NyaHookLib::Patch(0x51F1B6, 0x8B79D4); // make UISafehouseRaceSheet::AddRace use ChallengeDatum vtable
 	NyaHookLib::Patch<uint16_t>(0x7AE9E6, 0x9090); // don't check unlock states
