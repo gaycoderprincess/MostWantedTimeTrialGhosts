@@ -171,6 +171,12 @@ void RecordGhost(IVehicle* veh) {
 
 std::string GetGhostFilename(const std::string& car, const std::string& track, int lapCount, int opponentId, const FECustomizationRecord* upgrades) {
 	std::string path = "CwoeeGhosts/";
+	if (bChallengeSeriesMode) {
+		path += opponentId == 0 ? "ChallengePBs/" : "Challenges/";
+	}
+	else {
+		path += "Practice/";
+	}
 	path += std::format("{}_{}", track, car);
 	if (lapCount > 1) {
 		path += std::format("_lap{}", lapCount);
@@ -231,6 +237,8 @@ std::string GetGhostFilename(const std::string& car, const std::string& track, i
 
 void SavePB(tReplayGhost* ghost, const std::string& car, const std::string& track, int lapCount, const FECustomizationRecord* upgrades) {
 	std::filesystem::create_directory("CwoeeGhosts");
+	std::filesystem::create_directory("CwoeeGhosts/ChallengePBs");
+	std::filesystem::create_directory("CwoeeGhosts/Practice");
 
 	auto fileName = GetGhostFilename(car, track, lapCount, 0, upgrades);
 	auto outFile = std::ofstream(fileName, std::ios::out | std::ios::binary);

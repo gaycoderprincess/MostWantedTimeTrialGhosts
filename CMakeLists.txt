@@ -12,7 +12,8 @@ SET(CMAKE_CXX_STANDARD 20)
 
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -masm=intel -static")
 
-add_compile_definitions(IMGUI_USER_CONFIG="../../nya_imconfig.h" NYA_BACKEND_DX9 NYA_NO_FONT NYA_COMMON_NO_D3D)
+add_compile_definitions(IMGUI_USER_CONFIG="../../nya_imconfig.h" NYA_BACKEND_DX9 NYA_NO_FONT NYA_COMMON_NO_D3D TIMETRIALS_CHALLENGESERIES)
+#add_compile_definitions(IMGUI_USER_CONFIG="../../nya_imconfig.h" NYA_BACKEND_DX9 NYA_NO_FONT NYA_COMMON_NO_D3D)
 add_library(NFSMWTimeTrialGhosts SHARED
         ../nya-common/3rdparty/imgui/imgui.cpp
         ../nya-common/3rdparty/imgui/backends/imgui_impl_dx9.cpp

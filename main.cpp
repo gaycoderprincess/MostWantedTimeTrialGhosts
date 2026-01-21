@@ -197,8 +197,10 @@ BOOL WINAPI DllMain(HINSTANCE, DWORD fdwReason, LPVOID) {
 
 			NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x439BBD, &TrafficDensityHooked);
 
-			// remove career mode
+			// remove career mode and multiplayer
 			NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x544FEF, 0x57397D);
+			NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x545103, 0x57397D);
+			NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x545147, 0x57397D);
 
 			NyaHookLib::Fill(0x6876FB, 0x90, 5); // don't run PVehicle::UpdateListing when changing driver class
 
@@ -217,7 +219,14 @@ BOOL WINAPI DllMain(HINSTANCE, DWORD fdwReason, LPVOID) {
 
 			DoConfigLoad();
 
+#ifdef TIMETRIALS_CHALLENGESERIES
 			SetChallengeSeriesMode(true);
+			// remove quick race
+			NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x54507B, 0x57397D);
+#else
+			// remove challenge series
+			NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x545037, 0x57397D);
+#endif
 
 			WriteLog("Mod initialized");
 		} break;

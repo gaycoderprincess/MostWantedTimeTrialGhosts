@@ -22,6 +22,7 @@ std::vector<tChallengeSeriesEvent> aNewChallengeSeries = {
 	{"10.2.1", "BL10"},
 	{"16.2.2", "DDAYSUPRA"},
 	{"9.5.3", "BL9"},
+	{"19.8.31", "E3_DEMO_RX8"},
 	{"8.2.1", "BL8"},
 	{"7.2.1", "CE_GTRSTREET"},
 	{"7.2.2", "BL7"},
@@ -88,6 +89,7 @@ uint32_t __thiscall GetChallengeSeriesEventDescription2(cFrontendDatabase* pThis
 
 const char* GetChallengeSeriesEventDescription3(uint32_t hash) {
 	auto trackName = GetLocalizedString(hash);
+	if (pSelectedEvent->sEventName == "19.8.31") trackName = "Burger King Challenge";
 	static std::string str;
 	auto carName = pSelectedEvent->sCarPreset;
 	if (auto preset = FindFEPresetCar(bStringHashUpper(carName.c_str()))) {
