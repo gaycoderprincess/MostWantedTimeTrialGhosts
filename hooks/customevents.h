@@ -72,7 +72,9 @@ float __thiscall GetChallengeSeriesCarPerformance(GRaceParameters* pThis) {
 }
 
 tChallengeSeriesEvent* pSelectedEvent = nullptr;
+GRaceParameters* pSelectedEventParams = nullptr;
 uint32_t __thiscall GetChallengeSeriesEventDescription1(GRaceParameters* pThis) {
+	pSelectedEventParams = pThis;
 	auto event = GRaceParameters::GetEventID(pThis);
 	for (auto& challenge : aNewChallengeSeries) {
 		if (event == challenge.sEventName) {
@@ -88,18 +90,47 @@ uint32_t __thiscall GetChallengeSeriesEventDescription2(cFrontendDatabase* pThis
 }
 
 const char* GetChallengeSeriesEventDescription3(uint32_t hash) {
+	DLLDirSetter _setdir;
+
 	auto trackName = GetLocalizedString(hash);
 	if (pSelectedEvent->sEventName == "19.8.31") trackName = "Burger King Challenge";
 	static std::string str;
+	uint32_t pbTime = 0;
+	uint32_t targetTime = 0;
 	auto carName = pSelectedEvent->sCarPreset;
 	if (auto preset = FindFEPresetCar(bStringHashUpper(carName.c_str()))) {
 		carName = preset->CarTypeName;
 		std::transform(carName.begin(), carName.end(), carName.begin(), [](wchar_t c){ return std::tolower(c); });
+
+		auto trackId = GRaceParameters::GetEventID(pSelectedEventParams);
+		if (carName == "copsport") carName = "copcross";
+
+		tReplayGhost temp;
+		LoadPB(&temp, carName, trackId, GRaceParameters::GetNumLaps(pSelectedEventParams), 0, nullptr);
+		pbTime = temp.nFinishTime;
+
+		for (int i = 0; i < 3; i++) {
+			LoadPB(&temp, carName, trackId, GRaceParameters::GetNumLaps(pSelectedEventParams), i+1, nullptr);
+			if (!temp.nFinishTime) continue;
+
+			if (!targetTime || temp.nFinishTime < targetTime) {
+				targetTime = temp.nFinishTime;
+			}
+		}
+
 		auto tmp = CreateStockCarRecord(carName.c_str());
 		carName = GetLocalizedString(FECarRecord::GetNameHash(&tmp));
 		if (pSelectedEvent->sCarPreset == "CE_GTRSTREET") carName += " (Street)";
 	}
 	str = std::format("Track: {}\nCar: {}", trackName, carName);
+	if (targetTime > 0) {
+		str += std::format("\nTarget Time: {}", GetTimeFromMilliseconds(targetTime));
+		str.pop_back();
+	}
+	if (pbTime > 0) {
+		str += std::format("\nBest Time: {}", GetTimeFromMilliseconds(pbTime));
+		str.pop_back();
+	}
 	return str.c_str();
 }
 
