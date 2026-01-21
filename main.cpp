@@ -63,7 +63,7 @@ void DebugMenu() {
 	QuickValueEditor("UnlockAllThings", UnlockAllThings);
 
 	QuickValueEditor("Show Inputs While Driving", bShowInputsWhileDriving);
-	QuickValueEditor("Player Name Override", sPlayerNameOverride, 32);
+	QuickValueEditor("Player Name Override", sPlayerNameOverride, sizeof(sPlayerNameOverride));
 
 	if (!bChallengeSeriesMode && TheGameFlowManager.CurrentGameFlowState == GAMEFLOW_STATE_IN_FRONTEND) {
 		QuickValueEditor("Replay Viewer", bViewReplayMode);

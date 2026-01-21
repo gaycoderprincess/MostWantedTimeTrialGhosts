@@ -276,7 +276,9 @@ void LoadPB(tReplayGhost* ghost, const std::string& car, const std::string& trac
 	auto fileName = GetGhostFilename(car, track, lapCount, opponentId, upgrades);
 	auto inFile = std::ifstream(fileName, std::ios::in | std::ios::binary);
 	if (!inFile.is_open()) {
-		WriteLog("No ghost found for " + fileName);
+		if (TheGameFlowManager.CurrentGameFlowState != GAMEFLOW_STATE_IN_FRONTEND) {
+			WriteLog("No ghost found for " + fileName);
+		}
 		return;
 	}
 
@@ -320,7 +322,8 @@ void LoadPB(tReplayGhost* ghost, const std::string& car, const std::string& trac
 	inFile.read((char*)&tmpphysics, sizeof(tmpphysics));
 	inFile.read((char*)&tmptuning, sizeof(tmptuning));
 	inFile.read(tmpplayername, sizeof(tmpplayername));
-	tmpplayername[31] = 0;
+	//tmpplayername[31] = 0;
+	tmpplayername[16] = 0; // max 16 characters, even though the buffer is 32 (any higher and the racer names glitch out)
 	if (tmpsize != sizeof(tReplayTick)) {
 		WriteLog("Outdated ghost for " + fileName);
 		return;
@@ -420,6 +423,7 @@ void TimeTrialLoop() {
 	if (!ShouldGhostRun()) return;
 
 	ICopMgr::mDisableCops = true;
+	FEDatabase->mUserProfile->TheOptionsSettings.TheGameplaySettings.JumpCam = false;
 
 	if (ply->IsStaging()) {
 		nGlobalReplayTimer = 0;
