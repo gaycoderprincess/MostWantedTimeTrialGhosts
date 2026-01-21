@@ -10,7 +10,7 @@ SET(CMAKE_RANLIB i686-w64-mingw32-ranlib)
 
 SET(CMAKE_CXX_STANDARD 20)
 
-SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -masm=intel -static")
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -masm=intel -s -static")
 
 add_compile_definitions(IMGUI_USER_CONFIG="../../nya_imconfig.h" NYA_BACKEND_DX9 NYA_NO_FONT NYA_COMMON_NO_D3D TIMETRIALS_CHALLENGESERIES)
 #add_compile_definitions(IMGUI_USER_CONFIG="../../nya_imconfig.h" NYA_BACKEND_DX9 NYA_NO_FONT NYA_COMMON_NO_D3D)
@@ -32,7 +32,7 @@ target_include_directories(NFSMWTimeTrialGhosts PUBLIC ../nya-common/3rdparty/im
 target_include_directories(NFSMWTimeTrialGhosts PUBLIC ../nya-common/3rdparty/imgui/backends)
 target_include_directories(NFSMWTimeTrialGhosts PUBLIC ../nya-common-nfsmw)
 target_include_directories(NFSMWTimeTrialGhosts PUBLIC ../CwoeeMenuLib/include)
-#target_link_options(NFSMWTimeTrialGhosts PRIVATE "-Wl,--exclude-all-symbols")
+target_link_options(NFSMWTimeTrialGhosts PRIVATE "-Wl,--exclude-all-symbols")
 
 set_target_properties(NFSMWTimeTrialGhosts PROPERTIES PREFIX "")
 set_target_properties(NFSMWTimeTrialGhosts PROPERTIES SUFFIX "_gcp.asi")
