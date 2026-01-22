@@ -1,5 +1,5 @@
 const int nLocalReplayVersion = 1;
-const int nMaxNumGhostsToCheck = 16;
+const int nMaxNumGhostsToCheck = 8;
 
 enum eNitroType {
 	NITRO_OFF,
