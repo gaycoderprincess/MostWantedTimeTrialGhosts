@@ -134,13 +134,15 @@ const char* GetChallengeSeriesEventDescription3(uint32_t hash) {
 		std::transform(carName.begin(), carName.end(), carName.begin(), [](char c){ return std::tolower(c); });
 
 		auto trackId = GRaceParameters::GetEventID(pSelectedEventParams);
-		if (carName == "copsport") carName = "copcross";
+
+		auto ghostCar = carName;
+		if (ghostCar == "pizza") ghostCar = "cs_clio_trafpizza";
 
 		tReplayGhost temp;
-		LoadPB(&temp, carName, trackId, GRaceParameters::GetNumLaps(pSelectedEventParams), 0, nullptr);
+		LoadPB(&temp, ghostCar, trackId, GRaceParameters::GetNumLaps(pSelectedEventParams), 0, nullptr);
 		pbTime = temp.nFinishTime;
 
-		auto times = CollectReplayGhosts(carName, trackId, GRaceParameters::GetNumLaps(pSelectedEventParams), nullptr);
+		auto times = CollectReplayGhosts(ghostCar, trackId, GRaceParameters::GetNumLaps(pSelectedEventParams), nullptr);
 		if (!times.empty()) targetTime = times[0];
 
 		nNumGhostsForEvent = times.size();
