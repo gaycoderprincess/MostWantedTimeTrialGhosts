@@ -179,7 +179,7 @@ uint32_t __thiscall GetChallengeSeriesEventIcon2(cFrontendDatabase* pThis, int a
 }
 
 int __thiscall GetNumOpponentsHooked(GRaceParameters* pThis) {
-	return nDifficulty == DIFFICULTY_NORMAL ? std::min(nNumGhostsForEvent, 3) : 1; // only spawn one ghost for easy and hard difficulty
+	return !bOneGhostOnly && nDifficulty != DIFFICULTY_EASY ? std::min(nNumGhostsForEvent, 3) : 1; // only spawn one ghost for easy difficulty
 }
 
 void ApplyCustomEventsHooks() {

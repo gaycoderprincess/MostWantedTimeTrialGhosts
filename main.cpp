@@ -124,6 +124,9 @@ void DebugMenu() {
 			}
 			ChloeMenuLib::EndMenu();
 		}
+		if (nDifficulty != DIFFICULTY_EASY) {
+			QuickValueEditor("Show Target Ghost Only", bOneGhostOnly);
+		}
 	}
 
 	if (DrawMenuOption("Ghost Visuals")) {
@@ -163,7 +166,7 @@ void RenderLoop() {
 
 	if (bViewReplayMode) {
 		if (PlayerPBGhost.aTicks.size() > nGlobalReplayTimer) {
-			DisplayInputs(&PlayerPBGhost.aTicks[nGlobalReplayTimer].inputs);
+			DisplayInputs(&PlayerPBGhost.aTicks[nGlobalReplayTimer].v1.inputs);
 		}
 	}
 	else if (bShowInputsWhileDriving) {
@@ -233,8 +236,6 @@ BOOL WINAPI DllMain(HINSTANCE, DWORD fdwReason, LPVOID) {
 			NyaHookLib::Patch<uint8_t>(0x60A7B0, 0xC3); // disable speedtrap trigger code
 			NyaHookLib::Patch<uint8_t>(0x5F4E50, 0xC3); // remove speedtraps
 			NyaHookLib::Patch<uint8_t>(0x5DDCB6, 0xEB); // remove speedtraps
-
-			//NyaHookLib::Patch(0x892764, 0x4086B0); // disable ai
 
 			ApplyCarRenderHooks();
 			ApplyGameFixes();

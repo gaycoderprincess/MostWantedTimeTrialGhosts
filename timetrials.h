@@ -1,4 +1,4 @@
-const int nLocalReplayVersion = 1;
+const int nLocalReplayVersion = 2;
 const int nMaxNumGhostsToCheck = 8;
 
 enum eNitroType {
@@ -32,51 +32,66 @@ enum eDifficulty {
 	DIFFICULTY_HARD, // quickest ghost only for every track
 };
 eDifficulty nDifficulty = DIFFICULTY_NORMAL;
+bool bOneGhostOnly = false;
 
 struct tReplayTick {
-	struct {
-		UMath::Matrix4 mat;
-		UMath::Vector3 vel;
-		UMath::Vector3 tvel;
-		int gear;
-		float nitro;
-	} car;
-	InputControls inputs;
+	struct tTickVersion1 {
+		struct {
+			UMath::Matrix4 mat;
+			UMath::Vector3 vel;
+			UMath::Vector3 tvel;
+			int gear;
+			float nitro;
+		} car;
+		InputControls inputs;
+	} v1;
+	struct tTickVersion2 {
+		float raceProgress;
+	} v2;
 
 	void Collect(IVehicle* pVehicle) {
 		auto rb = pVehicle->mCOMObject->Find<IRigidBody>();
-		rb->GetMatrix4(&car.mat);
-		car.mat.p = *rb->GetPosition();
-		car.vel = *rb->GetLinearVelocity();
-		car.tvel = *rb->GetAngularVelocity();
-		car.gear = pVehicle->mCOMObject->Find<ITransmission>()->GetGear();
-		car.nitro = pVehicle->mCOMObject->Find<IEngine>()->GetNOSCapacity();
-		inputs = *pVehicle->mCOMObject->Find<IInput>()->GetControls();
+		rb->GetMatrix4(&v1.car.mat);
+		v1.car.mat.p = *rb->GetPosition();
+		v1.car.vel = *rb->GetLinearVelocity();
+		v1.car.tvel = *rb->GetAngularVelocity();
+		v1.car.gear = pVehicle->mCOMObject->Find<ITransmission>()->GetGear();
+		v1.car.nitro = pVehicle->mCOMObject->Find<IEngine>()->GetNOSCapacity();
+		v1.inputs = *pVehicle->mCOMObject->Find<IInput>()->GetControls();
+
+		v2.raceProgress = 0;
+		if (auto racer = GetRacerInfoFromHandle(pVehicle->mCOMObject->Find<ISimable>()->GetOwnerHandle())) {
+			v2.raceProgress = racer->mPctRaceComplete;
+		}
 	}
 
 	void Apply(IVehicle* pVehicle) {
 		auto rb = pVehicle->mCOMObject->Find<IRigidBody>();
 		auto trans = pVehicle->mCOMObject->Find<ITransmission>();
 		auto engine = pVehicle->mCOMObject->Find<IEngine>();
-		rb->SetOrientation(&car.mat);
-		rb->SetPosition((UMath::Vector3*)&car.mat.p);
-		rb->SetLinearVelocity(&car.vel);
-		rb->SetAngularVelocity(&car.tvel);
+		rb->SetOrientation(&v1.car.mat);
+		rb->SetPosition((UMath::Vector3*)&v1.car.mat.p);
+		rb->SetLinearVelocity(&v1.car.vel);
+		rb->SetAngularVelocity(&v1.car.tvel);
 
 		auto gear = trans->GetGear();
-		if (gear != car.gear) {
+		if (gear != v1.car.gear) {
 			trans->Shift(gear);
 		}
 
 		engine->ChargeNOS(-engine->GetNOSCapacity());
-		engine->ChargeNOS(car.nitro);
+		engine->ChargeNOS(v1.car.nitro);
 
-		*pVehicle->mCOMObject->Find<IInput>()->GetControls() = inputs;
+		*pVehicle->mCOMObject->Find<IInput>()->GetControls() = v1.inputs;
 		if (pVehicle->GetDriverClass() == DRIVER_RACER) {
 			pVehicle->SetDriverClass(DRIVER_NONE);
 		}
 
 		pVehicle->mCOMObject->Find<IRBVehicle>()->EnableObjectCollisions(false);
+
+		if (auto racer = GetRacerInfoFromHandle(pVehicle->mCOMObject->Find<ISimable>()->GetOwnerHandle())) {
+			racer->mPctRaceComplete = v2.raceProgress;
+		}
 	}
 };
 
@@ -332,10 +347,10 @@ void LoadPB(tReplayGhost* ghost, const std::string& car, const std::string& trac
 	inFile.read((char*)&tmpphysics, sizeof(tmpphysics));
 	inFile.read((char*)&tmptuning, sizeof(tmptuning));
 	inFile.read(tmpplayername, sizeof(tmpplayername));
-	if (tmpsize != sizeof(tReplayTick)) {
-		WriteLog("Outdated ghost for " + fileName);
-		return;
-	}
+	//if (tmpsize != sizeof(tReplayTick)) {
+	//	WriteLog("Outdated ghost for " + fileName);
+	//	return;
+	//}
 	if (tmpcar != car || tmptrack != track) {
 		WriteLog("Mismatched ghost for " + fileName);
 		return;
@@ -377,8 +392,15 @@ void LoadPB(tReplayGhost* ghost, const std::string& car, const std::string& trac
 
 	ghost->aTicks.reserve(count);
 	for (int i = 0; i < count; i++) {
-		tReplayTick state;
-		inFile.read((char*)&state, sizeof(state));
+		tReplayTick state = {};
+		inFile.read((char*)&state.v1, sizeof(state.v1));
+		if (fileVersion >= 2) {
+			inFile.read((char*)&state.v2, sizeof(state.v2));
+		}
+		else {
+			// basic fallback by calculating replay progression
+			state.v2.raceProgress = (i / (double)count) * 100;
+		}
 		ghost->aTicks.push_back(state);
 	}
 }
@@ -477,18 +499,28 @@ void TimeTrialLoop() {
 
 		OpponentGhosts.clear();
 
-		if (!bChallengeSeriesMode || nDifficulty == DIFFICULTY_NORMAL) {
+		if (bChallengeSeriesMode) {
+			if (bOneGhostOnly || nDifficulty == DIFFICULTY_EASY) {
+				auto opponent = SelectTopGhost(car, track, laps, upgrades);
+				if (opponent.nFinishTime != 0) {
+					OpponentGhosts.push_back(opponent);
+				}
+			}
+			else {
+				auto ghosts = CollectReplayGhosts(car, track, laps, upgrades);
+
+				int opponentCount = VEHICLE_LIST::GetList(VEHICLE_AIRACERS).size();
+				for (int i = 0; i < opponentCount && i < ghosts.size(); i++) {
+					OpponentGhosts.push_back(ghosts[i]);
+				}
+			}
+		}
+		else {
 			int opponentCount = VEHICLE_LIST::GetList(VEHICLE_AIRACERS).size();
 			if (!bOpponentsOnly) opponentCount--;
 			for (int i = 0; i < opponentCount; i++) {
 				OpponentGhosts.push_back({});
 				LoadPB(&OpponentGhosts[i], car, track, laps, i+1, upgrades);
-			}
-		}
-		else {
-			auto opponent = SelectTopGhost(car, track, laps, upgrades);
-			if (opponent.nFinishTime != 0) {
-				OpponentGhosts.push_back(opponent);
 			}
 		}
 
@@ -516,7 +548,7 @@ void TimeTrialLoop() {
 	else {
 		auto opponents = VEHICLE_LIST::GetList(VEHICLE_AIRACERS);
 		if (bOpponentsOnly) {
-			for (int i = 0; i < opponents.size(); i++) {
+			for (int i = 0; i < opponents.size() && i < OpponentGhosts.size(); i++) {
 				RunGhost(opponents[i], &OpponentGhosts[i]);
 			}
 		}
@@ -588,6 +620,7 @@ void DoConfigSave() {
 	file.write((char*)&bShowInputsWhileDriving, sizeof(bShowInputsWhileDriving));
 	file.write(sPlayerNameOverride, sizeof(sPlayerNameOverride));
 	file.write((char*)&nDifficulty, sizeof(nDifficulty));
+	file.write((char*)&bOneGhostOnly, sizeof(bOneGhostOnly));
 }
 
 void DoConfigLoad() {
@@ -599,4 +632,5 @@ void DoConfigLoad() {
 	file.read(sPlayerNameOverride, sizeof(sPlayerNameOverride));
 	sPlayerNameOverride[31] = 0;
 	file.read((char*)&nDifficulty, sizeof(nDifficulty));
+	file.read((char*)&bOneGhostOnly, sizeof(bOneGhostOnly));
 }
