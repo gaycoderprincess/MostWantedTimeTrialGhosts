@@ -136,6 +136,7 @@ const char* GetChallengeSeriesEventDescription3(uint32_t hash) {
 		auto trackId = GRaceParameters::GetEventID(pSelectedEventParams);
 
 		auto ghostCar = carName;
+		if (ghostCar == "copsport") ghostCar = "copcross";
 		if (ghostCar == "pizza") ghostCar = "cs_clio_trafpizza";
 
 		tReplayGhost temp;
