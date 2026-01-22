@@ -182,7 +182,13 @@ int __thiscall GetNumOpponentsHooked(GRaceParameters* pThis) {
 	return !bOneGhostOnly && nDifficulty != DIFFICULTY_EASY ? std::min(nNumGhostsForEvent, 3) : 1; // only spawn one ghost for easy difficulty
 }
 
+bool __thiscall GetIsDDayRaceHooked(GRaceParameters* pThis) {
+	return false;
+}
+
 void ApplyCustomEventsHooks() {
+	NyaHookLib::PatchRelative(NyaHookLib::JMP, 0x5FBD20, &GetIsDDayRaceHooked);
+
 	NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x6F48DB, &GetChallengeSeriesCarType);
 	//NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x6F4945, &GetChallengeSeriesCarPerformance);
 	NyaHookLib::PatchRelative(NyaHookLib::JMP, 0x5FC180, &GetIsChallengeSeriesRace);

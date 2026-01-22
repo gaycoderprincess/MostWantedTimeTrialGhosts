@@ -153,6 +153,7 @@ void DebugMenu() {
 }
 
 void MainLoop() {
+	if (!Sim::Internal::mSystem) return;
 	if (Sim::Internal::mSystem->mState != Sim::STATE_ACTIVE) return;
 
 	DLLDirSetter _setdir;
@@ -236,6 +237,8 @@ BOOL WINAPI DllMain(HINSTANCE, DWORD fdwReason, LPVOID) {
 			NyaHookLib::Patch<uint8_t>(0x60A7B0, 0xC3); // disable speedtrap trigger code
 			NyaHookLib::Patch<uint8_t>(0x5F4E50, 0xC3); // remove speedtraps
 			NyaHookLib::Patch<uint8_t>(0x5DDCB6, 0xEB); // remove speedtraps
+
+			NyaHookLib::Patch<uint8_t>(0x60A67A, 0xEB); // disable SpawnCop, fixes dday issues
 
 			ApplyCarRenderHooks();
 			ApplyGameFixes();
