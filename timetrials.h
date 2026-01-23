@@ -284,8 +284,16 @@ void SavePB(tReplayGhost* ghost, const std::string& car, const std::string& trac
 	outFile.write((char*)&nNitroType, sizeof(nNitroType));
 	outFile.write((char*)&nSpeedbreakerType, sizeof(nSpeedbreakerType));
 	outFile.write((char*)&lapCount, sizeof(lapCount));
-	outFile.write((char*)&upgrades->InstalledPhysics, sizeof(upgrades->InstalledPhysics));
-	outFile.write((char*)&upgrades->Tunings[upgrades->ActiveTuning], sizeof(upgrades->Tunings[upgrades->ActiveTuning]));
+	if (upgrades) {
+		outFile.write((char*)&upgrades->InstalledPhysics, sizeof(upgrades->InstalledPhysics));
+		outFile.write((char*)&upgrades->Tunings[upgrades->ActiveTuning], sizeof(upgrades->Tunings[upgrades->ActiveTuning]));
+	}
+	else {
+		uint8_t tmp1[sizeof(Physics::Upgrades::Package)] = {};
+		uint8_t tmp2[sizeof(Physics::Tunings)] = {};
+		outFile.write((char*)tmp1, sizeof(tmp1));
+		outFile.write((char*)tmp2, sizeof(tmp2));
+	}
 	auto name = FEDatabase->mUserProfile->m_aProfileName;
 	if (sPlayerNameOverride[0]) name = sPlayerNameOverride;
 	outFile.write(name, 32);

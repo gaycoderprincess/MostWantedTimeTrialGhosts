@@ -33,6 +33,22 @@ void SetChallengeSeriesMode(bool on) {
 
 ISimable* VehicleConstructHooked(Sim::Param params) {
 	auto vehicle = (VehicleParams*)params.mData;
+	if (vehicle->carClass == DRIVER_HUMAN && !FindFEPresetCar(bStringHashUpper(pSelectedEvent->sCarPreset.c_str()))) {
+		static Physics::Info::Performance temp;
+		temp.Acceleration = 1;
+		temp.TopSpeed = 1;
+		temp.Handling = 1;
+		vehicle->matched = &temp;
+		vehicle->carType = Attrib::StringHash32(pSelectedEvent->sCarPreset.c_str());
+		vehicle->customization = nullptr;
+
+		if (pSelectedEvent->nLapCountOverride > 0) {
+			SetRaceNumLaps(pSelectedEventParams, pSelectedEvent->nLapCountOverride);
+		}
+
+		// do a config save in every loading screen
+		DoConfigSave();
+	}
 	if (vehicle->carClass == DRIVER_RACER) {
 		// copy player car for all opponents
 		auto player = GetLocalPlayerVehicle();
@@ -50,9 +66,6 @@ ISimable* VehicleConstructHooked(Sim::Param params) {
 		else {
 			vehicle->customization = nullptr;
 		}
-
-		// do a config save in every loading screen
-		DoConfigSave();
 	}
 	return PVehicle::Construct(params);
 }
@@ -239,6 +252,7 @@ BOOL WINAPI DllMain(HINSTANCE, DWORD fdwReason, LPVOID) {
 			NyaHookLib::Patch<uint8_t>(0x5DDCB6, 0xEB); // remove speedtraps
 
 			NyaHookLib::Patch<uint8_t>(0x60A67A, 0xEB); // disable SpawnCop, fixes dday issues
+			NyaHookLib::Patch<uint8_t>(0x611440, 0xC3); // disable KnockoutRacer
 
 			ApplyCarRenderHooks();
 			ApplyGameFixes();

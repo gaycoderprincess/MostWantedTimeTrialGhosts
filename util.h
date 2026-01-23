@@ -147,7 +147,16 @@ int GetRaceNumLaps() {
 	if (auto index = race->mIndex) {
 		return index->mNumLaps;
 	}
-	return *(uint8_t*)Attrib::Instance::GetAttributePointer(race->mRaceRecord, Attrib::StringHash32("NumLaps"), 0);
+	return GRaceParameters::GetNumLaps(race);
+}
+
+void SetRaceNumLaps(GRaceParameters* race, int numLaps) {
+	if (!GRaceParameters::GetIsLoopingRace(race)) return;
+	if (GRaceParameters::GetIsPursuitRace(race)) return;
+	if (auto index = race->mIndex) {
+		index->mNumLaps = numLaps;
+	}
+	*(uint8_t*)Attrib::Instance::GetAttributePointer(race->mRaceRecord, Attrib::StringHash32("NumLaps"), 0) = numLaps;
 }
 
 NyaVec3 WorldToRenderCoords(NyaVec3 world) {

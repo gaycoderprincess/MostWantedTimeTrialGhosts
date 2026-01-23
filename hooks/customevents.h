@@ -1,6 +1,7 @@
 struct tChallengeSeriesEvent {
 	std::string sEventName;
 	std::string sCarPreset;
+	int nLapCountOverride = 0;
 };
 
 std::vector<tChallengeSeriesEvent> aNewChallengeSeries = {
@@ -37,6 +38,7 @@ std::vector<tChallengeSeriesEvent> aNewChallengeSeries = {
 	{"3.1.1.r", "BL2"},
 	{"19.8.52", "CS_CAR_PIZZA"},
 	{"1.2.3", "E3_DEMO_BMW"},
+	{"1.1.1", "gti", 1},
 	{"2.2.1.r", "COP_CROSS"},
 
 	// todo elise CS_CAR_26
@@ -124,33 +126,28 @@ std::string GetTrackName(const std::string& eventId, uint32_t nameHash) {
 const char* GetChallengeSeriesEventDescription3(uint32_t hash) {
 	DLLDirSetter _setdir;
 
-	nNumGhostsForEvent = 0;
-
 	auto trackName = GetTrackName(pSelectedEvent->sEventName, hash);
-	static std::string str;
-	uint32_t pbTime = 0;
-	tReplayGhost targetTime;
 	auto carName = pSelectedEvent->sCarPreset;
 	if (auto preset = FindFEPresetCar(bStringHashUpper(carName.c_str()))) {
 		carName = preset->CarTypeName;
 		std::transform(carName.begin(), carName.end(), carName.begin(), [](char c){ return std::tolower(c); });
-
-		auto trackId = GRaceParameters::GetEventID(pSelectedEventParams);
-
-		auto ghostCar = carName;
-		if (ghostCar == "copsport") ghostCar = "copcross";
-		if (ghostCar == "pizza") ghostCar = "cs_clio_trafpizza";
-
-		tReplayGhost temp;
-		LoadPB(&temp, ghostCar, trackId, GRaceParameters::GetNumLaps(pSelectedEventParams), 0, nullptr);
-		pbTime = temp.nFinishTime;
-
-		auto times = CollectReplayGhosts(ghostCar, trackId, GRaceParameters::GetNumLaps(pSelectedEventParams), nullptr);
-		if (!times.empty()) targetTime = times[0];
-
-		nNumGhostsForEvent = times.size();
-		if (nNumGhostsForEvent < 1) nNumGhostsForEvent = 1;
 	}
+
+	auto trackId = GRaceParameters::GetEventID(pSelectedEventParams);
+
+	auto ghostCar = carName;
+	if (ghostCar == "copsport") ghostCar = "copcross";
+	if (ghostCar == "pizza") ghostCar = "cs_clio_trafpizza";
+
+	tReplayGhost temp;
+	LoadPB(&temp, ghostCar, trackId, GRaceParameters::GetNumLaps(pSelectedEventParams), 0, nullptr);
+
+	tReplayGhost targetTime;
+	auto times = CollectReplayGhosts(ghostCar, trackId, GRaceParameters::GetNumLaps(pSelectedEventParams), nullptr);
+	if (!times.empty()) targetTime = times[0];
+	nNumGhostsForEvent = times.size();
+
+	static std::string str;
 	str = std::format("Track: {}\nCar: {}", GetTrackName(pSelectedEvent->sEventName, hash), GetCarName(carName));
 	if (targetTime.nFinishTime > 0) {
 		str += std::format("\nTarget Time: {}", GetTimeFromMilliseconds(targetTime.nFinishTime));
@@ -159,8 +156,8 @@ const char* GetChallengeSeriesEventDescription3(uint32_t hash) {
 			str += std::format(" ({})", targetTime.sPlayerName);
 		}
 	}
-	if (pbTime > 0) {
-		str += std::format("\nBest Time: {}", GetTimeFromMilliseconds(pbTime));
+	if (temp.nFinishTime > 0) {
+		str += std::format("\nBest Time: {}", GetTimeFromMilliseconds(temp.nFinishTime));
 		str.pop_back();
 	}
 	return str.c_str();
