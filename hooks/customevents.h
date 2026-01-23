@@ -2,6 +2,12 @@ struct tChallengeSeriesEvent {
 	std::string sEventName;
 	std::string sCarPreset;
 	int nLapCountOverride = 0;
+
+	int GetLapCount() {
+		if (nLapCountOverride > 0) return nLapCountOverride;
+		auto race = GRaceDatabase::GetRaceFromHash(GRaceDatabase::mObj, Attrib::StringHash32(sEventName.c_str()));
+		return GRaceParameters::GetNumLaps(race);
+	}
 };
 
 std::vector<tChallengeSeriesEvent> aNewChallengeSeries = {
@@ -58,15 +64,8 @@ std::string GetCarNameForGhost(const std::string& carPreset) {
 int CalculateTotalTimes() {
 	uint32_t time = 0;
 	for (auto& event : aNewChallengeSeries) {
-		auto eventHash = GRaceDatabase::GetRaceFromHash(GRaceDatabase::mObj, Attrib::StringHash32(event.sEventName.c_str()));
-		auto trackId = event.sEventName;
-		auto carName = GetCarNameForGhost(event.sCarPreset);
-
-		int numLaps = GRaceParameters::GetNumLaps(eventHash);
-		if (event.nLapCountOverride > 0) numLaps = event.nLapCountOverride;
-
 		tReplayGhost temp;
-		LoadPB(&temp, carName, trackId, numLaps, 0, nullptr);
+		LoadPB(&temp, GetCarNameForGhost(event.sCarPreset), event.sEventName, event.GetLapCount(), 0, nullptr);
 		if (!temp.nFinishTime) return 0;
 		time += temp.nFinishTime;
 	}
@@ -158,11 +157,8 @@ const char* GetChallengeSeriesEventDescription3(uint32_t hash) {
 
 	auto trackName = GetTrackName(pSelectedEvent->sEventName, hash);
 	auto carName = GetCarNameForGhost(pSelectedEvent->sCarPreset);
-
 	auto trackId = GRaceParameters::GetEventID(pSelectedEventParams);
-
-	int numLaps = GRaceParameters::GetNumLaps(pSelectedEventParams);
-	if (pSelectedEvent->nLapCountOverride > 0) numLaps = pSelectedEvent->nLapCountOverride;
+	int numLaps = pSelectedEvent->GetLapCount();
 
 	tReplayGhost temp;
 	LoadPB(&temp, carName, trackId, numLaps, 0, nullptr);
