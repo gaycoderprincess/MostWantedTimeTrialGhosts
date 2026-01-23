@@ -13,7 +13,6 @@ struct tChallengeSeriesEvent {
 std::vector<tChallengeSeriesEvent> aNewChallengeSeries = {
 	//{"16.2.1", "M3GTRCAREERSTART"},
 	{"16.2.1", "RAZORMUSTANG"},
-	//{"19.8.32", "CS_CAR_01"},
 	{"15.1.1", "CE_997S"},
 	{"15.1.2", "BL15"},
 	{"14.1.1", "CS_CAR_02"},
@@ -46,6 +45,8 @@ std::vector<tChallengeSeriesEvent> aNewChallengeSeries = {
 	{"1.2.3", "E3_DEMO_BMW"},
 	{"13.5.1", "CE_ELISE"},
 	{"1.1.1", "gti", 1},
+	{"19.8.32", "911turbo"},
+	{"1.2.1", "CS_CAR_19"},
 	{"2.2.1.r", "COP_CROSS"},
 };
 

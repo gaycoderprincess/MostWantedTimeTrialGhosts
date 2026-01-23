@@ -32,6 +32,8 @@ void SetChallengeSeriesMode(bool on) {
 }
 
 ISimable* VehicleConstructHooked(Sim::Param params) {
+	DLLDirSetter _setdir;
+
 	auto vehicle = (VehicleParams*)params.mData;
 	if (vehicle->carClass == DRIVER_HUMAN && !FindFEPresetCar(bStringHashUpper(pSelectedEvent->sCarPreset.c_str()))) {
 		static Physics::Info::Performance temp;
@@ -200,7 +202,7 @@ void RenderLoop() {
 
 		int numOnLeaderboard = 0;
 		for (auto& ghost : aLeaderboardGhosts) {
-			auto name = GetRealPlayerName(ghost.sPlayerName);
+			auto name = ghost.bIsPersonalBest ? ghost.sPlayerName : GetRealPlayerName(ghost.sPlayerName);
 			if (std::find(uniquePlayers.begin(), uniquePlayers.end(), name) != uniquePlayers.end()) continue;
 			uniquePlayers.push_back(name);
 			numOnLeaderboard++;
@@ -214,7 +216,7 @@ void RenderLoop() {
 		data.outlinea = 255;
 		data.outlinedist = fLeaderboardOutlineSize;
 		for (auto& ghost : aLeaderboardGhosts) {
-			auto name = GetRealPlayerName(ghost.sPlayerName);
+			auto name = ghost.bIsPersonalBest ? ghost.sPlayerName : GetRealPlayerName(ghost.sPlayerName);
 			if (std::find(uniquePlayers.begin(), uniquePlayers.end(), name) != uniquePlayers.end()) continue;
 			uniquePlayers.push_back(name);
 
@@ -246,6 +248,8 @@ void RenderLoop() {
 		for (auto& ghost : OpponentGhosts) {
 			auto car = ghost.pLastVehicle;
 			if (!IsVehicleValidAndActive(car)) continue;
+
+			auto name = ghost.bIsPersonalBest ? ghost.sPlayerName : GetRealPlayerName(ghost.sPlayerName);
 
 			UMath::Vector3 dim;
 			car->mCOMObject->Find<IRigidBody>()->GetDimension(&dim);
@@ -280,7 +284,7 @@ void RenderLoop() {
 			else {
 				data.a = fPlayerNameAlpha;
 			}
-			DrawString(data, GetRealPlayerName(ghost.sPlayerName));
+			DrawString(data, name);
 		}
 	}
 }

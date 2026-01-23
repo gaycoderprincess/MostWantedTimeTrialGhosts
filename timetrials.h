@@ -107,6 +107,7 @@ public:
 	std::string sPlayerName;
 	IVehicle* pLastVehicle;
 	bool bHasCountdown;
+	bool bIsPersonalBest;
 
 	tReplayGhost() {
 		Invalidate();
@@ -122,6 +123,7 @@ public:
 		sPlayerName = "";
 		pLastVehicle = nullptr;
 		bHasCountdown = true;
+		bIsPersonalBest = false;
 	}
 };
 tReplayGhost PlayerPBGhost;
@@ -395,7 +397,7 @@ void LoadPB(tReplayGhost* ghost, const std::string& car, const std::string& trac
 		return;
 	}
 	// hack for my player name
-	if (bChallengeSeriesMode) {
+	if (bChallengeSeriesMode && opponentId > 0) {
 		if (!strcmp(tmpplayername, "woof")) strcpy_s(tmpplayername, "Chloe");
 	}
 	if (folder) {
@@ -478,6 +480,7 @@ std::vector<tReplayGhost> CollectReplayGhosts(const std::string& car, const std:
 	if (forFullLeaderboard || (bChallengesPBGhost && !bViewReplayMode)) {
 		tReplayGhost temp;
 		LoadPB(&temp, car, track, laps, 0, upgrades);
+		temp.bIsPersonalBest = true;
 		if (temp.nFinishTime) {
 			ghosts.push_back(temp);
 		}
