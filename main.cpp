@@ -220,6 +220,13 @@ void RenderLoop() {
 			if (std::find(uniquePlayers.begin(), uniquePlayers.end(), name) != uniquePlayers.end()) continue;
 			uniquePlayers.push_back(name);
 
+			if (ghost.bIsPersonalBest) {
+				data.SetColor(245, 185, 110, 255);
+			}
+			else {
+				data.SetColor(255, 255, 255, 255);
+			}
+
 			auto time = GetTimeFromMilliseconds(ghost.nFinishTime);
 			time.pop_back();
 			DrawString(data, std::format("{}. {} - {}", (&ghost - &aLeaderboardGhosts[0]) + 1, name, time));
