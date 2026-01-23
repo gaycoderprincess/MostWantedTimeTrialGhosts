@@ -39,9 +39,8 @@ std::vector<tChallengeSeriesEvent> aNewChallengeSeries = {
 	{"19.8.52", "CS_CAR_PIZZA"},
 	{"1.2.3", "E3_DEMO_BMW"},
 	{"1.1.1", "gti", 1},
+	{"13.5.1", "CE_ELISE"},
 	{"2.2.1.r", "COP_CROSS"},
-
-	// todo elise CS_CAR_26
 };
 
 int GetNumChallengeSeriesEvents() {
