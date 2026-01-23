@@ -43,6 +43,36 @@ std::vector<tChallengeSeriesEvent> aNewChallengeSeries = {
 	{"2.2.1.r", "COP_CROSS"},
 };
 
+std::string GetCarNameForGhost(const std::string& carPreset) {
+	auto carName = carPreset;
+	if (auto preset = FindFEPresetCar(bStringHashUpper(carName.c_str()))) {
+		carName = preset->CarTypeName;
+		std::transform(carName.begin(), carName.end(), carName.begin(), [](char c){ return std::tolower(c); });
+	}
+	auto ghostCar = carName;
+	if (ghostCar == "copsport") ghostCar = "copcross";
+	if (ghostCar == "pizza") ghostCar = "cs_clio_trafpizza";
+	return ghostCar;
+}
+
+int CalculateTotalTimes() {
+	uint32_t time = 0;
+	for (auto& event : aNewChallengeSeries) {
+		auto eventHash = GRaceDatabase::GetRaceFromHash(GRaceDatabase::mObj, Attrib::StringHash32(event.sEventName.c_str()));
+		auto trackId = event.sEventName;
+		auto carName = GetCarNameForGhost(event.sCarPreset);
+
+		int numLaps = GRaceParameters::GetNumLaps(eventHash);
+		if (event.nLapCountOverride > 0) numLaps = event.nLapCountOverride;
+
+		tReplayGhost temp;
+		LoadPB(&temp, carName, trackId, numLaps, 0, nullptr);
+		if (!temp.nFinishTime) return 0;
+		time += temp.nFinishTime;
+	}
+	return time;
+}
+
 int GetNumChallengeSeriesEvents() {
 	return aNewChallengeSeries.size();
 }
@@ -108,6 +138,7 @@ std::string GetCarName(const std::string& carModel) {
 	if (carName == "CEMTR" || carName == "GRAB" || carName == "PICKUPA" || carName == "PIZZA" || carName == "TAXI") {
 		carName = "TRAF" + carName;
 	}
+	if (carName == "CS_CLIO_TRAFPIZZA") carName = "TRAFPIZZA";
 	if (carName == "COPSPORT") carName = "COPCROSS";
 	return carName;
 }
@@ -126,26 +157,18 @@ const char* GetChallengeSeriesEventDescription3(uint32_t hash) {
 	DLLDirSetter _setdir;
 
 	auto trackName = GetTrackName(pSelectedEvent->sEventName, hash);
-	auto carName = pSelectedEvent->sCarPreset;
-	if (auto preset = FindFEPresetCar(bStringHashUpper(carName.c_str()))) {
-		carName = preset->CarTypeName;
-		std::transform(carName.begin(), carName.end(), carName.begin(), [](char c){ return std::tolower(c); });
-	}
+	auto carName = GetCarNameForGhost(pSelectedEvent->sCarPreset);
 
 	auto trackId = GRaceParameters::GetEventID(pSelectedEventParams);
-
-	auto ghostCar = carName;
-	if (ghostCar == "copsport") ghostCar = "copcross";
-	if (ghostCar == "pizza") ghostCar = "cs_clio_trafpizza";
 
 	int numLaps = GRaceParameters::GetNumLaps(pSelectedEventParams);
 	if (pSelectedEvent->nLapCountOverride > 0) numLaps = pSelectedEvent->nLapCountOverride;
 
 	tReplayGhost temp;
-	LoadPB(&temp, ghostCar, trackId, numLaps, 0, nullptr);
+	LoadPB(&temp, carName, trackId, numLaps, 0, nullptr);
 
 	tReplayGhost targetTime;
-	auto times = CollectReplayGhosts(ghostCar, trackId, numLaps, nullptr);
+	auto times = CollectReplayGhosts(carName, trackId, numLaps, nullptr);
 	if (!times.empty()) targetTime = times[0];
 	nNumGhostsForEvent = times.size();
 
@@ -161,6 +184,13 @@ const char* GetChallengeSeriesEventDescription3(uint32_t hash) {
 	if (temp.nFinishTime > 0) {
 		str += std::format("\nBest Time: {}", GetTimeFromMilliseconds(temp.nFinishTime));
 		str.pop_back();
+
+		auto total = CalculateTotalTimes();
+		if (total > 0) {
+			// expertly calculated amount of spaces :3
+			str += std::format("                   Completion Time: {}", GetTimeFromMilliseconds(total));
+			str.pop_back();
+		}
 	}
 	return str.c_str();
 }
