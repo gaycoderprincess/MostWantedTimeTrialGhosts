@@ -70,37 +70,44 @@ ISimable* VehicleConstructHooked(Sim::Param params) {
 	return PVehicle::Construct(params);
 }
 
+float fLeaderboardX = 0.03;
+float fLeaderboardY = 0.6;
+float fLeaderboardYSpacing = 0.03;
+float fLeaderboardSize = 0.03;
+float fLeaderboardOutlineSize = 0.02;
 void DebugMenu() {
 	ChloeMenuLib::BeginMenu();
 
 	QuickValueEditor("Show Inputs While Driving", bShowInputsWhileDriving);
 	QuickValueEditor("Player Name Override", sPlayerNameOverride, sizeof(sPlayerNameOverride));
 
+	//QuickValueEditor("fLeaderboardX", fLeaderboardX);
+	//QuickValueEditor("fLeaderboardY", fLeaderboardY);
+	//QuickValueEditor("fLeaderboardYSpacing", fLeaderboardYSpacing);
+	//QuickValueEditor("fLeaderboardSize", fLeaderboardSize);
+	//QuickValueEditor("fLeaderboardOutlineSize", fLeaderboardOutlineSize);
+
 	if (TheGameFlowManager.CurrentGameFlowState == GAMEFLOW_STATE_IN_FRONTEND) {
 		QuickValueEditor("Replay Viewer", bViewReplayMode);
 		if (bChallengeSeriesMode) {
-			const char* currDifficulty = "NULL";
-			switch (nDifficulty) {
-				case DIFFICULTY_EASY:
-					currDifficulty = "Easy";
-					break;
-				case DIFFICULTY_NORMAL:
-					currDifficulty = "Normal";
-					break;
-				case DIFFICULTY_HARD:
-					currDifficulty = "Hard";
-					break;
-			}
-			if (DrawMenuOption(std::format("Difficulty - {}", currDifficulty))) {
+			const char* difficultyNames[] = {
+				"Easy",
+				"Normal",
+				"Hard",
+				"Very Hard",
+			};
+			const char* difficultyDescs[] = {
+				"Easier ghosts",
+				"Average ghosts",
+				"Faster community ghosts",
+				"Speedrunners' community ghosts",
+			};
+			if (DrawMenuOption(std::format("Difficulty - {}", difficultyNames[nDifficulty]))) {
 				ChloeMenuLib::BeginMenu();
-				if (DrawMenuOption("Easy")) {
-					nDifficulty = DIFFICULTY_EASY;
-				}
-				if (DrawMenuOption("Normal")) {
-					nDifficulty = DIFFICULTY_NORMAL;
-				}
-				if (DrawMenuOption("Hard")) {
-					nDifficulty = DIFFICULTY_HARD;
+				for (int i = 0; i < NUM_DIFFICULTY; i++) {
+					if (DrawMenuOption(difficultyNames[i], difficultyDescs[i])) {
+						nDifficulty = (eDifficulty)i;
+					}
 				}
 				ChloeMenuLib::EndMenu();
 			}
@@ -175,11 +182,49 @@ void MainLoop() {
 	TimeTrialLoop();
 }
 
+// special cases for some player names that are above 16 chars
+std::string GetRealPlayerName(const std::string& ghostName) {
+	if (ghostName == "Chloe") return "gaycoderprincess";
+	if (ghostName == "ProfileInProces") return "ProfileInProcess";
+	return ghostName;
+}
+
 void RenderLoop() {
 	g_WorldLodLevel = std::min(g_WorldLodLevel, 2); // force world detail to one lower than max for props
 
 	if (TheGameFlowManager.CurrentGameFlowState != GAMEFLOW_STATE_RACING) return;
 	if (IsInLoadingScreen() || IsInNIS()) return;
+
+	if (bChallengeSeriesMode && (GetLocalPlayerVehicle()->IsStaging()) || FEManager::mPauseRequest) {
+		std::vector<std::string> uniquePlayers;
+
+		int numOnLeaderboard = 0;
+		for (auto& ghost : aLeaderboardGhosts) {
+			auto name = GetRealPlayerName(ghost.sPlayerName);
+			if (std::find(uniquePlayers.begin(), uniquePlayers.end(), name) != uniquePlayers.end()) continue;
+			uniquePlayers.push_back(name);
+			numOnLeaderboard++;
+		}
+		uniquePlayers.clear();
+
+		tNyaStringData data;
+		data.x = fLeaderboardX * GetAspectRatioInv();
+		data.y = fLeaderboardY - (numOnLeaderboard * fLeaderboardYSpacing);
+		data.size = fLeaderboardSize;
+		data.outlinea = 255;
+		data.outlinedist = fLeaderboardOutlineSize;
+		for (auto& ghost : aLeaderboardGhosts) {
+			auto name = GetRealPlayerName(ghost.sPlayerName);
+			if (std::find(uniquePlayers.begin(), uniquePlayers.end(), name) != uniquePlayers.end()) continue;
+			uniquePlayers.push_back(name);
+
+			auto time = GetTimeFromMilliseconds(ghost.nFinishTime);
+			time.pop_back();
+			DrawString(data, std::format("{}. {} - {}", (&ghost - &aLeaderboardGhosts[0]) + 1, name, time));
+			data.y += fLeaderboardYSpacing;
+		}
+	}
+
 	if (!ShouldGhostRun()) return;
 
 	if (bViewReplayMode) {
@@ -211,8 +256,10 @@ void RenderLoop() {
 			auto camFwd = RenderToWorldCoords(cam.z);
 			auto camPos = RenderToWorldCoords(cam.p);
 			auto playerDir = camPos - pos;
+			auto cameraDist = playerDir.length();
 			playerDir.Normalize();
 			if (playerDir.Dot(camFwd) > 0) continue;
+			if (cameraDist > fPlayerNameFadeEnd) continue;
 
 			bVector3 screenPos;
 			auto worldPos = WorldToRenderCoords(pos);
@@ -227,17 +274,13 @@ void RenderLoop() {
 			data.y = screenPos.y - fPlayerNameOffset;
 			data.size = fPlayerNameSize;
 			data.XCenterAlign = true;
-			if (screenPos.z > fPlayerNameFadeStart) {
-				data.a = std::lerp(fPlayerNameAlpha, 0, (screenPos.z - fPlayerNameFadeStart) / (fPlayerNameFadeEnd - fPlayerNameFadeStart));
+			if (cameraDist > fPlayerNameFadeStart) {
+				data.a = std::lerp(fPlayerNameAlpha, 0, (cameraDist - fPlayerNameFadeStart) / (fPlayerNameFadeEnd - fPlayerNameFadeStart));
 			}
 			else {
 				data.a = fPlayerNameAlpha;
 			}
-
-			auto name = ghost.sPlayerName;
-			if (ghost.sPlayerName == "Chloe") name = "gaycoderprincess";
-			if (ghost.sPlayerName == "ProfileInProces") name = "ProfileInProcess";
-			DrawString(data, name);
+			DrawString(data, GetRealPlayerName(ghost.sPlayerName));
 		}
 	}
 }

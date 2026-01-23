@@ -10,11 +10,6 @@ int nNitroType = NITRO_ON;
 int nSpeedbreakerType = NITRO_ON;
 
 bool bTrackReversed = false; // todo
-const char* GetRaceName() {
-	auto status = GRaceStatus::fObj;
-	if (status && status->mRaceParms) return GRaceParameters::GetEventID(status->mRaceParms);
-	return nullptr;
-}
 
 bool bViewReplayMode = false;
 bool bOpponentsOnly = false;
@@ -23,17 +18,21 @@ enum eGhostVisuals {
 	GHOST_SHOW,
 	GHOST_HIDE_NEARBY,
 };
-eGhostVisuals nGhostVisuals = GHOST_SHOW;
+eGhostVisuals nGhostVisuals = GHOST_HIDE_NEARBY;
 bool bShowInputsWhileDriving = false;
 char sPlayerNameOverride[32] = "";
 enum eDifficulty {
 	DIFFICULTY_EASY, // slowest ghost only for every track
 	DIFFICULTY_NORMAL, // first 3 ghosts in the folder
 	DIFFICULTY_HARD, // quickest ghost only for every track
+	DIFFICULTY_VERY_HARD, // include kuru ghosts
+	NUM_DIFFICULTY,
 };
 eDifficulty nDifficulty = DIFFICULTY_NORMAL;
 bool bChallengesOneGhostOnly = false;
 bool bChallengesPBGhost = false;
+
+bool bDebugInputsOnly = false;
 
 struct tReplayTick {
 	struct tTickVersion1 {
@@ -70,28 +69,33 @@ struct tReplayTick {
 		auto rb = pVehicle->mCOMObject->Find<IRigidBody>();
 		auto trans = pVehicle->mCOMObject->Find<ITransmission>();
 		auto engine = pVehicle->mCOMObject->Find<IEngine>();
-		rb->SetOrientation(&v1.car.mat);
-		rb->SetPosition((UMath::Vector3*)&v1.car.mat.p);
-		rb->SetLinearVelocity(&v1.car.vel);
-		rb->SetAngularVelocity(&v1.car.tvel);
 
-		auto gear = trans->GetGear();
-		if (gear != v1.car.gear) {
-			trans->Shift(gear);
+		if (!bDebugInputsOnly || pVehicle->GetDriverClass() != DRIVER_HUMAN) {
+			rb->SetOrientation(&v1.car.mat);
+			rb->SetPosition((UMath::Vector3*)&v1.car.mat.p);
+			rb->SetLinearVelocity(&v1.car.vel);
+			rb->SetAngularVelocity(&v1.car.tvel);
+
+			auto gear = trans->GetGear();
+			if (gear != v1.car.gear) {
+				trans->Shift(gear);
+			}
+
+			engine->ChargeNOS(-engine->GetNOSCapacity());
+			engine->ChargeNOS(v1.car.nitro);
 		}
-
-		engine->ChargeNOS(-engine->GetNOSCapacity());
-		engine->ChargeNOS(v1.car.nitro);
 
 		*pVehicle->mCOMObject->Find<IInput>()->GetControls() = v1.inputs;
 		if (pVehicle->GetDriverClass() == DRIVER_RACER) {
 			pVehicle->SetDriverClass(DRIVER_NONE);
 		}
 
-		pVehicle->mCOMObject->Find<IRBVehicle>()->EnableObjectCollisions(false);
+		if (pVehicle->GetDriverClass() != DRIVER_HUMAN) {
+			pVehicle->mCOMObject->Find<IRBVehicle>()->EnableObjectCollisions(false);
 
-		if (auto racer = GetRacerInfoFromHandle(pVehicle->mCOMObject->Find<ISimable>()->GetOwnerHandle())) {
-			racer->mPctRaceComplete = v2.raceProgress;
+			if (auto racer = GetRacerInfoFromHandle(pVehicle->mCOMObject->Find<ISimable>()->GetOwnerHandle())) {
+				racer->mPctRaceComplete = v2.raceProgress;
+			}
 		}
 	}
 };
@@ -137,6 +141,7 @@ bool ShouldGhostRun() {
 	return true;
 }
 
+std::vector<tReplayGhost> aLeaderboardGhosts;
 void InvalidateGhost() {
 	bGhostsLoaded = false;
 	nGlobalReplayTimer = 0;
@@ -144,6 +149,7 @@ void InvalidateGhost() {
 	PlayerPBGhost.Invalidate();
 	OpponentGhosts.clear();
 	aRecordingTicks.clear();
+	aLeaderboardGhosts.clear();
 }
 
 void RunGhost(IVehicle* veh, tReplayGhost* ghost) {
@@ -445,10 +451,13 @@ void OnFinishRace() {
 	aRecordingTicks.clear();
 }
 
-std::vector<tReplayGhost> CollectReplayGhosts(const std::string& car, const std::string& track, int laps, const FECustomizationRecord* upgrades) {
+std::vector<tReplayGhost> CollectReplayGhosts(const std::string& car, const std::string& track, int laps, const FECustomizationRecord* upgrades, bool forFullLeaderboard = false) {
 	std::vector<tReplayGhost> ghosts;
 
-	if (nDifficulty == DIFFICULTY_HARD) {
+	auto difficulty = nDifficulty;
+	if (forFullLeaderboard) difficulty = DIFFICULTY_VERY_HARD;
+
+	if (difficulty >= DIFFICULTY_HARD) {
 		// check all subdirectories for community ghosts
 		std::vector<std::string> folders;
 		for (const auto& entry : std::filesystem::directory_iterator("CwoeeGhosts/Challenges")) {
@@ -457,6 +466,8 @@ std::vector<tReplayGhost> CollectReplayGhosts(const std::string& car, const std:
 			folders.push_back(entry.path().filename().string());
 		}
 		for (auto& folder : folders) {
+			if (difficulty < DIFFICULTY_VERY_HARD && folder == "KuruHS") continue;
+
 			tReplayGhost temp;
 			LoadPB(&temp, car, track, laps, 0, upgrades, folder.c_str());
 			if (!temp.nFinishTime) continue;
@@ -464,7 +475,7 @@ std::vector<tReplayGhost> CollectReplayGhosts(const std::string& car, const std:
 		}
 	}
 
-	if (bChallengesPBGhost) {
+	if (forFullLeaderboard || (bChallengesPBGhost && !bViewReplayMode)) {
 		tReplayGhost temp;
 		LoadPB(&temp, car, track, laps, 0, upgrades);
 		if (temp.nFinishTime) {
@@ -472,7 +483,7 @@ std::vector<tReplayGhost> CollectReplayGhosts(const std::string& car, const std:
 		}
 	}
 
-	int numGhosts = nDifficulty != DIFFICULTY_NORMAL ? nMaxNumGhostsToCheck : 3;
+	int numGhosts = difficulty != DIFFICULTY_NORMAL ? nMaxNumGhostsToCheck : 3;
 	for (int i = 0; i < numGhosts; i++) {
 		tReplayGhost temp;
 		LoadPB(&temp, car, track, laps, i+1, upgrades);
@@ -480,14 +491,12 @@ std::vector<tReplayGhost> CollectReplayGhosts(const std::string& car, const std:
 		ghosts.push_back(temp);
 	}
 
-	std::sort(ghosts.begin(), ghosts.end(), [](const tReplayGhost& a, const tReplayGhost& b) {
-		if (nDifficulty == DIFFICULTY_EASY) {
-			return a.nFinishTime > b.nFinishTime;
-		}
-		else {
-			return a.nFinishTime < b.nFinishTime;
-		}
-	});
+	if (difficulty == DIFFICULTY_EASY) {
+		std::sort(ghosts.begin(), ghosts.end(), [](const tReplayGhost& a, const tReplayGhost& b) { return a.nFinishTime > b.nFinishTime; });
+	}
+	else {
+		std::sort(ghosts.begin(), ghosts.end(), [](const tReplayGhost& a, const tReplayGhost& b) { return a.nFinishTime < b.nFinishTime; });
+	}
 
 	return ghosts;
 }
@@ -499,9 +508,7 @@ tReplayGhost SelectTopGhost(const std::string& car, const std::string& track, in
 }
 
 void OnRaceRestart() {
-	nGlobalReplayTimer = 0;
-	nGlobalReplayTimerNoCountdown = 0;
-	aRecordingTicks.clear();
+	InvalidateGhost();
 }
 
 void TimeTrialLoop() {
@@ -532,6 +539,8 @@ void TimeTrialLoop() {
 		OpponentGhosts.clear();
 
 		if (bChallengeSeriesMode) {
+			aLeaderboardGhosts = CollectReplayGhosts(car, track, laps, upgrades, true);
+
 			if (bChallengesOneGhostOnly || nDifficulty == DIFFICULTY_EASY) {
 				auto opponent = SelectTopGhost(car, track, laps, upgrades);
 				if (opponent.nFinishTime != 0) {
