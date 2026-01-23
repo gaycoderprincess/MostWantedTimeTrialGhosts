@@ -175,7 +175,7 @@ uint32_t __thiscall GetChallengeSeriesEventIcon2(cFrontendDatabase* pThis, int a
 }
 
 int __thiscall GetNumOpponentsHooked(GRaceParameters* pThis) {
-	return !bOneGhostOnly && nDifficulty != DIFFICULTY_EASY ? std::min(nNumGhostsForEvent, 3) : 1; // only spawn one ghost for easy difficulty
+	return !bChallengesOneGhostOnly && nDifficulty != DIFFICULTY_EASY ? std::min(nNumGhostsForEvent, 3) : 1; // only spawn one ghost for easy difficulty
 }
 
 bool __thiscall GetIsDDayRaceHooked(GRaceParameters* pThis) {

@@ -32,7 +32,8 @@ enum eDifficulty {
 	DIFFICULTY_HARD, // quickest ghost only for every track
 };
 eDifficulty nDifficulty = DIFFICULTY_NORMAL;
-bool bOneGhostOnly = false;
+bool bChallengesOneGhostOnly = false;
+bool bChallengesPBGhost = false;
 
 struct tReplayTick {
 	struct tTickVersion1 {
@@ -454,6 +455,14 @@ std::vector<tReplayGhost> CollectReplayGhosts(const std::string& car, const std:
 		}
 	}
 
+	if (bChallengesPBGhost) {
+		tReplayGhost temp;
+		LoadPB(&temp, car, track, laps, 0, upgrades);
+		if (temp.nFinishTime) {
+			ghosts.push_back(temp);
+		}
+	}
+
 	int numGhosts = nDifficulty != DIFFICULTY_NORMAL ? nMaxNumGhostsToCheck : 3;
 	for (int i = 0; i < numGhosts; i++) {
 		tReplayGhost temp;
@@ -508,7 +517,7 @@ void TimeTrialLoop() {
 		OpponentGhosts.clear();
 
 		if (bChallengeSeriesMode) {
-			if (bOneGhostOnly || nDifficulty == DIFFICULTY_EASY) {
+			if (bChallengesOneGhostOnly || nDifficulty == DIFFICULTY_EASY) {
 				auto opponent = SelectTopGhost(car, track, laps, upgrades);
 				if (opponent.nFinishTime != 0) {
 					OpponentGhosts.push_back(opponent);
@@ -628,7 +637,8 @@ void DoConfigSave() {
 	file.write((char*)&bShowInputsWhileDriving, sizeof(bShowInputsWhileDriving));
 	file.write(sPlayerNameOverride, sizeof(sPlayerNameOverride));
 	file.write((char*)&nDifficulty, sizeof(nDifficulty));
-	file.write((char*)&bOneGhostOnly, sizeof(bOneGhostOnly));
+	file.write((char*)&bChallengesOneGhostOnly, sizeof(bChallengesOneGhostOnly));
+	file.write((char*)&bChallengesPBGhost, sizeof(bChallengesPBGhost));
 }
 
 void DoConfigLoad() {
@@ -640,5 +650,6 @@ void DoConfigLoad() {
 	file.read(sPlayerNameOverride, sizeof(sPlayerNameOverride));
 	sPlayerNameOverride[31] = 0;
 	file.read((char*)&nDifficulty, sizeof(nDifficulty));
-	file.read((char*)&bOneGhostOnly, sizeof(bOneGhostOnly));
+	file.read((char*)&bChallengesOneGhostOnly, sizeof(bChallengesOneGhostOnly));
+	file.read((char*)&bChallengesPBGhost, sizeof(bChallengesPBGhost));
 }

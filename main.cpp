@@ -138,7 +138,8 @@ void DebugMenu() {
 			ChloeMenuLib::EndMenu();
 		}
 		if (nDifficulty != DIFFICULTY_EASY) {
-			QuickValueEditor("Show Target Ghost Only", bOneGhostOnly);
+			QuickValueEditor("Show Target Ghost Only", bChallengesOneGhostOnly);
+			QuickValueEditor("Show Personal Ghost", bChallengesPBGhost);
 		}
 	}
 
