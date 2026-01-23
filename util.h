@@ -167,6 +167,24 @@ NyaVec3 RenderToWorldCoords(NyaVec3 render) {
 	return {-render.y, render.z, render.x};
 }
 
+NyaMat4x4 WorldToRenderMatrix(NyaMat4x4 world) {
+	NyaMat4x4 out;
+	out.x = WorldToRenderCoords(world.x);
+	out.y = -WorldToRenderCoords(world.y); // v1, up
+	out.z = WorldToRenderCoords(world.z);
+	out.p = WorldToRenderCoords(world.p);
+	return out;
+}
+
+Camera* GetLocalPlayerCamera() {
+	return eViews[EVIEW_PLAYER1].pCamera;
+}
+
+// view to world
+NyaMat4x4 PrepareCameraMatrix(Camera* pCamera) {
+	return pCamera->CurrentKey.Matrix.Invert();
+}
+
 // todo this is probably bad
 GRacerInfo* GetRacerInfoFromHandle(HSIMABLE handle) {
 	auto race = GRaceStatus::fObj;

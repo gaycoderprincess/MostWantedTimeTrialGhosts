@@ -45,9 +45,6 @@ ISimable* VehicleConstructHooked(Sim::Param params) {
 		if (pSelectedEvent->nLapCountOverride > 0) {
 			SetRaceNumLaps(pSelectedEventParams, pSelectedEvent->nLapCountOverride);
 		}
-
-		// do a config save in every loading screen
-		DoConfigSave();
 	}
 	if (vehicle->carClass == DRIVER_RACER) {
 		// copy player car for all opponents
@@ -66,6 +63,9 @@ ISimable* VehicleConstructHooked(Sim::Param params) {
 		else {
 			vehicle->customization = nullptr;
 		}
+
+		// do a config save in every loading screen
+		DoConfigSave();
 	}
 	return PVehicle::Construct(params);
 }
@@ -186,6 +186,56 @@ void RenderLoop() {
 	}
 	else if (bShowInputsWhileDriving) {
 		DisplayInputs(GetLocalPlayerInterface<IInput>()->GetControls());
+	}
+
+	if (bChallengeSeriesMode && nGhostVisuals != GHOST_HIDE && !FEManager::mPauseRequest) {
+		const float fPlayerNameOffset = 0.031;
+		const float fPlayerNameSize = 0.022;
+		const float fPlayerNameFadeStart = 50.0;
+		const float fPlayerNameFadeEnd = 150.0;
+		const float fPlayerNameAlpha = 200.0;
+
+		for (auto& ghost : OpponentGhosts) {
+			auto car = ghost.pLastVehicle;
+			if (!IsVehicleValidAndActive(car)) continue;
+
+			UMath::Vector3 dim;
+			car->mCOMObject->Find<IRigidBody>()->GetDimension(&dim);
+			auto pos = *car->GetPosition();
+			pos.y += dim.y;
+
+			auto cam = PrepareCameraMatrix(GetLocalPlayerCamera());
+			auto camFwd = RenderToWorldCoords(cam.z);
+			auto camPos = RenderToWorldCoords(cam.p);
+			auto playerDir = camPos - pos;
+			playerDir.Normalize();
+			if (playerDir.Dot(camFwd) > 0) continue;
+
+			bVector3 screenPos;
+			auto worldPos = WorldToRenderCoords(pos);
+			eViewPlatInterface::GetScreenPosition(&eViews[EVIEW_PLAYER1], &screenPos, (bVector3*)&worldPos);
+
+			screenPos.x /= (double)nResX;
+			screenPos.y /= (double)nResY;
+			//if (screenPos.z <= 0) continue;
+
+			tNyaStringData data;
+			data.x = screenPos.x;
+			data.y = screenPos.y - fPlayerNameOffset;
+			data.size = fPlayerNameSize;
+			data.XCenterAlign = true;
+			if (screenPos.z > fPlayerNameFadeStart) {
+				data.a = std::lerp(fPlayerNameAlpha, 0, (screenPos.z - fPlayerNameFadeStart) / (fPlayerNameFadeEnd - fPlayerNameFadeStart));
+			}
+			else {
+				data.a = fPlayerNameAlpha;
+			}
+
+			auto name = ghost.sPlayerName;
+			if (ghost.sPlayerName == "Chloe") name = "gaycoderprincess";
+			if (ghost.sPlayerName == "ProfileInProces") name = "ProfileInProcess";
+			DrawString(data, name);
+		}
 	}
 }
 

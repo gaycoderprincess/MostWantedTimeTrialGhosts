@@ -101,6 +101,7 @@ public:
 	std::vector<tReplayTick> aTicks;
 	uint32_t nFinishTime;
 	std::string sPlayerName;
+	IVehicle* pLastVehicle;
 
 	tReplayGhost() {
 		Invalidate();
@@ -114,6 +115,7 @@ public:
 		aTicks.clear();
 		nFinishTime = 0;
 		sPlayerName = "";
+		pLastVehicle = nullptr;
 	}
 };
 tReplayGhost PlayerPBGhost;
@@ -141,6 +143,8 @@ void InvalidateGhost() {
 }
 
 void RunGhost(IVehicle* veh, tReplayGhost* ghost) {
+	ghost->pLastVehicle = veh;
+
 	if (auto racer = GetRacerInfoFromHandle(veh->mCOMObject->Find<ISimable>()->GetOwnerHandle())) {
 		if (!ghost->sPlayerName.empty()) {
 			racer->mName = ghost->sPlayerName.c_str();
