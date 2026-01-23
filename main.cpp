@@ -76,70 +76,71 @@ void DebugMenu() {
 	QuickValueEditor("Show Inputs While Driving", bShowInputsWhileDriving);
 	QuickValueEditor("Player Name Override", sPlayerNameOverride, sizeof(sPlayerNameOverride));
 
-	if (!bChallengeSeriesMode && TheGameFlowManager.CurrentGameFlowState == GAMEFLOW_STATE_IN_FRONTEND) {
+	if (TheGameFlowManager.CurrentGameFlowState == GAMEFLOW_STATE_IN_FRONTEND) {
 		QuickValueEditor("Replay Viewer", bViewReplayMode);
-		QuickValueEditor("Opponent Ghosts Only", bOpponentsOnly);
-
-		if (bViewReplayMode) bOpponentsOnly = false;
-
-		if (DrawMenuOption("NOS")) {
-			ChloeMenuLib::BeginMenu();
-			if (DrawMenuOption("Off")) {
-				nNitroType = NITRO_OFF;
+		if (bChallengeSeriesMode) {
+			const char* currDifficulty = "NULL";
+			switch (nDifficulty) {
+				case DIFFICULTY_EASY:
+					currDifficulty = "Easy";
+					break;
+				case DIFFICULTY_NORMAL:
+					currDifficulty = "Normal";
+					break;
+				case DIFFICULTY_HARD:
+					currDifficulty = "Hard";
+					break;
 			}
-			if (DrawMenuOption("On")) {
-				nNitroType = NITRO_ON;
+			if (DrawMenuOption(std::format("Difficulty - {}", currDifficulty))) {
+				ChloeMenuLib::BeginMenu();
+				if (DrawMenuOption("Easy")) {
+					nDifficulty = DIFFICULTY_EASY;
+				}
+				if (DrawMenuOption("Normal")) {
+					nDifficulty = DIFFICULTY_NORMAL;
+				}
+				if (DrawMenuOption("Hard")) {
+					nDifficulty = DIFFICULTY_HARD;
+				}
+				ChloeMenuLib::EndMenu();
 			}
-			if (DrawMenuOption("Infinite")) {
-				nNitroType = NITRO_INF;
+			if (nDifficulty != DIFFICULTY_EASY) {
+				QuickValueEditor("Show Target Ghost Only", bChallengesOneGhostOnly);
+				QuickValueEditor("Show Personal Ghost", bChallengesPBGhost);
 			}
-			ChloeMenuLib::EndMenu();
 		}
+		else {
+			QuickValueEditor("Opponent Ghosts Only", bOpponentsOnly);
 
-		if (DrawMenuOption("Speedbreaker")) {
-			ChloeMenuLib::BeginMenu();
-			if (DrawMenuOption("Off")) {
-				nSpeedbreakerType = NITRO_OFF;
-			}
-			if (DrawMenuOption("On")) {
-				nSpeedbreakerType = NITRO_ON;
-			}
-			if (DrawMenuOption("Infinite")) {
-				nSpeedbreakerType = NITRO_INF;
-			}
-			ChloeMenuLib::EndMenu();
-		}
-	}
+			if (bViewReplayMode) bOpponentsOnly = false;
 
-	if (bChallengeSeriesMode && TheGameFlowManager.CurrentGameFlowState == GAMEFLOW_STATE_IN_FRONTEND) {
-		const char* currDifficulty = "NULL";
-		switch (nDifficulty) {
-			case DIFFICULTY_EASY:
-				currDifficulty = "Easy";
-				break;
-			case DIFFICULTY_NORMAL:
-				currDifficulty = "Normal";
-				break;
-			case DIFFICULTY_HARD:
-				currDifficulty = "Hard";
-				break;
-		}
-		if (DrawMenuOption(std::format("Difficulty - {}", currDifficulty))) {
-			ChloeMenuLib::BeginMenu();
-			if (DrawMenuOption("Easy")) {
-				nDifficulty = DIFFICULTY_EASY;
+			if (DrawMenuOption("NOS")) {
+				ChloeMenuLib::BeginMenu();
+				if (DrawMenuOption("Off")) {
+					nNitroType = NITRO_OFF;
+				}
+				if (DrawMenuOption("On")) {
+					nNitroType = NITRO_ON;
+				}
+				if (DrawMenuOption("Infinite")) {
+					nNitroType = NITRO_INF;
+				}
+				ChloeMenuLib::EndMenu();
 			}
-			if (DrawMenuOption("Normal")) {
-				nDifficulty = DIFFICULTY_NORMAL;
+
+			if (DrawMenuOption("Speedbreaker")) {
+				ChloeMenuLib::BeginMenu();
+				if (DrawMenuOption("Off")) {
+					nSpeedbreakerType = NITRO_OFF;
+				}
+				if (DrawMenuOption("On")) {
+					nSpeedbreakerType = NITRO_ON;
+				}
+				if (DrawMenuOption("Infinite")) {
+					nSpeedbreakerType = NITRO_INF;
+				}
+				ChloeMenuLib::EndMenu();
 			}
-			if (DrawMenuOption("Hard")) {
-				nDifficulty = DIFFICULTY_HARD;
-			}
-			ChloeMenuLib::EndMenu();
-		}
-		if (nDifficulty != DIFFICULTY_EASY) {
-			QuickValueEditor("Show Target Ghost Only", bChallengesOneGhostOnly);
-			QuickValueEditor("Show Personal Ghost", bChallengesPBGhost);
 		}
 	}
 
@@ -175,6 +176,8 @@ void MainLoop() {
 }
 
 void RenderLoop() {
+	g_WorldLodLevel = std::min(g_WorldLodLevel, 2); // force world detail to one lower than max for props
+
 	if (TheGameFlowManager.CurrentGameFlowState != GAMEFLOW_STATE_RACING) return;
 	if (IsInLoadingScreen() || IsInNIS()) return;
 	if (!ShouldGhostRun()) return;

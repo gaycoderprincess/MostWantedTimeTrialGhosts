@@ -20,7 +20,7 @@ void HideGhostCar(NyaMat4x4* carMatrix) {
 auto CarGetVisibleStateOrig = (int(__thiscall*)(eView*, const bVector3*, const bVector3*, bMatrix4*))nullptr;
 int __thiscall CarGetVisibleStateHooked(eView* a1, const bVector3* a2, const bVector3* a3, bMatrix4* a4) {
 	auto carMatrix = (NyaMat4x4*)a4;
-	if (TheGameFlowManager.CurrentGameFlowState == GAMEFLOW_STATE_RACING && (nGhostVisuals == GHOST_HIDE || nGhostVisuals == GHOST_HIDE_NEARBY)) {
+	if (TheGameFlowManager.CurrentGameFlowState == GAMEFLOW_STATE_RACING && !IsInNIS() && (nGhostVisuals == GHOST_HIDE || nGhostVisuals == GHOST_HIDE_NEARBY)) {
 		HideGhostCar(carMatrix);
 	}
 	return CarGetVisibleStateOrig(a1, a2, a3, a4);
