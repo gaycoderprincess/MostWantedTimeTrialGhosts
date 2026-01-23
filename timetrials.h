@@ -426,7 +426,6 @@ void LoadPB(tReplayGhost* ghost, const std::string& car, const std::string& trac
 void OnFinishRace() {
 	auto ghost = &PlayerPBGhost;
 
-	//uint32_t replayTime = GRaceStatus::fObj->mRacerInfo[0].mRaceTimer.GetTime() * 1000; // this'll go out of sync with speedbreaker
 	uint32_t replayTime = (nGlobalReplayTimerNoCountdown / 120.0) * 1000;
 	if (!bViewReplayMode && replayTime > 1000) {
 		if (!ghost->nFinishTime || replayTime < ghost->nFinishTime) {
