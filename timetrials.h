@@ -1,4 +1,4 @@
-const int nLocalReplayVersion = 2;
+const int nLocalReplayVersion = 3;
 const int nMaxNumGhostsToCheck = 8;
 
 enum eNitroType {
@@ -102,6 +102,7 @@ public:
 	uint32_t nFinishTime;
 	std::string sPlayerName;
 	IVehicle* pLastVehicle;
+	bool bHasCountdown;
 
 	tReplayGhost() {
 		Invalidate();
@@ -116,6 +117,7 @@ public:
 		nFinishTime = 0;
 		sPlayerName = "";
 		pLastVehicle = nullptr;
+		bHasCountdown = true;
 	}
 };
 tReplayGhost PlayerPBGhost;
@@ -124,6 +126,7 @@ std::vector<tReplayGhost> OpponentGhosts;
 bool bGhostsLoaded = false;
 std::vector<tReplayTick> aRecordingTicks;
 uint32_t nGlobalReplayTimer = 0;
+uint32_t nGlobalReplayTimerNoCountdown = 0;
 
 bool ShouldGhostRun() {
 	if (!GRaceStatus::fObj) return false;
@@ -137,6 +140,7 @@ bool ShouldGhostRun() {
 void InvalidateGhost() {
 	bGhostsLoaded = false;
 	nGlobalReplayTimer = 0;
+	nGlobalReplayTimerNoCountdown = 0;
 	PlayerPBGhost.Invalidate();
 	OpponentGhosts.clear();
 	aRecordingTicks.clear();
@@ -160,7 +164,7 @@ void RunGhost(IVehicle* veh, tReplayGhost* ghost) {
 		return;
 	}
 
-	auto tick = nGlobalReplayTimer;
+	auto tick = ghost->bHasCountdown ? nGlobalReplayTimer : nGlobalReplayTimerNoCountdown;
 	if (tick >= ghost->aTicks.size()) return;
 
 	ghost->aTicks[tick].Apply(veh);
@@ -399,6 +403,7 @@ void LoadPB(tReplayGhost* ghost, const std::string& car, const std::string& trac
 	}
 	ghost->sPlayerName = tmpplayername;
 	ghost->nFinishTime = tmptime;
+	ghost->bHasCountdown = fileVersion >= 3;
 
 	// don't needlessly load the full ghost data when previewing times in the menu
 	if (TheGameFlowManager.CurrentGameFlowState == GAMEFLOW_STATE_IN_FRONTEND) return;
@@ -422,12 +427,13 @@ void OnFinishRace() {
 	auto ghost = &PlayerPBGhost;
 
 	//uint32_t replayTime = GRaceStatus::fObj->mRacerInfo[0].mRaceTimer.GetTime() * 1000; // this'll go out of sync with speedbreaker
-	uint32_t replayTime = (nGlobalReplayTimer / 120.0) * 1000;
+	uint32_t replayTime = (nGlobalReplayTimerNoCountdown / 120.0) * 1000;
 	if (!bViewReplayMode && replayTime > 1000) {
 		if (!ghost->nFinishTime || replayTime < ghost->nFinishTime) {
 			WriteLog("Saving new lap PB of " + std::to_string(replayTime) + "ms");
 			ghost->aTicks = aRecordingTicks;
 			ghost->nFinishTime = replayTime;
+			ghost->bHasCountdown = true;
 
 			auto car = GetLocalPlayerVehicle();
 			SavePB(ghost, car->GetVehicleName(), GRaceParameters::GetEventID(GRaceStatus::fObj->mRaceParms), GetRaceNumLaps(), car->GetCustomizations());
@@ -491,6 +497,12 @@ tReplayGhost SelectTopGhost(const std::string& car, const std::string& track, in
 	auto ghosts = CollectReplayGhosts(car, track, laps, upgrades);
 	if (ghosts.empty()) return {};
 	return ghosts[0];
+}
+
+void OnRaceRestart() {
+	nGlobalReplayTimer = 0;
+	nGlobalReplayTimerNoCountdown = 0;
+	aRecordingTicks.clear();
 }
 
 void TimeTrialLoop() {
@@ -559,8 +571,7 @@ void TimeTrialLoop() {
 	}
 
 	if (ply->IsStaging()) {
-		nGlobalReplayTimer = 0;
-		aRecordingTicks.clear();
+		nGlobalReplayTimerNoCountdown = 0;
 	}
 
 	if (bViewReplayMode) {
@@ -581,10 +592,11 @@ void TimeTrialLoop() {
 		}
 	}
 
+	RecordGhost(ply);
 	if (!ply->IsStaging()) {
-		RecordGhost(ply);
-		nGlobalReplayTimer++;
+		nGlobalReplayTimerNoCountdown++;
 	}
+	nGlobalReplayTimer++;
 }
 
 auto gInputRGBBackground = NyaDrawing::CNyaRGBA32(215,215,215,255);

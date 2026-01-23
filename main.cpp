@@ -259,6 +259,12 @@ float TrafficDensityHooked() {
 	return 0.0;
 }
 
+auto RaceCountdownHooked_orig = (void(__thiscall*)(void*))nullptr;
+void __thiscall RaceCountdownHooked(void* pThis) {
+	OnRaceRestart();
+	RaceCountdownHooked_orig(pThis);
+}
+
 BOOL WINAPI DllMain(HINSTANCE, DWORD fdwReason, LPVOID) {
 	switch( fdwReason ) {
 		case DLL_PROCESS_ATTACH: {
@@ -295,6 +301,8 @@ BOOL WINAPI DllMain(HINSTANCE, DWORD fdwReason, LPVOID) {
 			NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x544FEF, 0x57397D);
 			NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x545103, 0x57397D);
 			NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x545147, 0x57397D);
+
+			RaceCountdownHooked_orig = (void(__thiscall*)(void*))NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x63B093, &RaceCountdownHooked);
 
 			NyaHookLib::Fill(0x6876FB, 0x90, 5); // don't run PVehicle::UpdateListing when changing driver class
 
