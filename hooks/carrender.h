@@ -3,6 +3,7 @@ void HideGhostCar(NyaMat4x4* carMatrix) {
 	if (!car) return;
 	if (car == GetLocalPlayerVehicle()) return;
 	if (car->IsStaging()) return;
+	if (car->GetDriverClass() == DRIVER_TRAFFIC || car->GetDriverClass() == DRIVER_COP) return;
 	auto playerCar = GetLocalPlayerVehicle();
 	if (!playerCar) return;
 
