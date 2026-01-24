@@ -327,6 +327,11 @@ void __thiscall RaceCountdownHooked(void* pThis) {
 	RaceCountdownHooked_orig(pThis);
 }
 
+float __thiscall FinishTimeHooked(GTimer* pThis) {
+	if (bViewReplayMode) return pThis->GetTime();
+	return PlayerPBGhost.nFinishTime * 0.001;
+}
+
 BOOL WINAPI DllMain(HINSTANCE, DWORD fdwReason, LPVOID) {
 	switch( fdwReason ) {
 		case DLL_PROCESS_ATTACH: {
@@ -356,6 +361,8 @@ BOOL WINAPI DllMain(HINSTANCE, DWORD fdwReason, LPVOID) {
 			NyaHookLib::Patch(0x61E9CE + 1, &OnEventFinished);
 
 			NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x439BBD, &TrafficDensityHooked);
+
+			NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x5A2CDC, &FinishTimeHooked);
 
 			NyaHookLib::Patch<uint8_t>(0x47DDD6, 0xEB); // disable CameraMover::MinGapCars
 
