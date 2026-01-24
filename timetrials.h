@@ -490,8 +490,7 @@ std::vector<tReplayGhost> CollectReplayGhosts(const std::string& car, const std:
 		}
 	}
 
-	int numGhosts = difficulty != DIFFICULTY_NORMAL ? nMaxNumGhostsToCheck : 3;
-	for (int i = 0; i < numGhosts; i++) {
+	for (int i = 0; i < nMaxNumGhostsToCheck; i++) {
 		tReplayGhost temp;
 		LoadPB(&temp, car, track, laps, i+1, upgrades);
 		if (!temp.nFinishTime) continue;

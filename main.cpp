@@ -220,6 +220,8 @@ void RenderLoop() {
 		}
 		uniquePlayers.clear();
 
+		int ranking = 1;
+
 		tNyaStringData data;
 		data.x = fLeaderboardX * GetAspectRatioInv();
 		data.y = fLeaderboardY - (numOnLeaderboard * fLeaderboardYSpacing);
@@ -240,7 +242,7 @@ void RenderLoop() {
 
 			auto time = GetTimeFromMilliseconds(ghost.nFinishTime);
 			time.pop_back();
-			DrawString(data, std::format("{}. {} - {}", (&ghost - &aLeaderboardGhosts[0]) + 1, name, time));
+			DrawString(data, std::format("{}. {} - {}", ranking++, name, time));
 			data.y += fLeaderboardYSpacing;
 		}
 	}
@@ -365,6 +367,10 @@ BOOL WINAPI DllMain(HINSTANCE, DWORD fdwReason, LPVOID) {
 			NyaHooks::LateInitHook::aFunctions.push_back([]() {
 				Scheduler::fgScheduler->fTimeStep = 1.0 / 120.0; // set sim framerate
 				*(void**)0x92C534 = (void*)&VehicleConstructHooked;
+				if (GetModuleHandleA("NFSMWLimitAdjuster.asi")) {
+					MessageBoxA(nullptr, "Incompatible mod detected! Please remove NFSMWLimitAdjuster.asi from your game before using this mod.", "nya?!~", MB_ICONERROR);
+					exit(0);
+				}
 			});
 
 			// use SuspensionRacer instead of SuspensionSimple for racers - fixes popped tire behavior

@@ -1,12 +1,80 @@
+std::string GetCarName(const std::string& carModel) {
+	auto tmp = CreateStockCarRecord(carModel.c_str());
+	std::string carName = GetLocalizedString(FECarRecord::GetNameHash(&tmp));
+	if (carName == GetLocalizedString(0x9BB9CCC3)) { // unlocalized string
+		carName = carModel;
+		std::transform(carName.begin(), carName.end(), carName.begin(), [](char c){ return std::toupper(c); });
+	}
+	else {
+		if (carModel == "bmwm3gtr") carName += " (Street)";
+	}
+
+	if (carName == "CEMTR" || carName == "GRAB" || carName == "PICKUPA" || carName == "PIZZA" || carName == "TAXI") {
+		carName = "TRAF" + carName;
+	}
+	if (carName == "CS_CLIO_TRAFPIZZA") carName = "TRAFPIZZA";
+	if (carName == "COPSPORT") carName = "COPCROSS";
+	return carName;
+}
+
+std::string GetTrackName(const std::string& eventId, uint32_t nameHash) {
+	if (eventId == "1.8.1") return "Final Pursuit";
+	if (eventId == "19.8.31") return "Burger King Challenge";
+
+	auto trackName = GetLocalizedString(nameHash);
+	if (trackName == GetLocalizedString(0x9BB9CCC3)) { // unlocalized string
+		return eventId;
+	}
+	return trackName;
+}
+
+std::string GetCarNameForGhost(const std::string& carPreset) {
+	auto carName = carPreset;
+	if (auto preset = FindFEPresetCar(bStringHashUpper(carName.c_str()))) {
+		carName = preset->CarTypeName;
+		std::transform(carName.begin(), carName.end(), carName.begin(), [](char c){ return std::tolower(c); });
+	}
+	auto ghostCar = carName;
+	if (ghostCar == "copsport") ghostCar = "copcross";
+	if (ghostCar == "pizza") ghostCar = "cs_clio_trafpizza";
+	return ghostCar;
+}
+
 struct tChallengeSeriesEvent {
 	std::string sEventName;
 	std::string sCarPreset;
 	int nLapCountOverride = 0;
 
+	int nNumGhosts = 0;
+
+	GRaceParameters* GetRace() const {
+		return GRaceDatabase::GetRaceFromHash(GRaceDatabase::mObj, Attrib::StringHash32(sEventName.c_str()));
+	}
+
 	int GetLapCount() {
 		if (nLapCountOverride > 0) return nLapCountOverride;
-		auto race = GRaceDatabase::GetRaceFromHash(GRaceDatabase::mObj, Attrib::StringHash32(sEventName.c_str()));
-		return GRaceParameters::GetNumLaps(race);
+		return GRaceParameters::GetNumLaps(GetRace());
+	}
+
+	uint32_t GetPBTime() {
+		tReplayGhost temp;
+		LoadPB(&temp, GetCarNameForGhost(sCarPreset), sEventName, GetLapCount(), 0, nullptr);
+		return temp.nFinishTime;
+	}
+
+	uint32_t GetTargetTime() {
+		tReplayGhost targetTime;
+		auto times = CollectReplayGhosts(GetCarNameForGhost(sCarPreset), sEventName, GetLapCount(), nullptr);
+		if (!times.empty()) targetTime = times[0];
+		nNumGhosts = times.size();
+		return targetTime.nFinishTime;
+	}
+
+	std::string GetTargetName() {
+		tReplayGhost targetTime;
+		auto times = CollectReplayGhosts(GetCarNameForGhost(sCarPreset), sEventName, GetLapCount(), nullptr);
+		if (!times.empty()) targetTime = times[0];
+		return targetTime.sPlayerName;
 	}
 };
 
@@ -51,27 +119,14 @@ std::vector<tChallengeSeriesEvent> aNewChallengeSeries = {
 	{"2.2.1.r", "COP_CROSS"},
 };
 
-std::string GetCarNameForGhost(const std::string& carPreset) {
-	auto carName = carPreset;
-	if (auto preset = FindFEPresetCar(bStringHashUpper(carName.c_str()))) {
-		carName = preset->CarTypeName;
-		std::transform(carName.begin(), carName.end(), carName.begin(), [](char c){ return std::tolower(c); });
-	}
-	auto ghostCar = carName;
-	if (ghostCar == "copsport") ghostCar = "copcross";
-	if (ghostCar == "pizza") ghostCar = "cs_clio_trafpizza";
-	return ghostCar;
-}
-
 int CalculateTotalTimes() {
-	uint32_t time = 0;
+	uint32_t totalTime = 0;
 	for (auto& event : aNewChallengeSeries) {
-		tReplayGhost temp;
-		LoadPB(&temp, GetCarNameForGhost(event.sCarPreset), event.sEventName, event.GetLapCount(), 0, nullptr);
-		if (!temp.nFinishTime) return 0;
-		time += temp.nFinishTime;
+		auto time = event.GetPBTime();
+		if (!time) return 0;
+		totalTime += time;
 	}
-	return time;
+	return totalTime;
 }
 
 int GetNumChallengeSeriesEvents() {
@@ -108,7 +163,6 @@ float __thiscall GetChallengeSeriesCarPerformance(GRaceParameters* pThis) {
 
 tChallengeSeriesEvent* pSelectedEvent = nullptr;
 GRaceParameters* pSelectedEventParams = nullptr;
-int nNumGhostsForEvent = 0;
 uint32_t __thiscall GetChallengeSeriesEventDescription1(GRaceParameters* pThis) {
 	pSelectedEventParams = pThis;
 	auto event = GRaceParameters::GetEventID(pThis);
@@ -125,63 +179,26 @@ uint32_t __thiscall GetChallengeSeriesEventDescription2(cFrontendDatabase* pThis
 	return a2;
 }
 
-std::string GetCarName(const std::string& carModel) {
-	auto tmp = CreateStockCarRecord(carModel.c_str());
-	std::string carName = GetLocalizedString(FECarRecord::GetNameHash(&tmp));
-	if (carName == GetLocalizedString(0x9BB9CCC3)) { // unlocalized string
-		carName = carModel;
-		std::transform(carName.begin(), carName.end(), carName.begin(), [](char c){ return std::toupper(c); });
-	}
-	else {
-		if (carModel == "bmwm3gtr") carName += " (Street)";
-	}
-
-	if (carName == "CEMTR" || carName == "GRAB" || carName == "PICKUPA" || carName == "PIZZA" || carName == "TAXI") {
-		carName = "TRAF" + carName;
-	}
-	if (carName == "CS_CLIO_TRAFPIZZA") carName = "TRAFPIZZA";
-	if (carName == "COPSPORT") carName = "COPCROSS";
-	return carName;
-}
-
-std::string GetTrackName(const std::string& eventId, uint32_t nameHash) {
-	if (eventId == "1.8.1") return "Final Pursuit";
-	if (eventId == "19.8.31") return "Burger King Challenge";
-
-	auto trackName = GetLocalizedString(nameHash);
-	if (trackName == GetLocalizedString(0x9BB9CCC3)) { // unlocalized string
-		return eventId;
-	}
-	return trackName;
-}
-
 const char* GetChallengeSeriesEventDescription3(uint32_t hash) {
 	DLLDirSetter _setdir;
 
-	auto trackName = GetTrackName(pSelectedEvent->sEventName, hash);
 	auto carName = GetCarNameForGhost(pSelectedEvent->sCarPreset);
-	auto trackId = GRaceParameters::GetEventID(pSelectedEventParams);
-	int numLaps = pSelectedEvent->GetLapCount();
 
-	tReplayGhost temp;
-	LoadPB(&temp, carName, trackId, numLaps, 0, nullptr);
-
-	tReplayGhost targetTime;
-	auto times = CollectReplayGhosts(carName, trackId, numLaps, nullptr);
-	if (!times.empty()) targetTime = times[0];
-	nNumGhostsForEvent = times.size();
+	auto pbTime = pSelectedEvent->GetPBTime();
+	auto targetTime = pSelectedEvent->GetTargetTime();
+	auto targetName = pSelectedEvent->GetTargetName();
 
 	static std::string str;
 	str = std::format("Track: {}\nCar: {}", GetTrackName(pSelectedEvent->sEventName, hash), GetCarName(carName));
-	if (targetTime.nFinishTime > 0) {
-		str += std::format("\nTarget Time: {}", GetTimeFromMilliseconds(targetTime.nFinishTime));
+	if (targetTime > 0) {
+		str += std::format("\nTarget Time: {}", GetTimeFromMilliseconds(targetTime));
 		str.pop_back();
-		if (targetTime.sPlayerName[0]) {
-			str += std::format(" ({})", targetTime.sPlayerName);
+		if (!targetName.empty()) {
+			str += std::format(" ({})", targetName);
 		}
 	}
-	if (temp.nFinishTime > 0) {
-		str += std::format("\nBest Time: {}", GetTimeFromMilliseconds(temp.nFinishTime));
+	if (pbTime > 0) {
+		str += std::format("\nBest Time: {}", GetTimeFromMilliseconds(pbTime));
 		str.pop_back();
 
 		auto total = CalculateTotalTimes();
@@ -216,7 +233,7 @@ uint32_t __thiscall GetChallengeSeriesEventIcon2(cFrontendDatabase* pThis, int a
 int __thiscall GetNumOpponentsHooked(GRaceParameters* pThis) {
 	if (bViewReplayMode) return 0;
 	if (bChallengesOneGhostOnly) return 1;
-	return nDifficulty != DIFFICULTY_EASY ? std::min(nNumGhostsForEvent, 3) : 1; // only spawn one ghost for easy difficulty
+	return nDifficulty != DIFFICULTY_EASY ? std::min(pSelectedEvent->nNumGhosts, 3) : 1; // only spawn one ghost for easy difficulty
 }
 
 bool __thiscall GetIsDDayRaceHooked(GRaceParameters* pThis) {
@@ -248,10 +265,26 @@ void __thiscall FinalPursuitEndHooked(ICEManager* pThis, const char* a1, const c
 	DoConfigSave();
 }
 
+bool __thiscall GetIsEventCompleteHooked(GRaceDatabase* pThis, uint32_t raceHash, uint32_t a3) {
+	DLLDirSetter _setdir;
+
+	auto race = GRaceDatabase::GetRaceFromHash(pThis, raceHash);
+	auto event = GRaceParameters::GetEventID(race);
+	for (auto& challenge : aNewChallengeSeries) {
+		if (event == challenge.sEventName) {
+			auto pb = challenge.GetPBTime();
+			if (pb && pb <= challenge.GetTargetTime()) return true;
+			return false;
+		}
+	}
+	return false;
+}
+
 void ApplyCustomEventsHooks() {
 	NyaHookLib::PatchRelative(NyaHookLib::JMP, 0x5FBD20, &GetIsDDayRaceHooked);
 	NyaHookLib::PatchRelative(NyaHookLib::JMP, 0x56DC00, &GetIsFinalPursuitHooked);
 	NyaHookLib::PatchRelative(NyaHookLib::JMP, 0x5FC560, &GetIsFinalPursuitHooked);
+	NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x7AEA30, &GetIsEventCompleteHooked);
 	NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x443004, &GetIsFinalPursuitForCopSpawnsHooked);
 	NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x44430A, &GetIsFinalPursuitForCopSpawnsHooked);
 	NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x71A826, &GetIsFinalPursuitForCopSpawnsHooked);
