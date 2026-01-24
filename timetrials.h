@@ -573,7 +573,7 @@ void TimeTrialLoop() {
 
 	if (!ShouldGhostRun()) return;
 
-	ICopMgr::mDisableCops = true;
+	ICopMgr::mDisableCops = !GRaceParameters::GetIsPursuitRace(GRaceStatus::fObj->mRaceParms);
 	FEDatabase->mUserProfile->TheOptionsSettings.TheGameplaySettings.JumpCam = false;
 	for (int i = 0; i < GRaceStatus::fObj->mRacerCount; i++) {
 		auto racer = &GRaceStatus::fObj->mRacerInfo[i];

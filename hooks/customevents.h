@@ -47,6 +47,7 @@ std::vector<tChallengeSeriesEvent> aNewChallengeSeries = {
 	{"1.1.1", "gti", 1},
 	{"19.8.32", "911turbo"},
 	{"1.2.1", "CS_CAR_19"},
+	//{"1.8.1", "E3_DEMO_BMW"},
 	{"2.2.1.r", "COP_CROSS"},
 };
 
@@ -144,6 +145,7 @@ std::string GetCarName(const std::string& carModel) {
 }
 
 std::string GetTrackName(const std::string& eventId, uint32_t nameHash) {
+	if (eventId == "1.8.1") return "Final Pursuit";
 	if (eventId == "19.8.31") return "Burger King Challenge";
 
 	auto trackName = GetLocalizedString(nameHash);
@@ -197,11 +199,14 @@ bool GetIsChallengeSeriesRace() {
 }
 
 uint32_t __thiscall GetChallengeSeriesEventIcon1(GRaceParameters* pThis) {
+	if (GRaceParameters::GetIsPursuitRace(pThis)) return GRaceParameters::GetChallengeType(pThis);
 	return GRaceParameters::GetRaceType(pThis);
 }
 
 uint32_t __thiscall GetChallengeSeriesEventIcon2(cFrontendDatabase* pThis, int a1, int a2) {
-	return cFrontendDatabase::GetRaceIconHash(pThis, a1);
+	auto icon = cFrontendDatabase::GetRaceIconHash(pThis, a1);
+	if (!icon) return cFrontendDatabase::GetMilestoneIconHash(pThis, a1, a2);
+	return icon;
 }
 
 int __thiscall GetNumOpponentsHooked(GRaceParameters* pThis) {
@@ -214,8 +219,13 @@ bool __thiscall GetIsDDayRaceHooked(GRaceParameters* pThis) {
 	return false;
 }
 
+bool __thiscall GetIsFinalPursuitHooked() {
+	return false;
+}
+
 void ApplyCustomEventsHooks() {
 	NyaHookLib::PatchRelative(NyaHookLib::JMP, 0x5FBD20, &GetIsDDayRaceHooked);
+	NyaHookLib::PatchRelative(NyaHookLib::JMP, 0x56DC00, &GetIsFinalPursuitHooked);
 
 	NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x6F48DB, &GetChallengeSeriesCarType);
 	//NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x6F4945, &GetChallengeSeriesCarPerformance);
@@ -233,7 +243,7 @@ void ApplyCustomEventsHooks() {
 	NyaHookLib::Patch<uint8_t>(0x7A42C2, 0xEB);
 
 	// correct event icons and event type names in the list
-	NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x7AE8C1, 0x5FAA20);
+	NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x7AE8C1, &GetChallengeSeriesEventIcon1);
 	NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x7AE8DA, &GetChallengeSeriesEventIcon2);
 	NyaHookLib::Patch<uint8_t>(0x7AE8C8, 0xEB);
 	NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x7AE8FF, 0x5FAA20);
