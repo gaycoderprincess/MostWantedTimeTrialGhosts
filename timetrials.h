@@ -437,10 +437,11 @@ void LoadPB(tReplayGhost* ghost, const std::string& car, const std::string& trac
 	}
 }
 
+uint32_t nLastFinishTime = 0;
 void OnFinishRace() {
 	auto ghost = &PlayerPBGhost;
 
-	uint32_t replayTime = (nGlobalReplayTimerNoCountdown / 120.0) * 1000;
+	uint32_t replayTime = nLastFinishTime = (nGlobalReplayTimerNoCountdown / 120.0) * 1000;
 	if (!bViewReplayMode && replayTime > 1000) {
 		if (!ghost->nFinishTime || replayTime < ghost->nFinishTime) {
 			WriteLog("Saving new lap PB of " + std::to_string(replayTime) + "ms");
