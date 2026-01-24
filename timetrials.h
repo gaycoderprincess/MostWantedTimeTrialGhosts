@@ -12,6 +12,7 @@ int nSpeedbreakerType = NITRO_ON;
 bool bTrackReversed = false; // todo
 
 bool bViewReplayMode = false;
+bool bViewReplayTargetTime = false;
 bool bOpponentsOnly = false;
 enum eGhostVisuals {
 	GHOST_HIDE,
@@ -100,6 +101,9 @@ struct tReplayTick {
 	}
 };
 
+uint32_t nGlobalReplayTimer = 0;
+uint32_t nGlobalReplayTimerNoCountdown = 0;
+
 struct tReplayGhost {
 public:
 	std::vector<tReplayTick> aTicks;
@@ -117,6 +121,10 @@ public:
 		return nFinishTime != 0 && !aTicks.empty();
 	}
 
+	uint32_t GetCurrentTick() const {
+		return bHasCountdown ? nGlobalReplayTimer : nGlobalReplayTimerNoCountdown;
+	}
+
 	void Invalidate() {
 		aTicks.clear();
 		nFinishTime = 0;
@@ -131,8 +139,6 @@ std::vector<tReplayGhost> OpponentGhosts;
 
 bool bGhostsLoaded = false;
 std::vector<tReplayTick> aRecordingTicks;
-uint32_t nGlobalReplayTimer = 0;
-uint32_t nGlobalReplayTimerNoCountdown = 0;
 
 bool ShouldGhostRun() {
 	if (!GRaceStatus::fObj) return false;
@@ -172,7 +178,7 @@ void RunGhost(IVehicle* veh, tReplayGhost* ghost) {
 		return;
 	}
 
-	auto tick = ghost->bHasCountdown ? nGlobalReplayTimer : nGlobalReplayTimerNoCountdown;
+	auto tick = ghost->GetCurrentTick();
 	if (tick >= ghost->aTicks.size()) return;
 
 	ghost->aTicks[tick].Apply(veh);
@@ -544,7 +550,7 @@ void TimeTrialLoop() {
 		if (bChallengeSeriesMode) {
 			aLeaderboardGhosts = CollectReplayGhosts(car, track, laps, upgrades, true);
 
-			if (bChallengesOneGhostOnly || nDifficulty == DIFFICULTY_EASY) {
+			if (bChallengesOneGhostOnly || bViewReplayMode || nDifficulty == DIFFICULTY_EASY) {
 				auto opponent = SelectTopGhost(car, track, laps, upgrades);
 				if (opponent.nFinishTime != 0) {
 					OpponentGhosts.push_back(opponent);
@@ -586,7 +592,7 @@ void TimeTrialLoop() {
 	}
 
 	if (bViewReplayMode) {
-		RunGhost(ply, &PlayerPBGhost);
+		RunGhost(ply, bChallengeSeriesMode && bViewReplayTargetTime && !OpponentGhosts.empty() ? &OpponentGhosts[0] : &PlayerPBGhost);
 	}
 	else {
 		auto opponents = VEHICLE_LIST::GetList(VEHICLE_AIRACERS);

@@ -91,6 +91,11 @@ void DebugMenu() {
 
 	if (TheGameFlowManager.CurrentGameFlowState == GAMEFLOW_STATE_IN_FRONTEND) {
 		QuickValueEditor("Replay Viewer", bViewReplayMode);
+		if (bViewReplayMode) {
+			if (DrawMenuOption(std::format("Replay Viewer Ghost - {}", bViewReplayTargetTime ? "Target Time" : "Personal Best"))) {
+				bViewReplayTargetTime = !bViewReplayTargetTime;
+			}
+		}
 		if (bChallengeSeriesMode) {
 			const char* difficultyNames[] = {
 				"Easy",
@@ -237,8 +242,11 @@ void RenderLoop() {
 	if (!ShouldGhostRun()) return;
 
 	if (bViewReplayMode) {
-		if (PlayerPBGhost.aTicks.size() > nGlobalReplayTimer) {
-			DisplayInputs(&PlayerPBGhost.aTicks[nGlobalReplayTimer].v1.inputs);
+		auto ghost = bChallengeSeriesMode && bViewReplayTargetTime && !OpponentGhosts.empty() ? &OpponentGhosts[0] : &PlayerPBGhost;
+
+		auto tick = ghost->GetCurrentTick();
+		if (ghost->aTicks.size() > tick) {
+			DisplayInputs(&ghost->aTicks[tick].v1.inputs);
 		}
 	}
 	else if (bShowInputsWhileDriving) {
