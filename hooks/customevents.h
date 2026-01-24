@@ -47,7 +47,7 @@ std::vector<tChallengeSeriesEvent> aNewChallengeSeries = {
 	{"1.1.1", "gti", 1},
 	{"19.8.32", "911turbo"},
 	{"1.2.1", "CS_CAR_19"},
-	//{"1.8.1", "E3_DEMO_BMW"},
+	{"1.8.1", "E3_DEMO_BMW"},
 	{"2.2.1.r", "COP_CROSS"},
 };
 
@@ -191,6 +191,10 @@ const char* GetChallengeSeriesEventDescription3(uint32_t hash) {
 			str.pop_back();
 		}
 	}
+
+	// disable SpawnCop, fixes dday issues
+	NyaHookLib::Patch<uint8_t>(0x60A67A, GRaceParameters::GetIsPursuitRace(pSelectedEventParams) ? 0x74 : 0xEB);
+
 	return str.c_str();
 }
 
@@ -219,13 +223,40 @@ bool __thiscall GetIsDDayRaceHooked(GRaceParameters* pThis) {
 	return false;
 }
 
-bool __thiscall GetIsFinalPursuitHooked() {
+bool __thiscall GetIsFinalPursuitHooked(cFrontendDatabase* pThis) {
 	return false;
+}
+
+bool __thiscall GetIsFinalPursuitForCopSpawnsHooked(cFrontendDatabase* pThis) {
+	if (!GRaceStatus::fObj) return false;
+	auto parms = GRaceStatus::fObj->mRaceParms;
+	if (!parms) return false;
+
+	if (!strcmp(GRaceParameters::GetEventID(parms), "1.8.1")) return true;
+	return false;
+}
+
+void __thiscall FinalPursuitEndHooked(ICEManager* pThis, const char* a1, const char* a2) {
+	ICEManager::SetGenericCameraToPlay(pThis, a1, a2);
+
+	if (!GRaceParameters::GetIsPursuitRace(GRaceStatus::fObj->mRaceParms)) return;
+
+	DLLDirSetter _setdir;
+	OnFinishRace();
+
+	// do a config save when finishing a race
+	DoConfigSave();
 }
 
 void ApplyCustomEventsHooks() {
 	NyaHookLib::PatchRelative(NyaHookLib::JMP, 0x5FBD20, &GetIsDDayRaceHooked);
 	NyaHookLib::PatchRelative(NyaHookLib::JMP, 0x56DC00, &GetIsFinalPursuitHooked);
+	NyaHookLib::PatchRelative(NyaHookLib::JMP, 0x5FC560, &GetIsFinalPursuitHooked);
+	NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x443004, &GetIsFinalPursuitForCopSpawnsHooked);
+	NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x44430A, &GetIsFinalPursuitForCopSpawnsHooked);
+	NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x71A826, &GetIsFinalPursuitForCopSpawnsHooked);
+	NyaHookLib::PatchRelative(NyaHookLib::JMP, 0x6F19DB, 0x6F1C1F); // disable milestone display
+	NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x6412C1, &FinalPursuitEndHooked);
 
 	NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x6F48DB, &GetChallengeSeriesCarType);
 	//NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x6F4945, &GetChallengeSeriesCarPerformance);

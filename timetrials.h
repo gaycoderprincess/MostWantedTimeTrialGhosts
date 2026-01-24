@@ -526,7 +526,7 @@ void TimeTrialLoop() {
 		return;
 	}
 
-	if (IsInLoadingScreen() || IsInNIS()) {
+	if (IsInLoadingScreen() || IsInNIS() || GetLocalPlayerInterface<IHumanAI>()->GetAiControl()) {
 		auto cars = VEHICLE_LIST::GetList(VEHICLE_AIRACERS);
 		for (int i = 0; i < cars.size(); i++) {
 			auto veh = cars[i];
