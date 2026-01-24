@@ -26,10 +26,9 @@ enum eDifficulty {
 	DIFFICULTY_EASY, // slowest ghost only for every track
 	DIFFICULTY_NORMAL, // first 3 ghosts in the folder
 	DIFFICULTY_HARD, // quickest ghost only for every track
-	DIFFICULTY_VERY_HARD, // include kuru ghosts
 	NUM_DIFFICULTY,
 };
-eDifficulty nDifficulty = DIFFICULTY_VERY_HARD;
+eDifficulty nDifficulty = DIFFICULTY_HARD;
 bool bChallengesOneGhostOnly = false;
 bool bChallengesPBGhost = false;
 
@@ -464,9 +463,9 @@ std::vector<tReplayGhost> CollectReplayGhosts(const std::string& car, const std:
 	std::vector<tReplayGhost> ghosts;
 
 	auto difficulty = nDifficulty;
-	if (forFullLeaderboard) difficulty = DIFFICULTY_VERY_HARD;
+	if (forFullLeaderboard) difficulty = DIFFICULTY_HARD;
 
-	if (difficulty >= DIFFICULTY_HARD) {
+	if (difficulty != DIFFICULTY_NORMAL) {
 		// check all subdirectories for community ghosts
 		std::vector<std::string> folders;
 		for (const auto& entry : std::filesystem::directory_iterator("CwoeeGhosts/Challenges")) {
@@ -475,8 +474,6 @@ std::vector<tReplayGhost> CollectReplayGhosts(const std::string& car, const std:
 			folders.push_back(entry.path().filename().string());
 		}
 		for (auto& folder : folders) {
-			if (difficulty < DIFFICULTY_VERY_HARD && folder == "KuruHS") continue;
-
 			tReplayGhost temp;
 			LoadPB(&temp, car, track, laps, 0, upgrades, folder.c_str());
 			if (!temp.nFinishTime) continue;
@@ -581,6 +578,12 @@ void TimeTrialLoop() {
 	if (!ShouldGhostRun()) return;
 
 	ICopMgr::mDisableCops = !GRaceParameters::GetIsPursuitRace(GRaceStatus::fObj->mRaceParms);
+	if (!ICopMgr::mDisableCops && bViewReplayMode) {
+		auto cars = GetActiveVehicles(DRIVER_COP);
+		for (auto& car : cars) {
+			car->mCOMObject->Find<ISimable>()->Kill();
+		}
+	}
 	FEDatabase->mUserProfile->TheOptionsSettings.TheGameplaySettings.JumpCam = false;
 	for (int i = 0; i < GRaceStatus::fObj->mRacerCount; i++) {
 		auto racer = &GRaceStatus::fObj->mRacerInfo[i];
