@@ -329,7 +329,7 @@ void __thiscall RaceCountdownHooked(void* pThis) {
 
 float __thiscall FinishTimeHooked(GTimer* pThis) {
 	if (bViewReplayMode) return pThis->GetTime();
-	return PlayerPBGhost.nFinishTime * 0.001;
+	return (nGlobalReplayTimerNoCountdown / 120.0);
 }
 
 BOOL WINAPI DllMain(HINSTANCE, DWORD fdwReason, LPVOID) {
