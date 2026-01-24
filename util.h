@@ -194,6 +194,20 @@ GRacerInfo* GetRacerInfoFromHandle(HSIMABLE handle) {
 	return nullptr;
 }
 
+FECustomizationRecord CreateStockCustomizations(uint32_t carModel) {
+	FECustomizationRecord record;
+	FECustomizationRecord::Default(&record);
+
+	FECarRecord tmp;
+	tmp.FEKey = carModel;
+	tmp.VehicleKey = carModel;
+	RideInfo info;
+	RideInfo::Init(&info, FECarRecord::GetType(&tmp), CarRenderUsage_Player, false, false);
+	RideInfo::SetStockParts(&info);
+	FECustomizationRecord::WriteRideIntoRecord(&record, &info);
+	return record;
+}
+
 uint32_t GetCarFEKey(uint32_t modelHash) {
 	auto collection = Attrib::FindCollection(Attrib::StringHash32("pvehicle"), modelHash);
 	if (!collection) return modelHash;

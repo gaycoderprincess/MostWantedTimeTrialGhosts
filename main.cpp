@@ -36,13 +36,19 @@ ISimable* VehicleConstructHooked(Sim::Param params) {
 
 	auto vehicle = (VehicleParams*)params.mData;
 	if (vehicle->carClass == DRIVER_HUMAN && !FindFEPresetCar(bStringHashUpper(pSelectedEvent->sCarPreset.c_str()))) {
+		static FECustomizationRecord customizations;
+		customizations = CreateStockCustomizations(Attrib::StringHash32(pSelectedEvent->sCarPreset.c_str()));
+		if (pSelectedEvent->sCarPreset == "gti") {
+			customizations.Tunings[customizations.ActiveTuning].Value[Physics::Tunings::AERODYNAMICS] = 1; // aerodynamics +5
+		}
+
 		static Physics::Info::Performance temp;
 		temp.Acceleration = 1;
 		temp.TopSpeed = 1;
 		temp.Handling = 1;
 		vehicle->matched = &temp;
 		vehicle->carType = Attrib::StringHash32(pSelectedEvent->sCarPreset.c_str());
-		vehicle->customization = nullptr;
+		vehicle->customization = &customizations;
 
 		if (pSelectedEvent->nLapCountOverride > 0) {
 			SetRaceNumLaps(pSelectedEventParams, pSelectedEvent->nLapCountOverride);
@@ -332,6 +338,14 @@ float __thiscall FinishTimeHooked(GTimer* pThis) {
 	return nLastFinishTime * 0.001;
 }
 
+float __thiscall RaceTimeHooked(GTimer* pThis) {
+	return (nGlobalReplayTimerNoCountdown / 120.0);
+}
+
+float __thiscall GetTimeLimitHooked(GRaceParameters* pThis) {
+	return 120;
+}
+
 BOOL WINAPI DllMain(HINSTANCE, DWORD fdwReason, LPVOID) {
 	switch( fdwReason ) {
 		case DLL_PROCESS_ATTACH: {
@@ -363,6 +377,10 @@ BOOL WINAPI DllMain(HINSTANCE, DWORD fdwReason, LPVOID) {
 			NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x439BBD, &TrafficDensityHooked);
 
 			NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x5A2CDC, &FinishTimeHooked);
+			NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x6F1E00, &RaceTimeHooked);
+			NyaHookLib::PatchRelative(NyaHookLib::JMP, 0x5FC260, &GetTimeLimitHooked);
+			NyaHookLib::PatchRelative(NyaHookLib::JMP, 0x5FE090, &GetTimeLimitHooked);
+			NyaHookLib::Patch<uint8_t>(0x6F1DD5, 0xEB); // disable tollbooth time limit display on hud
 
 			NyaHookLib::Patch<uint8_t>(0x47DDD6, 0xEB); // disable CameraMover::MinGapCars
 

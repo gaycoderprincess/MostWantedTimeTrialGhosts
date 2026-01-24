@@ -390,7 +390,7 @@ void LoadPB(tReplayGhost* ghost, const std::string& car, const std::string& trac
 		WriteLog("Mismatched ghost for " + fileName);
 		return;
 	}
-	if (upgrades) {
+	if (upgrades && !bChallengeSeriesMode) {
 		if (memcmp(&playerPhysics, &tmpphysics, sizeof(playerPhysics)) != 0 || memcmp(&playerTuning, &tmptuning, sizeof(playerTuning)) != 0) {
 			WriteLog("Mismatched ghost for " + fileName);
 			return;
