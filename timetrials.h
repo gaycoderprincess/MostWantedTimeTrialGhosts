@@ -29,7 +29,7 @@ enum eDifficulty {
 	DIFFICULTY_VERY_HARD, // include kuru ghosts
 	NUM_DIFFICULTY,
 };
-eDifficulty nDifficulty = DIFFICULTY_NORMAL;
+eDifficulty nDifficulty = DIFFICULTY_VERY_HARD;
 bool bChallengesOneGhostOnly = false;
 bool bChallengesPBGhost = false;
 
@@ -79,7 +79,7 @@ struct tReplayTick {
 
 			auto gear = trans->GetGear();
 			if (gear != v1.car.gear) {
-				trans->Shift(gear);
+				trans->Shift((GearID)v1.car.gear);
 			}
 
 			engine->ChargeNOS(-engine->GetNOSCapacity());
