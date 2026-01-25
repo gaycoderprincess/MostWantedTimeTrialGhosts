@@ -511,7 +511,7 @@ std::vector<tReplayGhost> CollectReplayGhosts(const std::string& car, const std:
 	auto difficulty = nDifficulty;
 	if (forFullLeaderboard) difficulty = DIFFICULTY_HARD;
 
-	if (difficulty != DIFFICULTY_NORMAL) {
+	if (difficulty != DIFFICULTY_NORMAL && std::filesystem::exists("CwoeeGhosts/Challenges")) {
 		// check all subdirectories for community ghosts
 		std::vector<std::string> folders;
 		for (const auto& entry : std::filesystem::directory_iterator("CwoeeGhosts/Challenges")) {
