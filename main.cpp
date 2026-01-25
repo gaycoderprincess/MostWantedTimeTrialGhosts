@@ -14,8 +14,10 @@ bool bChallengeSeriesMode = false;
 #include "d3dhook.h"
 #include "timetrials.h"
 #include "hooks/carrender.h"
-#include "hooks/customevents.h"
 #include "hooks/fixes.h"
+
+#ifdef TIMETRIALS_CHALLENGESERIES
+#include "hooks/customevents.h"
 
 void SetChallengeSeriesMode(bool on) {
 	bChallengeSeriesMode = on;
@@ -30,6 +32,7 @@ void SetChallengeSeriesMode(bool on) {
 		bOpponentsOnly = false;
 	}
 }
+#endif
 
 ISimable* VehicleConstructHooked(Sim::Param params) {
 	DLLDirSetter _setdir;
