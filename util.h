@@ -1,3 +1,5 @@
+typedef FECustomizationRecord GameCustomizationRecord;
+
 void WriteLog(const std::string& str) {
 	static auto file = std::ofstream("NFSMWTimeTrialGhosts_gcp.log");
 
@@ -15,6 +17,10 @@ bool IsInLoadingScreen() {
 
 bool IsInNIS() {
 	return INIS::mInstance && INIS::mInstance->IsPlaying();
+}
+
+UserProfile* GetUserProfile() {
+	return FEDatabase->mUserProfile;
 }
 
 IPlayer* GetLocalPlayer() {
@@ -229,6 +235,14 @@ FECarRecord CreateStockCarRecord(const char* carModel) {
 	car.Customization = -1;
 	car.CareerHandle = -1;
 	return car;
+}
+
+void SetRacerName(GRacerInfo* racer, const char* name) {
+	racer->mName = name;
+}
+
+const char* GetLocalPlayerName() {
+	return GetUserProfile()->m_aProfileName;
 }
 
 wchar_t gDLLDir[MAX_PATH];

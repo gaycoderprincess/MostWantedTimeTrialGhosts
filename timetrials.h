@@ -34,6 +34,34 @@ bool bChallengesPBGhost = false;
 
 bool bDebugInputsOnly = false;
 
+#ifdef TIMETRIALS_CARBON
+struct InputControls {
+	float fBanking;
+	float fSteering;
+	float fOverSteer;
+	float fClutch;
+	float fStrafeHorizontal;
+	float fGas;
+	float fBrake;
+	float fHandBrake;
+	bool fActionButton;
+	bool fNOS;
+};
+InputControls GetPlayerControls(IVehicle* veh) {
+	InputControls out;
+	auto input = veh->mCOMObject->Find<IInput>();
+	memset(&out, 0, sizeof(out));
+	out.fSteering = input->GetControlSteering();
+	out.fOverSteer = input->GetControlOverSteer();
+	out.fGas = input->GetControlGas();
+	out.fBrake = input->GetControlBrake();
+	out.fHandBrake = input->GetControlHandBrake();
+	out.fClutch = input->GetControlClutch();
+	out.fNOS = input->GetControlNOS();
+	return out;
+}
+#endif
+
 struct tReplayTick {
 	struct tTickVersion1 {
 		struct {
@@ -57,7 +85,11 @@ struct tReplayTick {
 		v1.car.tvel = *rb->GetAngularVelocity();
 		v1.car.gear = pVehicle->mCOMObject->Find<ITransmission>()->GetGear();
 		v1.car.nitro = pVehicle->mCOMObject->Find<IEngine>()->GetNOSCapacity();
+#ifdef TIMETRIALS_CARBON
+		v1.inputs = GetPlayerControls(pVehicle);
+#else
 		v1.inputs = *pVehicle->mCOMObject->Find<IInput>()->GetControls();
+#endif
 
 		v2.raceProgress = 0;
 		if (auto racer = GetRacerInfoFromHandle(pVehicle->mCOMObject->Find<ISimable>()->GetOwnerHandle())) {
@@ -85,7 +117,19 @@ struct tReplayTick {
 			engine->ChargeNOS(v1.car.nitro);
 		}
 
+#ifdef TIMETRIALS_CARBON
+		auto input = pVehicle->mCOMObject->Find<IInput>();
+		input->SetControlSteering(v1.inputs.fSteering);
+		input->SetControlOverSteer(v1.inputs.fOverSteer);
+		input->SetControlGas(v1.inputs.fGas);
+		input->SetControlBrake(v1.inputs.fBrake);
+		input->SetControlHandBrake(v1.inputs.fHandBrake);
+		input->SetControlClutch(v1.inputs.fClutch);
+		input->SetControlNOS(v1.inputs.fNOS);
+#else
 		*pVehicle->mCOMObject->Find<IInput>()->GetControls() = v1.inputs;
+#endif
+
 		if (pVehicle->GetDriverClass() == DRIVER_RACER) {
 			pVehicle->SetDriverClass(DRIVER_NONE);
 		}
@@ -163,12 +207,7 @@ void RunGhost(IVehicle* veh, tReplayGhost* ghost) {
 	ghost->pLastVehicle = veh;
 
 	if (auto racer = GetRacerInfoFromHandle(veh->mCOMObject->Find<ISimable>()->GetOwnerHandle())) {
-		if (!ghost->sPlayerName.empty()) {
-			racer->mName = ghost->sPlayerName.c_str();
-		}
-		else {
-			racer->mName = "RACER";
-		}
+		SetRacerName(racer, ghost->sPlayerName.empty() ? "RACER" : ghost->sPlayerName.c_str());
 	}
 
 	if (!ghost->IsValid()) {
@@ -203,7 +242,7 @@ void RecordGhost(IVehicle* veh) {
 
 	if (sPlayerNameOverride[0]) {
 		if (auto racer = GetRacerInfoFromHandle(GetLocalPlayerSimable()->GetOwnerHandle())) {
-			racer->mName = sPlayerNameOverride;
+			SetRacerName(racer, sPlayerNameOverride);
 		}
 	}
 
@@ -212,7 +251,7 @@ void RecordGhost(IVehicle* veh) {
 	aRecordingTicks.push_back(state);
 }
 
-std::string GetGhostFilename(const std::string& car, const std::string& track, int lapCount, int opponentId, const FECustomizationRecord* upgrades, const char* folder = nullptr) {
+std::string GetGhostFilename(const std::string& car, const std::string& track, int lapCount, int opponentId, const GameCustomizationRecord* upgrades, const char* folder = nullptr) {
 	std::string path = "CwoeeGhosts/";
 	if (bChallengeSeriesMode) {
 		path += opponentId == 0 && !folder ? "ChallengePBs/" : "Challenges/";
@@ -250,6 +289,7 @@ std::string GetGhostFilename(const std::string& car, const std::string& track, i
 	}
 
 	// read tunings
+#ifndef TIMETRIALS_CARBON
 	if (!bChallengeSeriesMode) {
 		path += "_up";
 		for (int i = 0; i < Physics::Upgrades::PUT_MAX; i++) {
@@ -268,6 +308,7 @@ std::string GetGhostFilename(const std::string& car, const std::string& track, i
 			path += std::format("{}", level);
 		}
 	}
+#endif
 
 	if (bTrackReversed) {
 		path += "_rev";
@@ -281,7 +322,7 @@ std::string GetGhostFilename(const std::string& car, const std::string& track, i
 	return path;
 }
 
-void SavePB(tReplayGhost* ghost, const std::string& car, const std::string& track, int lapCount, const FECustomizationRecord* upgrades) {
+void SavePB(tReplayGhost* ghost, const std::string& car, const std::string& track, int lapCount, const GameCustomizationRecord* upgrades) {
 	std::filesystem::create_directory("CwoeeGhosts");
 	std::filesystem::create_directory("CwoeeGhosts/ChallengePBs");
 	std::filesystem::create_directory("CwoeeGhosts/Practice");
@@ -306,17 +347,20 @@ void SavePB(tReplayGhost* ghost, const std::string& car, const std::string& trac
 	outFile.write((char*)&nNitroType, sizeof(nNitroType));
 	outFile.write((char*)&nSpeedbreakerType, sizeof(nSpeedbreakerType));
 	outFile.write((char*)&lapCount, sizeof(lapCount));
+#ifndef TIMETRIALS_CARBON
 	if (upgrades) {
 		outFile.write((char*)&upgrades->InstalledPhysics, sizeof(upgrades->InstalledPhysics));
 		outFile.write((char*)&upgrades->Tunings[upgrades->ActiveTuning], sizeof(upgrades->Tunings[upgrades->ActiveTuning]));
 	}
-	else {
+	else
+#endif
+	{
 		uint8_t tmp1[sizeof(Physics::Upgrades::Package)] = {};
 		uint8_t tmp2[sizeof(Physics::Tunings)] = {};
 		outFile.write((char*)tmp1, sizeof(tmp1));
 		outFile.write((char*)tmp2, sizeof(tmp2));
 	}
-	auto name = FEDatabase->mUserProfile->m_aProfileName;
+	auto name = GetLocalPlayerName();
 	if (sPlayerNameOverride[0]) name = sPlayerNameOverride;
 	outFile.write(name, 32);
 	int count = ghost->aTicks.size();
@@ -324,7 +368,7 @@ void SavePB(tReplayGhost* ghost, const std::string& car, const std::string& trac
 	outFile.write((char*)&ghost->aTicks[0], sizeof(ghost->aTicks[0]) * count);
 }
 
-void LoadPB(tReplayGhost* ghost, const std::string& car, const std::string& track, int lapCount, int opponentId, const FECustomizationRecord* upgrades, const char* folder = nullptr) {
+void LoadPB(tReplayGhost* ghost, const std::string& car, const std::string& track, int lapCount, int opponentId, const GameCustomizationRecord* upgrades, const char* folder = nullptr) {
 	ghost->aTicks.clear();
 	ghost->nFinishTime = 0;
 
@@ -358,10 +402,12 @@ void LoadPB(tReplayGhost* ghost, const std::string& car, const std::string& trac
 
 	Physics::Upgrades::Package playerPhysics = {};
 	Physics::Tunings playerTuning = {};
+#ifndef TIMETRIALS_CARBON
 	if (upgrades) {
 		playerPhysics = upgrades->InstalledPhysics;
 		playerTuning = upgrades->Tunings[upgrades->ActiveTuning];
 	}
+#endif
 
 	int tmptime, tmpnitro, tmpspdbrk, tmplaps;
 	Physics::Upgrades::Package tmpphysics;
@@ -459,7 +505,7 @@ void OnFinishRace() {
 	aRecordingTicks.clear();
 }
 
-std::vector<tReplayGhost> CollectReplayGhosts(const std::string& car, const std::string& track, int laps, const FECustomizationRecord* upgrades, bool forFullLeaderboard = false) {
+std::vector<tReplayGhost> CollectReplayGhosts(const std::string& car, const std::string& track, int laps, const GameCustomizationRecord* upgrades, bool forFullLeaderboard = false) {
 	std::vector<tReplayGhost> ghosts;
 
 	auto difficulty = nDifficulty;
@@ -507,7 +553,7 @@ std::vector<tReplayGhost> CollectReplayGhosts(const std::string& car, const std:
 	return ghosts;
 }
 
-tReplayGhost SelectTopGhost(const std::string& car, const std::string& track, int laps, const FECustomizationRecord* upgrades) {
+tReplayGhost SelectTopGhost(const std::string& car, const std::string& track, int laps, const GameCustomizationRecord* upgrades) {
 	auto ghosts = CollectReplayGhosts(car, track, laps, upgrades);
 	if (ghosts.empty()) return {};
 	return ghosts[0];
@@ -583,12 +629,15 @@ void TimeTrialLoop() {
 			car->mCOMObject->Find<ISimable>()->Kill();
 		}
 	}
-	FEDatabase->mUserProfile->TheOptionsSettings.TheGameplaySettings.JumpCam = false;
+
+#ifndef TIMETRIALS_CARBON
+	GetUserProfile()->TheOptionsSettings.TheGameplaySettings.JumpCam = false;
 	for (int i = 0; i < GRaceStatus::fObj->mRacerCount; i++) {
 		auto racer = &GRaceStatus::fObj->mRacerInfo[i];
 		racer->mSpeedTrapsCrossed = 0;
 		for (auto& speed : racer->mSpeedTrapSpeed) { speed = 0; }
 	}
+#endif
 
 	if (ply->IsStaging()) {
 		nGlobalReplayTimerNoCountdown = 0;
