@@ -76,6 +76,9 @@ struct tReplayTick {
 	struct tTickVersion2 {
 		float raceProgress;
 	} v2;
+	struct tTickVersion3 {
+		int driftPoints;
+	} v4;
 
 	void Collect(IVehicle* pVehicle) {
 		auto rb = pVehicle->mCOMObject->Find<IRigidBody>();
@@ -87,6 +90,11 @@ struct tReplayTick {
 		v1.car.nitro = pVehicle->mCOMObject->Find<IEngine>()->GetNOSCapacity();
 #ifdef TIMETRIALS_CARBON
 		v1.inputs = GetPlayerControls(pVehicle);
+
+		auto raceType = GRaceParameters::GetRaceType(GRaceStatus::fObj->mRaceParms);
+		if (raceType == GRace::kRaceType_DriftRace || raceType == GRace::kRaceType_CanyonDrift) {
+			v4.driftPoints = DALRacer::GetDriftScoreReport(nullptr, 0)->totalPoints;
+		}
 #else
 		v1.inputs = *pVehicle->mCOMObject->Find<IInput>()->GetControls();
 #endif
@@ -424,6 +432,9 @@ void LoadPB(tReplayGhost* ghost, const std::string& car, const std::string& trac
 	if (fileVersion >= 4) {
 		inFile.read((char*)&tmppoints, sizeof(tmppoints));
 	}
+	else {
+		tmppoints = 0;
+	}
 	inFile.read((char*)&tmpnitro, sizeof(tmpnitro));
 	inFile.read((char*)&tmpspdbrk, sizeof(tmpspdbrk));
 	inFile.read((char*)&tmplaps, sizeof(tmplaps));
@@ -486,6 +497,9 @@ void LoadPB(tReplayGhost* ghost, const std::string& car, const std::string& trac
 			// basic fallback by calculating replay progression
 			state.v2.raceProgress = (i / (double)count) * 100;
 		}
+		if (fileVersion >= 4) {
+			inFile.read((char*)&state.v4, sizeof(state.v4));
+		}
 		ghost->aTicks.push_back(state);
 	}
 }
@@ -499,7 +513,7 @@ void OnFinishRace() {
 #ifdef TIMETRIALS_CARBON
 	auto raceType = GRaceParameters::GetRaceType(GRaceStatus::fObj->mRaceParms);
 	bool isDrift = raceType == GRace::kRaceType_DriftRace || raceType == GRace::kRaceType_CanyonDrift;
-	if (raceType == GRace::kRaceType_DriftRace || raceType == GRace::kRaceType_CanyonDrift) {
+	if (isDrift) {
 		replayPoints = DALRacer::GetDriftScoreReport(nullptr, 0)->totalPoints;
 	}
 #else
