@@ -327,7 +327,11 @@ std::string GetGhostFilename(const std::string& car, const std::string& track, i
 	if (opponentId) path += "_" + std::to_string(opponentId);
 	else path += "_pb";
 
+#ifdef TIMETRIALS_CARBON
+	path += ".carbon";
+#else
 	path += ".mw";
+#endif
 	path += "rep";
 	return path;
 }
