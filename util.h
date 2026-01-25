@@ -23,6 +23,10 @@ UserProfile* GetUserProfile() {
 	return FEDatabase->mUserProfile;
 }
 
+bool GetIsGamePaused() {
+	return FEManager::mPauseRequest;
+}
+
 IPlayer* GetLocalPlayer() {
 	auto& list = PLAYER_LIST::GetList(PLAYER_LOCAL);
 	if (list.empty()) return nullptr;

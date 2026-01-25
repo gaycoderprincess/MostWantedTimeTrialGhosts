@@ -714,6 +714,111 @@ void DisplayInputs(InputControls* inputs) {
 	DrawInputRectangle((fInputBaseXPosition + 0.525) * GetAspectRatioInv(), fInputBaseYPosition + 0.05, 0.03 * GetAspectRatioInv(), 0.03, inputs->fActionButton);
 }
 
+// special cases for some player names that are above 16 chars
+std::string GetRealPlayerName(const std::string& ghostName) {
+	if (ghostName == "Chloe") return "gaycoderprincess";
+	if (ghostName == "ProfileInProces") return "ProfileInProcess";
+	return ghostName;
+}
+
+float fLeaderboardX = 0.03;
+float fLeaderboardY = 0.6;
+float fLeaderboardYSpacing = 0.03;
+float fLeaderboardSize = 0.03;
+float fLeaderboardOutlineSize = 0.02;
+void DisplayLeaderboard() {
+	if (bChallengeSeriesMode && (GetLocalPlayerVehicle()->IsStaging()) || GetIsGamePaused()) {
+		std::vector<std::string> uniquePlayers;
+
+		int numOnLeaderboard = 0;
+		for (auto& ghost : aLeaderboardGhosts) {
+			auto name = ghost.bIsPersonalBest ? ghost.sPlayerName : GetRealPlayerName(ghost.sPlayerName);
+			if (std::find(uniquePlayers.begin(), uniquePlayers.end(), name) != uniquePlayers.end()) continue;
+			uniquePlayers.push_back(name);
+			numOnLeaderboard++;
+		}
+		uniquePlayers.clear();
+
+		int ranking = 1;
+
+		tNyaStringData data;
+		data.x = fLeaderboardX * GetAspectRatioInv();
+		data.y = fLeaderboardY - (numOnLeaderboard * fLeaderboardYSpacing);
+		data.size = fLeaderboardSize;
+		data.outlinea = 255;
+		data.outlinedist = fLeaderboardOutlineSize;
+		for (auto& ghost : aLeaderboardGhosts) {
+			auto name = ghost.bIsPersonalBest ? ghost.sPlayerName : GetRealPlayerName(ghost.sPlayerName);
+			if (std::find(uniquePlayers.begin(), uniquePlayers.end(), name) != uniquePlayers.end()) continue;
+			uniquePlayers.push_back(name);
+
+			if (ghost.bIsPersonalBest) {
+				data.SetColor(245, 185, 110, 255);
+			}
+			else {
+				data.SetColor(255, 255, 255, 255);
+			}
+
+			auto time = GetTimeFromMilliseconds(ghost.nFinishTime);
+			time.pop_back();
+			DrawString(data, std::format("{}. {} - {}", ranking++, name, time));
+			data.y += fLeaderboardYSpacing;
+		}
+	}
+}
+
+void DisplayPlayerNames() {
+	if (bChallengeSeriesMode && nGhostVisuals != GHOST_HIDE && !GetIsGamePaused()) {
+		const float fPlayerNameOffset = 0.031;
+		const float fPlayerNameSize = 0.022;
+		const float fPlayerNameFadeStart = 50.0;
+		const float fPlayerNameFadeEnd = 150.0;
+		const float fPlayerNameAlpha = 200.0;
+
+		for (auto& ghost : OpponentGhosts) {
+			auto car = ghost.pLastVehicle;
+			if (!IsVehicleValidAndActive(car)) continue;
+
+			auto name = ghost.bIsPersonalBest ? ghost.sPlayerName : GetRealPlayerName(ghost.sPlayerName);
+
+			UMath::Vector3 dim;
+			car->mCOMObject->Find<IRigidBody>()->GetDimension(&dim);
+			auto pos = *car->GetPosition();
+			pos.y += dim.y;
+
+			auto cam = PrepareCameraMatrix(GetLocalPlayerCamera());
+			auto camFwd = RenderToWorldCoords(cam.z);
+			auto camPos = RenderToWorldCoords(cam.p);
+			auto playerDir = camPos - pos;
+			auto cameraDist = playerDir.length();
+			playerDir.Normalize();
+			if (playerDir.Dot(camFwd) > 0) continue;
+			if (cameraDist > fPlayerNameFadeEnd) continue;
+
+			bVector3 screenPos;
+			auto worldPos = WorldToRenderCoords(pos);
+			eViewPlatInterface::GetScreenPosition(&eViews[EVIEW_PLAYER1], &screenPos, (bVector3*)&worldPos);
+
+			screenPos.x /= (double)nResX;
+			screenPos.y /= (double)nResY;
+			//if (screenPos.z <= 0) continue;
+
+			tNyaStringData data;
+			data.x = screenPos.x;
+			data.y = screenPos.y - fPlayerNameOffset;
+			data.size = fPlayerNameSize;
+			data.XCenterAlign = true;
+			if (cameraDist > fPlayerNameFadeStart) {
+				data.a = std::lerp(fPlayerNameAlpha, 0, (cameraDist - fPlayerNameFadeStart) / (fPlayerNameFadeEnd - fPlayerNameFadeStart));
+			}
+			else {
+				data.a = fPlayerNameAlpha;
+			}
+			DrawString(data, name);
+		}
+	}
+}
+
 void DoConfigSave() {
 	std::ofstream file("CwoeeGhosts/config.sav", std::iostream::out | std::iostream::binary);
 	if (!file.is_open()) return;

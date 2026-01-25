@@ -78,22 +78,11 @@ ISimable* VehicleConstructHooked(Sim::Param params) {
 	return PVehicle::Construct(params);
 }
 
-float fLeaderboardX = 0.03;
-float fLeaderboardY = 0.6;
-float fLeaderboardYSpacing = 0.03;
-float fLeaderboardSize = 0.03;
-float fLeaderboardOutlineSize = 0.02;
 void DebugMenu() {
 	ChloeMenuLib::BeginMenu();
 
 	QuickValueEditor("Show Inputs While Driving", bShowInputsWhileDriving);
 	QuickValueEditor("Player Name Override", sPlayerNameOverride, sizeof(sPlayerNameOverride));
-
-	//QuickValueEditor("fLeaderboardX", fLeaderboardX);
-	//QuickValueEditor("fLeaderboardY", fLeaderboardY);
-	//QuickValueEditor("fLeaderboardYSpacing", fLeaderboardYSpacing);
-	//QuickValueEditor("fLeaderboardSize", fLeaderboardSize);
-	//QuickValueEditor("fLeaderboardOutlineSize", fLeaderboardOutlineSize);
 
 	if (TheGameFlowManager.CurrentGameFlowState == GAMEFLOW_STATE_IN_FRONTEND) {
 		QuickValueEditor("Replay Viewer", bViewReplayMode);
@@ -195,57 +184,13 @@ void MainLoop() {
 	TimeTrialLoop();
 }
 
-// special cases for some player names that are above 16 chars
-std::string GetRealPlayerName(const std::string& ghostName) {
-	if (ghostName == "Chloe") return "gaycoderprincess";
-	if (ghostName == "ProfileInProces") return "ProfileInProcess";
-	return ghostName;
-}
-
 void RenderLoop() {
 	g_WorldLodLevel = std::min(g_WorldLodLevel, 2); // force world detail to one lower than max for props
 
 	if (TheGameFlowManager.CurrentGameFlowState != GAMEFLOW_STATE_RACING) return;
 	if (IsInLoadingScreen() || IsInNIS()) return;
 
-	if (bChallengeSeriesMode && (GetLocalPlayerVehicle()->IsStaging()) || FEManager::mPauseRequest) {
-		std::vector<std::string> uniquePlayers;
-
-		int numOnLeaderboard = 0;
-		for (auto& ghost : aLeaderboardGhosts) {
-			auto name = ghost.bIsPersonalBest ? ghost.sPlayerName : GetRealPlayerName(ghost.sPlayerName);
-			if (std::find(uniquePlayers.begin(), uniquePlayers.end(), name) != uniquePlayers.end()) continue;
-			uniquePlayers.push_back(name);
-			numOnLeaderboard++;
-		}
-		uniquePlayers.clear();
-
-		int ranking = 1;
-
-		tNyaStringData data;
-		data.x = fLeaderboardX * GetAspectRatioInv();
-		data.y = fLeaderboardY - (numOnLeaderboard * fLeaderboardYSpacing);
-		data.size = fLeaderboardSize;
-		data.outlinea = 255;
-		data.outlinedist = fLeaderboardOutlineSize;
-		for (auto& ghost : aLeaderboardGhosts) {
-			auto name = ghost.bIsPersonalBest ? ghost.sPlayerName : GetRealPlayerName(ghost.sPlayerName);
-			if (std::find(uniquePlayers.begin(), uniquePlayers.end(), name) != uniquePlayers.end()) continue;
-			uniquePlayers.push_back(name);
-
-			if (ghost.bIsPersonalBest) {
-				data.SetColor(245, 185, 110, 255);
-			}
-			else {
-				data.SetColor(255, 255, 255, 255);
-			}
-
-			auto time = GetTimeFromMilliseconds(ghost.nFinishTime);
-			time.pop_back();
-			DrawString(data, std::format("{}. {} - {}", ranking++, name, time));
-			data.y += fLeaderboardYSpacing;
-		}
-	}
+	DisplayLeaderboard();
 
 	if (!ShouldGhostRun()) return;
 
@@ -261,55 +206,7 @@ void RenderLoop() {
 		DisplayInputs(GetLocalPlayerInterface<IInput>()->GetControls());
 	}
 
-	if (bChallengeSeriesMode && nGhostVisuals != GHOST_HIDE && !FEManager::mPauseRequest) {
-		const float fPlayerNameOffset = 0.031;
-		const float fPlayerNameSize = 0.022;
-		const float fPlayerNameFadeStart = 50.0;
-		const float fPlayerNameFadeEnd = 150.0;
-		const float fPlayerNameAlpha = 200.0;
-
-		for (auto& ghost : OpponentGhosts) {
-			auto car = ghost.pLastVehicle;
-			if (!IsVehicleValidAndActive(car)) continue;
-
-			auto name = ghost.bIsPersonalBest ? ghost.sPlayerName : GetRealPlayerName(ghost.sPlayerName);
-
-			UMath::Vector3 dim;
-			car->mCOMObject->Find<IRigidBody>()->GetDimension(&dim);
-			auto pos = *car->GetPosition();
-			pos.y += dim.y;
-
-			auto cam = PrepareCameraMatrix(GetLocalPlayerCamera());
-			auto camFwd = RenderToWorldCoords(cam.z);
-			auto camPos = RenderToWorldCoords(cam.p);
-			auto playerDir = camPos - pos;
-			auto cameraDist = playerDir.length();
-			playerDir.Normalize();
-			if (playerDir.Dot(camFwd) > 0) continue;
-			if (cameraDist > fPlayerNameFadeEnd) continue;
-
-			bVector3 screenPos;
-			auto worldPos = WorldToRenderCoords(pos);
-			eViewPlatInterface::GetScreenPosition(&eViews[EVIEW_PLAYER1], &screenPos, (bVector3*)&worldPos);
-
-			screenPos.x /= (double)nResX;
-			screenPos.y /= (double)nResY;
-			//if (screenPos.z <= 0) continue;
-
-			tNyaStringData data;
-			data.x = screenPos.x;
-			data.y = screenPos.y - fPlayerNameOffset;
-			data.size = fPlayerNameSize;
-			data.XCenterAlign = true;
-			if (cameraDist > fPlayerNameFadeStart) {
-				data.a = std::lerp(fPlayerNameAlpha, 0, (cameraDist - fPlayerNameFadeStart) / (fPlayerNameFadeEnd - fPlayerNameFadeStart));
-			}
-			else {
-				data.a = fPlayerNameAlpha;
-			}
-			DrawString(data, name);
-		}
-	}
+	DisplayPlayerNames();
 }
 
 auto Game_NotifyRaceFinished = (void(*)(ISimable*))0x6119F0;
