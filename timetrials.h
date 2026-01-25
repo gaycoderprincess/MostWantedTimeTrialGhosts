@@ -1,4 +1,4 @@
-const int nLocalReplayVersion = 3;
+const int nLocalReplayVersion = 4;
 const int nMaxNumGhostsToCheck = 8;
 
 enum eNitroType {
@@ -151,6 +151,7 @@ struct tReplayGhost {
 public:
 	std::vector<tReplayTick> aTicks;
 	uint32_t nFinishTime;
+	uint32_t nFinishPoints;
 	std::string sPlayerName;
 	IVehicle* pLastVehicle;
 	bool bHasCountdown;
@@ -171,6 +172,7 @@ public:
 	void Invalidate() {
 		aTicks.clear();
 		nFinishTime = 0;
+		nFinishPoints = 0;
 		sPlayerName = "";
 		pLastVehicle = nullptr;
 		bHasCountdown = true;
@@ -344,6 +346,7 @@ void SavePB(tReplayGhost* ghost, const std::string& car, const std::string& trac
 	WriteStringToFile(outFile, car.c_str());
 	WriteStringToFile(outFile, track.c_str());
 	outFile.write((char*)&ghost->nFinishTime, sizeof(ghost->nFinishTime));
+	outFile.write((char*)&ghost->nFinishPoints, sizeof(ghost->nFinishPoints));
 	outFile.write((char*)&nNitroType, sizeof(nNitroType));
 	outFile.write((char*)&nSpeedbreakerType, sizeof(nSpeedbreakerType));
 	outFile.write((char*)&lapCount, sizeof(lapCount));
@@ -371,6 +374,7 @@ void SavePB(tReplayGhost* ghost, const std::string& car, const std::string& trac
 void LoadPB(tReplayGhost* ghost, const std::string& car, const std::string& track, int lapCount, int opponentId, const GameCustomizationRecord* upgrades, const char* folder = nullptr) {
 	ghost->aTicks.clear();
 	ghost->nFinishTime = 0;
+	ghost->nFinishPoints = 0;
 
 	auto fileName = GetGhostFilename(car, track, lapCount, opponentId, upgrades, folder);
 	auto inFile = std::ifstream(fileName, std::ios::in | std::ios::binary);
@@ -409,7 +413,7 @@ void LoadPB(tReplayGhost* ghost, const std::string& car, const std::string& trac
 	}
 #endif
 
-	int tmptime, tmpnitro, tmpspdbrk, tmplaps;
+	int tmptime, tmppoints, tmpnitro, tmpspdbrk, tmplaps;
 	Physics::Upgrades::Package tmpphysics;
 	Physics::Tunings tmptuning;
 	char tmpplayername[32];
@@ -417,6 +421,9 @@ void LoadPB(tReplayGhost* ghost, const std::string& car, const std::string& trac
 	auto tmpcar = ReadStringFromFile(inFile);
 	auto tmptrack = ReadStringFromFile(inFile);
 	inFile.read((char*)&tmptime, sizeof(tmptime));
+	if (fileVersion >= 4) {
+		inFile.read((char*)&tmppoints, sizeof(tmppoints));
+	}
 	inFile.read((char*)&tmpnitro, sizeof(tmpnitro));
 	inFile.read((char*)&tmpspdbrk, sizeof(tmpspdbrk));
 	inFile.read((char*)&tmplaps, sizeof(tmplaps));
@@ -462,6 +469,7 @@ void LoadPB(tReplayGhost* ghost, const std::string& car, const std::string& trac
 	}
 	ghost->sPlayerName = tmpplayername;
 	ghost->nFinishTime = tmptime;
+	ghost->nFinishPoints = tmppoints;
 	ghost->bHasCountdown = fileVersion >= 3;
 
 	// don't needlessly load the full ghost data when previewing times in the menu
@@ -487,11 +495,26 @@ void OnFinishRace() {
 	auto ghost = &PlayerPBGhost;
 
 	uint32_t replayTime = nLastFinishTime = (nGlobalReplayTimerNoCountdown / 120.0) * 1000;
+	uint32_t replayPoints = 0;
+#ifdef TIMETRIALS_CARBON
+	auto raceType = GRaceParameters::GetRaceType(GRaceStatus::fObj->mRaceParms);
+	bool isDrift = raceType == GRace::kRaceType_DriftRace || raceType == GRace::kRaceType_CanyonDrift;
+	if (raceType == GRace::kRaceType_DriftRace || raceType == GRace::kRaceType_CanyonDrift) {
+		replayPoints = DALRacer::GetDriftScoreReport(nullptr, 0)->totalPoints;
+	}
+#else
+	bool isDrift = false;
+#endif
 	if (!bViewReplayMode && replayTime > 1000) {
-		if (!ghost->nFinishTime || replayTime < ghost->nFinishTime) {
-			WriteLog("Saving new lap PB of " + std::to_string(replayTime) + "ms");
+		bool isBetter = !ghost->nFinishTime || replayTime < ghost->nFinishTime;
+		if (isDrift) {
+			isBetter = !ghost->nFinishTime || replayPoints > ghost->nFinishPoints;
+		}
+		if (isBetter) {
+			WriteLog(std::format("Saving new lap PB of {}ms {}pts", replayTime, replayPoints));
 			ghost->aTicks = aRecordingTicks;
 			ghost->nFinishTime = replayTime;
+			ghost->nFinishPoints = replayPoints;
 			ghost->bHasCountdown = true;
 
 			auto car = GetLocalPlayerVehicle();
@@ -544,10 +567,10 @@ std::vector<tReplayGhost> CollectReplayGhosts(const std::string& car, const std:
 	}
 
 	if (difficulty == DIFFICULTY_EASY) {
-		std::sort(ghosts.begin(), ghosts.end(), [](const tReplayGhost& a, const tReplayGhost& b) { return a.nFinishTime > b.nFinishTime; });
+		std::sort(ghosts.begin(), ghosts.end(), [](const tReplayGhost& a, const tReplayGhost& b) { if (a.nFinishPoints && b.nFinishPoints) { return a.nFinishPoints < b.nFinishPoints; } return a.nFinishTime > b.nFinishTime; });
 	}
 	else {
-		std::sort(ghosts.begin(), ghosts.end(), [](const tReplayGhost& a, const tReplayGhost& b) { return a.nFinishTime < b.nFinishTime; });
+		std::sort(ghosts.begin(), ghosts.end(), [](const tReplayGhost& a, const tReplayGhost& b) { if (a.nFinishPoints && b.nFinishPoints) { return a.nFinishPoints > b.nFinishPoints; } return a.nFinishTime < b.nFinishTime; });
 	}
 
 	return ghosts;
@@ -759,9 +782,20 @@ void DisplayLeaderboard() {
 				data.SetColor(255, 255, 255, 255);
 			}
 
-			auto time = GetTimeFromMilliseconds(ghost.nFinishTime);
-			time.pop_back();
-			DrawString(data, std::format("{}. {} - {}", ranking++, name, time));
+#ifdef TIMETRIALS_CARBON
+			auto raceType = GRaceParameters::GetRaceType(GRaceStatus::fObj->mRaceParms);
+			bool isDrift = raceType == GRace::kRaceType_DriftRace || raceType == GRace::kRaceType_CanyonDrift;
+#else
+			bool isDrift = false;
+#endif
+			if (isDrift) {
+				DrawString(data, std::format("{}. {} - {}", ranking++, name, ghost.nFinishPoints));
+			}
+			else {
+				auto time = GetTimeFromMilliseconds(ghost.nFinishTime);
+				time.pop_back();
+				DrawString(data, std::format("{}. {} - {}", ranking++, name, time));
+			}
 			data.y += fLeaderboardYSpacing;
 		}
 	}
