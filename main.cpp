@@ -208,14 +208,14 @@ void RenderLoop() {
 	g_WorldLodLevel = std::min(g_WorldLodLevel, 2); // force world detail to one lower than max for props
 
 	if (TheGameFlowManager.CurrentGameFlowState != GAMEFLOW_STATE_RACING) return;
-	if (IsInLoadingScreen() || IsInNIS()) return;
+	if (IsInLoadingScreen()) return;
 
 	DisplayLeaderboard();
 
 	if (!ShouldGhostRun()) return;
 
 	if (bViewReplayMode) {
-		auto ghost = bChallengeSeriesMode && bViewReplayTargetTime && !OpponentGhosts.empty() ? &OpponentGhosts[0] : &PlayerPBGhost;
+		auto ghost = GetViewReplayGhost();
 
 		auto tick = ghost->GetCurrentTick();
 		if (ghost->aTicks.size() > tick) {
@@ -284,8 +284,8 @@ BOOL WINAPI DllMain(HINSTANCE, DWORD fdwReason, LPVOID) {
 			NyaHooks::LateInitHook::aFunctions.push_back([]() {
 				Scheduler::fgScheduler->fTimeStep = 1.0 / 120.0; // set sim framerate
 				*(void**)0x92C534 = (void*)&VehicleConstructHooked;
-				if (GetModuleHandleA("NFSMWLimitAdjuster.asi")) {
-					MessageBoxA(nullptr, "Incompatible mod detected! Please remove NFSMWLimitAdjuster.asi from your game before using this mod.", "nya?!~", MB_ICONERROR);
+				if (GetModuleHandleA("NFSMWLimitAdjuster.asi") || std::filesystem::exists("NFSMWLimitAdjuster.ini")) {
+					MessageBoxA(nullptr, "Incompatible mod detected! Please remove NFSMWLimitAdjuster from your game before using this mod.", "nya?!~", MB_ICONERROR);
 					exit(0);
 				}
 			});

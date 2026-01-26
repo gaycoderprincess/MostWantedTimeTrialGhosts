@@ -164,6 +164,8 @@ float __thiscall GetChallengeSeriesCarPerformance(GRaceParameters* pThis) {
 tChallengeSeriesEvent* pSelectedEvent = nullptr;
 GRaceParameters* pSelectedEventParams = nullptr;
 uint32_t __thiscall GetChallengeSeriesEventDescription1(GRaceParameters* pThis) {
+	SkipMovies = true;
+
 	pSelectedEventParams = pThis;
 	auto event = GRaceParameters::GetEventID(pThis);
 	for (auto& challenge : aNewChallengeSeries) {

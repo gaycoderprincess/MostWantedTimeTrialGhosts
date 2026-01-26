@@ -186,7 +186,16 @@ public:
 	}
 
 	uint32_t GetCurrentTick() const {
-		return bHasCountdown ? nGlobalReplayTimer : nGlobalReplayTimerNoCountdown;
+		if (!bHasCountdown) return nGlobalReplayTimerNoCountdown;
+
+		// take countdown time and use globaltimernocountdown to accomodate for it
+		// the countdown seems to be inconsistent otherwise
+		auto finishTick = (nFinishTime * 120) / 1000;
+		auto totalTicks = aTicks.size();
+		if (GetLocalPlayerVehicle()->IsStaging()) {
+			return nGlobalReplayTimer;
+		}
+		return nGlobalReplayTimerNoCountdown + (totalTicks - finishTick);
 	}
 
 	void Invalidate() {
@@ -206,6 +215,7 @@ bool bGhostsLoaded = false;
 std::vector<tReplayTick> aRecordingTicks;
 
 bool ShouldGhostRun() {
+	if (IsInNIS()) return false;
 	if (!GRaceStatus::fObj) return false;
 	if (!GRaceStatus::fObj->mRaceParms) return false;
 
@@ -618,13 +628,18 @@ void OnRaceRestart() {
 	InvalidateGhost();
 }
 
+tReplayGhost* GetViewReplayGhost() {
+	if (bChallengeSeriesMode && bViewReplayTargetTime && !OpponentGhosts.empty()) return &OpponentGhosts[0];
+	return &PlayerPBGhost;
+}
+
 void TimeTrialLoop() {
 	if (TheGameFlowManager.CurrentGameFlowState != GAMEFLOW_STATE_RACING) {
 		InvalidateGhost();
 		return;
 	}
 
-	if (IsInLoadingScreen() || IsInNIS() || GetLocalPlayerInterface<IHumanAI>()->GetAiControl()) {
+	if (IsInLoadingScreen() || GetLocalPlayerInterface<IHumanAI>()->GetAiControl()) {
 		auto cars = VEHICLE_LIST::GetList(VEHICLE_AIRACERS);
 		for (int i = 0; i < cars.size(); i++) {
 			auto veh = cars[i];
@@ -699,7 +714,7 @@ void TimeTrialLoop() {
 	}
 
 	if (bViewReplayMode) {
-		RunGhost(ply, bChallengeSeriesMode && bViewReplayTargetTime && !OpponentGhosts.empty() ? &OpponentGhosts[0] : &PlayerPBGhost);
+		RunGhost(ply, GetViewReplayGhost());
 	}
 	else {
 		// set fixed start points, super ultra hack
