@@ -150,6 +150,16 @@ struct tReplayTick {
 			}
 		}
 	}
+
+	void ApplyPhysics(IVehicle* pVehicle) {
+		if (bDebugInputsOnly && pVehicle->GetDriverClass() == DRIVER_HUMAN) return;
+
+		auto rb = pVehicle->mCOMObject->Find<IRigidBody>();
+		rb->SetOrientation(&v1.car.mat);
+		rb->SetPosition((UMath::Vector3*)&v1.car.mat.p);
+		rb->SetLinearVelocity(&v1.car.vel);
+		rb->SetAngularVelocity(&v1.car.tvel);
+	}
 };
 
 uint32_t nGlobalReplayTimer = 0;
@@ -688,6 +698,13 @@ void TimeTrialLoop() {
 		RunGhost(ply, bChallengeSeriesMode && bViewReplayTargetTime && !OpponentGhosts.empty() ? &OpponentGhosts[0] : &PlayerPBGhost);
 	}
 	else {
+		// set fixed start points, super ultra hack
+#ifdef TIMETRIALS_CARBON
+		if (GetLocalPlayerVehicle()->IsStaging() && !OpponentGhosts.empty() && OpponentGhosts[0].IsValid()) {
+			OpponentGhosts[0].aTicks[0].ApplyPhysics(GetLocalPlayerVehicle());
+		}
+#endif
+
 		auto opponents = VEHICLE_LIST::GetList(VEHICLE_AIRACERS);
 		if (bOpponentsOnly) {
 			for (int i = 0; i < opponents.size() && i < OpponentGhosts.size(); i++) {
