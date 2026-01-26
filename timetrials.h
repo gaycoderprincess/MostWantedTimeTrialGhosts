@@ -732,7 +732,7 @@ void TimeTrialLoop() {
 
 auto gInputRGBBackground = NyaDrawing::CNyaRGBA32(215,215,215,255);
 auto gInputRGBHighlight = NyaDrawing::CNyaRGBA32(0,255,0,255);
-float fInputBaseXPosition = 0.2;
+float fInputBaseXPosition = 0.45;
 float fInputBaseYPosition = 0.85;
 
 void DrawInputTriangle(float posX, float posY, float sizeX, float sizeY, float inputValue, bool invertValue) {
