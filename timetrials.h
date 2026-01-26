@@ -144,7 +144,11 @@ struct tReplayTick {
 		}
 #endif
 
-		if (pVehicle->GetDriverClass() != DRIVER_HUMAN) {
+		if (pVehicle->GetDriverClass() == DRIVER_HUMAN) {
+			auto player = GetLocalPlayer();
+			if (player->InGameBreaker() != v1.inputs.fActionButton) player->ToggleGameBreaker();
+		}
+		else {
 			pVehicle->mCOMObject->Find<IRBVehicle>()->EnableObjectCollisions(false);
 
 			if (auto racer = GetRacerInfoFromHandle(pVehicle->mCOMObject->Find<ISimable>()->GetOwnerHandle())) {
