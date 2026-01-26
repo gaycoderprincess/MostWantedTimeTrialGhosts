@@ -138,9 +138,11 @@ struct tReplayTick {
 		*pVehicle->mCOMObject->Find<IInput>()->GetControls() = v1.inputs;
 #endif
 
+#ifndef TIMETRIALS_CARBON
 		if (pVehicle->GetDriverClass() == DRIVER_RACER) {
 			pVehicle->SetDriverClass(DRIVER_NONE);
 		}
+#endif
 
 		if (pVehicle->GetDriverClass() != DRIVER_HUMAN) {
 			pVehicle->mCOMObject->Find<IRBVehicle>()->EnableObjectCollisions(false);
@@ -231,7 +233,9 @@ void RunGhost(IVehicle* veh, tReplayGhost* ghost) {
 	}
 
 	if (!ghost->IsValid()) {
+#ifndef TIMETRIALS_CARBON
 		if (veh->GetDriverClass() == DRIVER_RACER) veh->SetDriverClass(DRIVER_NONE);
+#endif
 		veh->mCOMObject->Find<IRBVehicle>()->EnableObjectCollisions(false);
 		return;
 	}
@@ -811,7 +815,11 @@ void DisplayLeaderboard() {
 			uniquePlayers.push_back(name);
 
 			if (ghost.bIsPersonalBest) {
+#ifdef TIMETRIALS_CARBON
+				data.SetColor(126, 246, 240, 255);
+#else
 				data.SetColor(245, 185, 110, 255);
+#endif
 			}
 			else {
 				data.SetColor(255, 255, 255, 255);
