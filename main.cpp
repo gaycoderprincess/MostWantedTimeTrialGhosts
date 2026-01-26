@@ -187,7 +187,24 @@ void MainLoop() {
 	TimeTrialLoop();
 }
 
+template<uintptr_t addr>
+void ImportIntegrityCheck() {
+	static auto tmp1 = *(uint32_t*)addr;
+	static auto tmp2 = **(uint32_t**)addr;
+	if (tmp1 != *(uint32_t*)addr || tmp2 != **(uint32_t**)addr) {
+		exit(0);
+	}
+}
+
 void RenderLoop() {
+	bInitTicker(60000.0);
+	ImportIntegrityCheck<0x7C3F58 + 2>(); // QueryPerformanceCounter
+	ImportIntegrityCheck<0x89017C>(); // QueryPerformanceCounter
+	ImportIntegrityCheck<0x7C3F58 + 2>(); // QueryPerformanceFrequency
+	ImportIntegrityCheck<0x890180>(); // QueryPerformanceFrequency
+	ImportIntegrityCheck<0x8352B3 + 2>(); // GetTickCount
+	ImportIntegrityCheck<0x8900A4>(); // GetTickCount
+
 	g_WorldLodLevel = std::min(g_WorldLodLevel, 2); // force world detail to one lower than max for props
 
 	if (TheGameFlowManager.CurrentGameFlowState != GAMEFLOW_STATE_RACING) return;
@@ -308,6 +325,12 @@ BOOL WINAPI DllMain(HINSTANCE, DWORD fdwReason, LPVOID) {
 
 			NyaHookLib::Patch<uint8_t>(0x60A67A, 0xEB); // disable SpawnCop, fixes dday issues
 			NyaHookLib::Patch<uint8_t>(0x611440, 0xC3); // disable KnockoutRacer
+
+			// undo exopts gamespeed
+			static float f = 1.0;
+			NyaHookLib::Patch(0x6F4D1A, &f);
+			NyaHookLib::Patch(0x6F4D2B, &f);
+			NyaHookLib::Patch(0x78AA77, &f);
 
 			ApplyCarRenderHooks();
 			ApplyGameFixes();
