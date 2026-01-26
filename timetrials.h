@@ -637,6 +637,8 @@ tReplayGhost* GetViewReplayGhost() {
 	return &PlayerPBGhost;
 }
 
+void CollectPlayerPos();
+
 void TimeTrialLoop() {
 	if (TheGameFlowManager.CurrentGameFlowState != GAMEFLOW_STATE_RACING) {
 		InvalidateGhost();
@@ -724,6 +726,7 @@ void TimeTrialLoop() {
 		// set fixed start points, super ultra hack
 #ifdef TIMETRIALS_CARBON
 		if (GetLocalPlayerVehicle()->IsStaging() && !OpponentGhosts.empty() && OpponentGhosts[0].IsValid()) {
+			CollectPlayerPos();
 			OpponentGhosts[0].aTicks[0].ApplyPhysics(GetLocalPlayerVehicle());
 		}
 #endif

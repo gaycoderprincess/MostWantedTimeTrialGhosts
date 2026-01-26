@@ -13,6 +13,7 @@ bool bChallengeSeriesMode = false;
 #include "util.h"
 #include "d3dhook.h"
 #include "timetrials.h"
+#include "verification.h"
 #include "hooks/carrender.h"
 #include "hooks/fixes.h"
 
@@ -187,23 +188,8 @@ void MainLoop() {
 	TimeTrialLoop();
 }
 
-template<uintptr_t addr>
-void ImportIntegrityCheck() {
-	static auto tmp1 = *(uint32_t*)addr;
-	static auto tmp2 = **(uint32_t**)addr;
-	if (tmp1 != *(uint32_t*)addr || tmp2 != **(uint32_t**)addr) {
-		exit(0);
-	}
-}
-
 void RenderLoop() {
-	bInitTicker(60000.0);
-	ImportIntegrityCheck<0x7C3F58 + 2>(); // QueryPerformanceCounter
-	ImportIntegrityCheck<0x89017C>(); // QueryPerformanceCounter
-	ImportIntegrityCheck<0x7C3F58 + 2>(); // QueryPerformanceFrequency
-	ImportIntegrityCheck<0x890180>(); // QueryPerformanceFrequency
-	ImportIntegrityCheck<0x8352B3 + 2>(); // GetTickCount
-	ImportIntegrityCheck<0x8900A4>(); // GetTickCount
+	VerifyTimers();
 
 	g_WorldLodLevel = std::min(g_WorldLodLevel, 2); // force world detail to one lower than max for props
 
@@ -275,13 +261,16 @@ BOOL WINAPI DllMain(HINSTANCE, DWORD fdwReason, LPVOID) {
 
 			GetCurrentDirectoryW(MAX_PATH, gDLLDir);
 
-			NyaHooks::PlaceD3DHooks();
-			NyaHooks::D3DEndSceneHook::aFunctions.push_back(D3DHookMain);
-			NyaHooks::D3DResetHook::aFunctions.push_back(OnD3DReset);
 			NyaHooks::SimServiceHook::Init();
 			NyaHooks::SimServiceHook::aFunctions.push_back(MainLoop);
 			NyaHooks::LateInitHook::Init();
 			NyaHooks::LateInitHook::aFunctions.push_back([]() {
+				NyaHooks::PlaceD3DHooks();
+				NyaHooks::D3DEndSceneHook::aPreFunctions.push_back(CollectPlayerPos);
+				NyaHooks::D3DEndSceneHook::aFunctions.push_back(D3DHookMain);
+				NyaHooks::D3DEndSceneHook::aFunctions.push_back(CheckPlayerPos);
+				NyaHooks::D3DResetHook::aFunctions.push_back(OnD3DReset);
+
 				Scheduler::fgScheduler->fTimeStep = 1.0 / 120.0; // set sim framerate
 				*(void**)0x92C534 = (void*)&VehicleConstructHooked;
 				if (GetModuleHandleA("NFSMWLimitAdjuster.asi") || std::filesystem::exists("NFSMWLimitAdjuster.ini")) {
