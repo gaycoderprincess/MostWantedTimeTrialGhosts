@@ -58,6 +58,7 @@ InputControls GetPlayerControls(IVehicle* veh) {
 	out.fHandBrake = input->GetControlHandBrake();
 	out.fClutch = input->GetControlClutch();
 	out.fNOS = input->GetControlNOS();
+	out.fActionButton = GetLocalPlayer()->InGameBreaker();
 	return out;
 }
 #endif

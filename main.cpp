@@ -39,6 +39,7 @@ ISimable* VehicleConstructHooked(Sim::Param params) {
 	DLLDirSetter _setdir;
 
 	auto vehicle = (VehicleParams*)params.mData;
+#ifdef TIMETRIALS_CHALLENGESERIES
 	if (vehicle->carClass == DRIVER_HUMAN && !FindFEPresetCar(bStringHashUpper(pSelectedEvent->sCarPreset.c_str()))) {
 		static FECustomizationRecord customizations;
 		customizations = CreateStockCustomizations(Attrib::StringHash32(pSelectedEvent->sCarPreset.c_str()));
@@ -58,6 +59,7 @@ ISimable* VehicleConstructHooked(Sim::Param params) {
 			SetRaceNumLaps(pSelectedEventParams, pSelectedEvent->nLapCountOverride);
 		}
 	}
+#endif
 	if (vehicle->carClass == DRIVER_RACER) {
 		// copy player car for all opponents
 		auto player = GetLocalPlayerVehicle();
