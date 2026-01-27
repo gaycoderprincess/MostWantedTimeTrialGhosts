@@ -40,12 +40,16 @@ std::string GetCarNameForGhost(const std::string& carPreset) {
 	return ghostCar;
 }
 
-struct tChallengeSeriesEvent {
+class ChallengeSeriesEvent {
+public:
 	std::string sEventName;
 	std::string sCarPreset;
 	int nLapCountOverride = 0;
 
 	int nNumGhosts = 0;
+	tReplayGhost aTargetGhosts[NUM_DIFFICULTY] = {};
+
+	ChallengeSeriesEvent(const char* eventName, const char* carPreset, int lapCount = 0) : sEventName(eventName), sCarPreset(carPreset), nLapCountOverride(lapCount) {}
 
 	GRaceParameters* GetRace() const {
 		return GRaceDatabase::GetRaceFromHash(GRaceDatabase::mObj, Attrib::StringHash32(sEventName.c_str()));
@@ -56,73 +60,71 @@ struct tChallengeSeriesEvent {
 		return GRaceParameters::GetNumLaps(GetRace());
 	}
 
-	uint32_t GetPBTime() {
+	tReplayGhost GetPBGhost() {
 		tReplayGhost temp;
 		LoadPB(&temp, GetCarNameForGhost(sCarPreset), sEventName, GetLapCount(), 0, nullptr);
-		return temp.nFinishTime;
+		return temp;
 	}
 
-	uint32_t GetTargetTime() {
+	tReplayGhost GetTargetGhost() {
+		if (aTargetGhosts[nDifficulty].nFinishTime != 0) return aTargetGhosts[nDifficulty];
+
 		tReplayGhost targetTime;
 		auto times = CollectReplayGhosts(GetCarNameForGhost(sCarPreset), sEventName, GetLapCount(), nullptr);
-		if (!times.empty()) targetTime = times[0];
+		if (!times.empty()) {
+			times[0].aTicks.clear(); // just in case
+			targetTime = aTargetGhosts[nDifficulty] = times[0];
+		}
 		nNumGhosts = times.size();
-		return targetTime.nFinishTime;
-	}
-
-	std::string GetTargetName() {
-		tReplayGhost targetTime;
-		auto times = CollectReplayGhosts(GetCarNameForGhost(sCarPreset), sEventName, GetLapCount(), nullptr);
-		if (!times.empty()) targetTime = times[0];
-		return targetTime.sPlayerName;
+		return targetTime;
 	}
 };
 
-std::vector<tChallengeSeriesEvent> aNewChallengeSeries = {
-	//{"16.2.1", "M3GTRCAREERSTART"},
-	{"16.2.1", "RAZORMUSTANG"},
-	{"15.1.1", "CE_997S"},
-	{"15.1.2", "BL15"},
-	{"14.1.1", "CS_CAR_02"},
-	{"14.2.4", "BL14"},
-	{"16.1.1", "OPM_MUSTANG_BOSS"},
-	{"13.2.3", "BL13"},
-	{"12.7.3", "CS_CAR_14"},
-	{"12.2.1", "BL12"},
-	{"11.7.1", "CS_CAR_01"},
-	{"11.1.2", "BL11"},
-	{"10.3.2", "CE_SUPRA"},
-	{"10.2.1", "BL10"},
-	{"16.2.2", "DDAYSUPRA"},
-	{"9.5.3", "BL9"},
-	{"19.8.31", "E3_DEMO_RX8"},
-	{"8.2.1", "BL8"},
-	{"7.2.1", "CE_GTRSTREET"},
-	{"7.2.2", "BL7"},
-	{"6.2.2", "CS_CAR_07"},
-	{"6.1.1", "BL6"},
-	{"1.2.4", "CS_CAR_17"},
-	{"5.2.2", "BL5"},
-	{"3.3.2.r", "CS_CAR_08"},
-	{"4.5.2", "BL4"},
-	{"3.3.1", "CS_CAR_16"},
-	{"3.1.2.r", "BL3"},
-	{"1.5.2", "CASTROLGT"},
-	{"3.1.1.r", "BL2"},
-	{"19.8.52", "CS_CAR_PIZZA"},
-	{"1.2.3", "E3_DEMO_BMW"},
-	{"13.5.1", "CE_ELISE"},
-	{"1.1.1", "gti", 1},
-	{"19.8.32", "911turbo"},
-	{"1.2.1", "CS_CAR_19"},
-	{"1.8.1", "E3_DEMO_BMW"},
-	{"2.2.1.r", "COP_CROSS"},
+std::vector<ChallengeSeriesEvent> aNewChallengeSeries = {
+	//ChallengeSeriesEvent("16.2.1", "M3GTRCAREERSTART"),
+	ChallengeSeriesEvent("16.2.1", "RAZORMUSTANG"),
+	ChallengeSeriesEvent("15.1.1", "CE_997S"),
+	ChallengeSeriesEvent("15.1.2", "BL15"),
+	ChallengeSeriesEvent("14.1.1", "CS_CAR_02"),
+	ChallengeSeriesEvent("14.2.4", "BL14"),
+	ChallengeSeriesEvent("16.1.1", "OPM_MUSTANG_BOSS"),
+	ChallengeSeriesEvent("13.2.3", "BL13"),
+	ChallengeSeriesEvent("12.7.3", "CS_CAR_14"),
+	ChallengeSeriesEvent("12.2.1", "BL12"),
+	ChallengeSeriesEvent("11.7.1", "CS_CAR_01"),
+	ChallengeSeriesEvent("11.1.2", "BL11"),
+	ChallengeSeriesEvent("10.3.2", "CE_SUPRA"),
+	ChallengeSeriesEvent("10.2.1", "BL10"),
+	ChallengeSeriesEvent("16.2.2", "DDAYSUPRA"),
+	ChallengeSeriesEvent("9.5.3", "BL9"),
+	ChallengeSeriesEvent("19.8.31", "E3_DEMO_RX8"),
+	ChallengeSeriesEvent("8.2.1", "BL8"),
+	ChallengeSeriesEvent("7.2.1", "CE_GTRSTREET"),
+	ChallengeSeriesEvent("7.2.2", "BL7"),
+	ChallengeSeriesEvent("6.2.2", "CS_CAR_07"),
+	ChallengeSeriesEvent("6.1.1", "BL6"),
+	ChallengeSeriesEvent("1.2.4", "CS_CAR_17"),
+	ChallengeSeriesEvent("5.2.2", "BL5"),
+	ChallengeSeriesEvent("3.3.2.r", "CS_CAR_08"),
+	ChallengeSeriesEvent("4.5.2", "BL4"),
+	ChallengeSeriesEvent("3.3.1", "CS_CAR_16"),
+	ChallengeSeriesEvent("3.1.2.r", "BL3"),
+	ChallengeSeriesEvent("1.5.2", "CASTROLGT"),
+	ChallengeSeriesEvent("3.1.1.r", "BL2"),
+	ChallengeSeriesEvent("19.8.52", "CS_CAR_PIZZA"),
+	ChallengeSeriesEvent("1.2.3", "E3_DEMO_BMW"),
+	ChallengeSeriesEvent("13.5.1", "CE_ELISE"),
+	ChallengeSeriesEvent("1.1.1", "gti", 1),
+	ChallengeSeriesEvent("19.8.32", "911turbo"),
+	ChallengeSeriesEvent("1.2.1", "CS_CAR_19"),
+	ChallengeSeriesEvent("1.8.1", "E3_DEMO_BMW"),
+	ChallengeSeriesEvent("2.2.1.r", "COP_CROSS"),
 };
 
 int CalculateTotalTimes() {
 	uint32_t totalTime = 0;
 	for (auto& event : aNewChallengeSeries) {
-		auto time = event.GetPBTime();
+		auto time = event.GetPBGhost().nFinishTime;
 		if (!time) return 0;
 		totalTime += time;
 	}
@@ -161,7 +163,7 @@ float __thiscall GetChallengeSeriesCarPerformance(GRaceParameters* pThis) {
 	return GRaceParameters::GetPlayerCarPerformance(pThis);
 }
 
-tChallengeSeriesEvent* pSelectedEvent = nullptr;
+ChallengeSeriesEvent* pSelectedEvent = nullptr;
 GRaceParameters* pSelectedEventParams = nullptr;
 uint32_t __thiscall GetChallengeSeriesEventDescription1(GRaceParameters* pThis) {
 	SkipMovies = true;
@@ -186,17 +188,16 @@ const char* GetChallengeSeriesEventDescription3(uint32_t hash) {
 
 	auto carName = GetCarNameForGhost(pSelectedEvent->sCarPreset);
 
-	auto pbTime = pSelectedEvent->GetPBTime();
-	auto targetTime = pSelectedEvent->GetTargetTime();
-	auto targetName = pSelectedEvent->GetTargetName();
+	auto pbTime = pSelectedEvent->GetPBGhost().nFinishTime;
+	auto target = pSelectedEvent->GetTargetGhost();
 
 	static std::string str;
 	str = std::format("Track: {}\nCar: {}", GetTrackName(pSelectedEvent->sEventName, hash), GetCarName(carName));
-	if (targetTime > 0) {
-		str += std::format("\nTarget Time: {}", GetTimeFromMilliseconds(targetTime));
+	if (target.nFinishTime > 0) {
+		str += std::format("\nTarget Time: {}", GetTimeFromMilliseconds(target.nFinishTime));
 		str.pop_back();
-		if (!targetName.empty()) {
-			str += std::format(" ({})", targetName);
+		if (!target.sPlayerName.empty()) {
+			str += std::format(" ({})", target.sPlayerName);
 		}
 	}
 	if (pbTime > 0) {
@@ -274,8 +275,8 @@ bool __thiscall GetIsEventCompleteHooked(GRaceDatabase* pThis, uint32_t raceHash
 	auto event = GRaceParameters::GetEventID(race);
 	for (auto& challenge : aNewChallengeSeries) {
 		if (event == challenge.sEventName) {
-			auto pb = challenge.GetPBTime();
-			if (pb && pb <= challenge.GetTargetTime()) return true;
+			auto pb = challenge.GetPBGhost().nFinishTime;
+			if (pb && pb <= challenge.GetTargetGhost().nFinishTime) return true;
 			return false;
 		}
 	}

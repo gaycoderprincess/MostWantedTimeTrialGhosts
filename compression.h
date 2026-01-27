@@ -1,4 +1,36 @@
-uint8_t* DecompressPB(const std::filesystem::path& filePath, uint32_t* outSize) {
+class CwoeeFileStream {
+public:
+	uint8_t* pData = nullptr;
+	size_t nDataSize = 0;
+	size_t nCursor = 0;
+
+	CwoeeFileStream(uint8_t* data, size_t dataSize) : pData(data), nDataSize(dataSize) {}
+	~CwoeeFileStream() {
+		delete[] pData;
+	}
+	size_t read(char* out, size_t numBytes) {
+		auto bytesRead = std::min(numBytes, nDataSize - nCursor);
+		if (!bytesRead) return 0;
+		memcpy(out, &pData[nCursor], bytesRead);
+		nCursor += bytesRead;
+		return bytesRead;
+	}
+};
+
+std::string ReadStringFromFile(CwoeeFileStream& file) {
+	int len = 0;
+	file.read((char*)&len, sizeof(len));
+	if (len <= 0) return "";
+
+	char* tmp = new char[len];
+	file.read(tmp, len);
+	std::string str = tmp;
+	delete[] tmp;
+
+	return str;
+}
+
+CwoeeFileStream* DecompressPB(const std::filesystem::path& filePath) {
 	auto size = std::filesystem::file_size(filePath);
 	auto inFile = std::ifstream(filePath, std::ios::in | std::ios::binary);
 	if (!inFile.is_open()) return nullptr;
@@ -14,7 +46,6 @@ uint8_t* DecompressPB(const std::filesystem::path& filePath, uint32_t* outSize) 
 	};
 	auto header = (tHeader*)data;
 	auto decompressedSize = header->decompressedSize;
-	*outSize = decompressedSize;
 	auto decompressed = new uint8_t[decompressedSize];
 	memset(decompressed, 0, decompressedSize);
 	if (!LZDecompress(data, decompressed)) {
@@ -22,7 +53,7 @@ uint8_t* DecompressPB(const std::filesystem::path& filePath, uint32_t* outSize) 
 		return nullptr;
 	}
 	delete[] data;
-	return decompressed;
+	return new CwoeeFileStream(decompressed, decompressedSize);
 }
 
 bool CompressPB(const std::filesystem::path& filePath) {
@@ -40,34 +71,6 @@ bool CompressPB(const std::filesystem::path& filePath) {
 	if (!outFile.is_open()) return false;
 	outFile.write((char*)compressed, newSize);
 	return true;
-}
-
-struct IMemBuf: std::streambuf {
-	IMemBuf(const char* base, size_t size) {
-		char* p(const_cast<char*>(base));
-		this->setg(p, p, p + size);
-	}
-};
-
-struct IMemStream: virtual IMemBuf, std::istream {
-	IMemStream(const char* mem, size_t size) :
-			IMemBuf(mem, size),
-			std::istream(static_cast<std::streambuf*>(this))
-	{
-	}
-};
-
-std::string ReadStringFromFile(IMemStream& file) {
-	int len = 0;
-	file.read((char*)&len, sizeof(len));
-	if (len <= 0) return "";
-
-	char* tmp = new char[len];
-	file.read(tmp, len);
-	std::string str = tmp;
-	delete[] tmp;
-
-	return str;
 }
 
 /*if (std::filesystem::exists(fileName)) {

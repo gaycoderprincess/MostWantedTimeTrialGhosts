@@ -1,3 +1,5 @@
+#include "compression.h"
+
 const int nLocalReplayVersion = 5;
 const int nMaxNumGhostsToCheck = 8;
 
@@ -415,6 +417,12 @@ void SavePB(tReplayGhost* ghost, const std::string& car, const std::string& trac
 	int count = ghost->aTicks.size();
 	outFile.write((char*)&count, sizeof(count));
 	outFile.write((char*)&ghost->aTicks[0], sizeof(ghost->aTicks[0]) * count);
+
+	outFile.flush();
+	outFile.close();
+	if (CompressPB(fileName)) {
+		std::filesystem::remove(fileName);
+	}
 }
 
 void LoadPB(tReplayGhost* ghost, const std::string& car, const std::string& track, int lapCount, int opponentId, const GameCustomizationRecord* upgrades, const char* folder = nullptr) {
@@ -423,13 +431,37 @@ void LoadPB(tReplayGhost* ghost, const std::string& car, const std::string& trac
 	ghost->nFinishPoints = 0;
 
 	auto fileName = GetGhostFilename(car, track, lapCount, opponentId, upgrades, folder);
-	auto inFile = std::ifstream(fileName, std::ios::in | std::ios::binary);
-	if (!inFile.is_open()) {
+	if (std::filesystem::exists(fileName)) {
+		if (CompressPB(fileName)) {
+			std::filesystem::remove(fileName);
+		}
+	}
+
+	auto newFileName = fileName + "2";
+	if (!std::filesystem::exists(newFileName)) {
 		if (TheGameFlowManager.CurrentGameFlowState != GAMEFLOW_STATE_IN_FRONTEND) {
 			WriteLog("No ghost found for " + fileName);
 		}
 		return;
 	}
+
+	auto decompress = DecompressPB(fileName + "2");
+	if (!decompress) {
+		if (TheGameFlowManager.CurrentGameFlowState != GAMEFLOW_STATE_IN_FRONTEND) {
+			WriteLog("Invalid ghost for " + fileName);
+		}
+		return;
+	}
+
+	auto& inFile = *decompress;
+
+	class temp {
+	public:
+		CwoeeFileStream* data;
+
+		temp(CwoeeFileStream* a) : data(a) {}
+		~temp() { delete data; }
+	} dtor(decompress);
 
 	size_t tmpsize;
 	int fileVersion;
