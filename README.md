@@ -1,6 +1,6 @@
 # Most Wanted Time Trial Ghosts
 
-Experiment for Need for Speed: Most Wanted that replaces Quick Race opponents with TrackMania-like replays
+A mod for Need for Speed: Most Wanted that replaces Quick Race opponents with TrackMania-like replays
 
 ## Installation
 
