@@ -610,6 +610,8 @@ void LoadPB(tReplayGhost* ghost, const std::string& car, const std::string& trac
 	}
 }
 
+void OnChallengeSeriesEventPB();
+
 uint32_t nLastFinishTime = 0;
 void OnFinishRace() {
 	auto ghost = &PlayerPBGhost;
@@ -639,6 +641,10 @@ void OnFinishRace() {
 
 			auto car = GetLocalPlayerVehicle();
 			SavePB(ghost, car->GetVehicleName(), GRaceParameters::GetEventID(GRaceStatus::fObj->mRaceParms), GetRaceNumLaps(), car->GetCustomizations());
+
+#ifdef TIMETRIALS_CHALLENGESERIES
+			OnChallengeSeriesEventPB();
+#endif
 		}
 		//if (!ghost->nCurrentSessionPBTime || replayTime < ghost->nCurrentSessionPBTime) {
 		//	ghost->nCurrentSessionPBTime = replayTime;
