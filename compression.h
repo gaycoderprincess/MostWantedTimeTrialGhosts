@@ -1,11 +1,11 @@
-class CwoeeFileStream {
+class CwoeeIStream {
 public:
 	uint8_t* pData = nullptr;
 	size_t nDataSize = 0;
 	size_t nCursor = 0;
 
-	CwoeeFileStream(uint8_t* data, size_t dataSize) : pData(data), nDataSize(dataSize) {}
-	~CwoeeFileStream() {
+	CwoeeIStream(uint8_t* data, size_t dataSize) : pData(data), nDataSize(dataSize) {}
+	~CwoeeIStream() {
 		delete[] pData;
 	}
 	size_t read(char* out, size_t numBytes) {
@@ -17,7 +17,18 @@ public:
 	}
 };
 
-std::string ReadStringFromFile(CwoeeFileStream& file) {
+class CwoeeOStream {
+public:
+	std::vector<char> aData;
+
+	void write(const char* in, size_t numBytes) {
+		for (int i = 0; i < numBytes; i++) {
+			aData.push_back(in[i]);
+		}
+	}
+};
+
+std::string ReadStringFromFile(CwoeeIStream& file) {
 	int len = 0;
 	file.read((char*)&len, sizeof(len));
 	if (len <= 0) return "";
@@ -29,8 +40,13 @@ std::string ReadStringFromFile(CwoeeFileStream& file) {
 
 	return str;
 }
+void WriteStringToFile(CwoeeOStream& file, const char* string) {
+	int len  = lstrlen(string) + 1;
+	file.write((char*)&len, sizeof(len));
+	file.write(string, len);
+}
 
-CwoeeFileStream* DecompressPB(const std::filesystem::path& filePath) {
+CwoeeIStream* DecompressPB(const std::filesystem::path& filePath) {
 	auto size = std::filesystem::file_size(filePath);
 	auto inFile = std::ifstream(filePath, std::ios::in | std::ios::binary);
 	if (!inFile.is_open()) return nullptr;
@@ -53,17 +69,17 @@ CwoeeFileStream* DecompressPB(const std::filesystem::path& filePath) {
 		return nullptr;
 	}
 	delete[] data;
-	return new CwoeeFileStream(decompressed, decompressedSize);
+	return new CwoeeIStream(decompressed, decompressedSize);
 }
 
-CwoeeFileStream* ReadRawPB(const std::filesystem::path& filePath) {
+CwoeeIStream* ReadRawPB(const std::filesystem::path& filePath) {
 	auto size = std::filesystem::file_size(filePath);
 	auto inFile = std::ifstream(filePath, std::ios::in | std::ios::binary);
 	if (!inFile.is_open()) return nullptr;
 
 	auto data = new uint8_t[size];
 	inFile.read((char*)data, size);
-	return new CwoeeFileStream(data, size);
+	return new CwoeeIStream(data, size);
 }
 
 bool CompressPB(const std::filesystem::path& filePath) {
@@ -76,6 +92,16 @@ bool CompressPB(const std::filesystem::path& filePath) {
 
 	auto compressed = new uint8_t[size];
 	auto newSize = HUFFCompress(data, size, compressed);
+
+	auto outFile = std::ofstream(filePath.string() + "2", std::ios::out | std::ios::binary);
+	if (!outFile.is_open()) return false;
+	outFile.write((char*)compressed, newSize);
+	return true;
+}
+
+bool WriteCompressedPB(CwoeeOStream* file, const std::filesystem::path& filePath) {
+	auto compressed = new uint8_t[file->aData.size()];
+	auto newSize = HUFFCompress((uint8_t*)&file->aData[0], file->aData.size(), compressed);
 
 	auto outFile = std::ofstream(filePath.string() + "2", std::ios::out | std::ios::binary);
 	if (!outFile.is_open()) return false;

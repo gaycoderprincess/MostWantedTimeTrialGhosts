@@ -377,11 +377,7 @@ void SavePB(tReplayGhost* ghost, const std::string& car, const std::string& trac
 	std::filesystem::create_directory("CwoeeGhosts/Practice");
 
 	auto fileName = GetGhostFilename(car, track, lapCount, 0, upgrades);
-	auto outFile = std::ofstream(fileName, std::ios::out | std::ios::binary);
-	if (!outFile.is_open()) {
-		WriteLog("Failed to save " + fileName + "!");
-		return;
-	}
+	auto outFile = CwoeeOStream();
 
 	char signature[4] = "nya";
 	int fileVersion = nLocalReplayVersion;
@@ -418,10 +414,9 @@ void SavePB(tReplayGhost* ghost, const std::string& car, const std::string& trac
 	outFile.write((char*)&count, sizeof(count));
 	outFile.write((char*)&ghost->aTicks[0], sizeof(ghost->aTicks[0]) * count);
 
-	outFile.flush();
-	outFile.close();
-	if (CompressPB(fileName)) {
-		std::filesystem::remove(fileName);
+	if (!WriteCompressedPB(&outFile, fileName)) {
+		WriteLog("Failed to save " + fileName + "!");
+		return;
 	}
 }
 
@@ -438,7 +433,7 @@ void LoadPB(tReplayGhost* ghost, const std::string& car, const std::string& trac
 		}
 	}
 
-	CwoeeFileStream* decompress = nullptr;
+	CwoeeIStream* decompress = nullptr;
 
 	auto newFileName = fileName + "2";
 	if (std::filesystem::exists(newFileName)) {
@@ -457,7 +452,7 @@ void LoadPB(tReplayGhost* ghost, const std::string& car, const std::string& trac
 		return;
 	}
 #else
-	CwoeeFileStream* decompress = nullptr;
+	CwoeeIStream* decompress = nullptr;
 
 	auto newFileName = fileName + "2";
 	if (std::filesystem::exists(newFileName)) {
@@ -492,9 +487,9 @@ void LoadPB(tReplayGhost* ghost, const std::string& car, const std::string& trac
 
 	class temp {
 	public:
-		CwoeeFileStream* data;
+		CwoeeIStream* data;
 
-		temp(CwoeeFileStream* a) : data(a) {}
+		temp(CwoeeIStream* a) : data(a) {}
 		~temp() { delete data; }
 	} dtor(decompress);
 
