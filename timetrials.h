@@ -448,7 +448,7 @@ void LoadPB(tReplayGhost* ghost, const std::string& car, const std::string& trac
 
 	auto newFileName = fileName + "2";
 	if (std::filesystem::exists(newFileName)) {
-		decompress = DecompressPB(newFileName);
+		decompress = OpenCompressedPB(newFileName);
 		if (!decompress) {
 			if (TheGameFlowManager.CurrentGameFlowState > GAMEFLOW_STATE_IN_FRONTEND) {
 				WriteLog("Invalid ghost for " + fileName);
