@@ -446,7 +446,7 @@ void LoadPB(tReplayGhost* ghost, const std::string& car, const std::string& trac
 	}
 
 	if (fileVersion > nLocalReplayVersion) {
-		WriteLog("Too new ghost for " + fileName);
+		WriteLog(std::format("Too new ghost for {} (version {})", fileName, fileVersion));
 		return;
 	}
 

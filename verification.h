@@ -70,7 +70,9 @@ void InvalidatePlayerPos() {
 	bVerifyPlayerCollected = false;
 }
 
+// only needed for MW, not set in carbon - MW anticheat checks are way more strict and finishing trips them for some reason
 bool bVerifyPlayerFinished = false;
+
 tReplayTick VerifyPlayer;
 void CollectPlayerPos() {
 	bVerifyPlayerCollected = false;
