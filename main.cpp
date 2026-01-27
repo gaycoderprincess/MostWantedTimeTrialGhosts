@@ -167,6 +167,7 @@ BOOL WINAPI DllMain(HINSTANCE, DWORD fdwReason, LPVOID) {
 				return TRUE;
 			}
 
+			gDLLPath = std::filesystem::current_path();
 			GetCurrentDirectoryW(MAX_PATH, gDLLDir);
 
 			NyaHooks::SimServiceHook::Init();

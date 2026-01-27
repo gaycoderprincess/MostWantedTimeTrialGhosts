@@ -297,7 +297,8 @@ void RecordGhost(IVehicle* veh) {
 }
 
 std::string GetGhostFilename(const std::string& car, const std::string& track, int lapCount, int opponentId, const GameCustomizationRecord* upgrades, const char* folder = nullptr) {
-	std::string path = "CwoeeGhosts/";
+	std::string path = gDLLPath.string();
+	path += "/CwoeeGhosts/";
 	if (bChallengeSeriesMode) {
 		path += opponentId == 0 && !folder ? "ChallengePBs/" : "Challenges/";
 	}

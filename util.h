@@ -249,6 +249,7 @@ const char* GetLocalPlayerName() {
 	return GetUserProfile()->m_aProfileName;
 }
 
+std::filesystem::path gDLLPath;
 wchar_t gDLLDir[MAX_PATH];
 class DLLDirSetter {
 public:
