@@ -46,7 +46,7 @@ void WriteStringToFile(CwoeeOStream& file, const char* string) {
 	file.write(string, len);
 }
 
-CwoeeIStream* DecompressPB(const std::filesystem::path& filePath) {
+CwoeeIStream* OpenCompressedPB(const std::filesystem::path& filePath) {
 	auto size = std::filesystem::file_size(filePath);
 	auto inFile = std::ifstream(filePath, std::ios::in | std::ios::binary);
 	if (!inFile.is_open()) return nullptr;
@@ -72,7 +72,7 @@ CwoeeIStream* DecompressPB(const std::filesystem::path& filePath) {
 	return new CwoeeIStream(decompressed, decompressedSize);
 }
 
-CwoeeIStream* ReadRawPB(const std::filesystem::path& filePath) {
+CwoeeIStream* OpenRawPB(const std::filesystem::path& filePath) {
 	auto size = std::filesystem::file_size(filePath);
 	auto inFile = std::ifstream(filePath, std::ios::in | std::ios::binary);
 	if (!inFile.is_open()) return nullptr;

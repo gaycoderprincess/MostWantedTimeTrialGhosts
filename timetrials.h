@@ -467,7 +467,7 @@ void LoadPB(tReplayGhost* ghost, const std::string& car, const std::string& trac
 
 	auto newFileName = fileName + "2";
 	if (std::filesystem::exists(newFileName)) {
-		decompress = DecompressPB(newFileName);
+		decompress = OpenCompressedPB(newFileName);
 		if (!decompress) {
 			if (TheGameFlowManager.CurrentGameFlowState > GAMEFLOW_STATE_IN_FRONTEND) {
 				WriteLog("Invalid ghost for " + fileName);
@@ -477,7 +477,7 @@ void LoadPB(tReplayGhost* ghost, const std::string& car, const std::string& trac
 	}
 	else {
 		if (std::filesystem::exists(fileName)) {
-			decompress = ReadRawPB(fileName);
+			decompress = OpenRawPB(fileName);
 			if (!decompress) {
 				if (TheGameFlowManager.CurrentGameFlowState > GAMEFLOW_STATE_IN_FRONTEND) {
 					WriteLog("Invalid ghost for " + fileName);
@@ -1046,6 +1046,20 @@ void TimeTrialRenderLoop() {
 
 	if (!ShouldGhostRun()) return;
 
+#ifdef TIMETRIALS_CARBON
+	if (bViewReplayMode) {
+		auto ghost = GetViewReplayGhost();
+
+		auto tick = ghost->GetCurrentTick();
+		if (ghost->aTicks.size() > tick) {
+			DisplayInputs(&ghost->aTicks[tick].v1.inputs);
+		}
+	}
+	else if (bShowInputsWhileDriving) {
+		auto inputs = GetPlayerControls(GetLocalPlayerVehicle());
+		DisplayInputs(&inputs);
+	}
+#else
 	if (bViewReplayMode) {
 		auto ghost = GetViewReplayGhost();
 
@@ -1057,6 +1071,7 @@ void TimeTrialRenderLoop() {
 	else if (bShowInputsWhileDriving) {
 		DisplayInputs(GetLocalPlayerInterface<IInput>()->GetControls());
 	}
+#endif
 
 	DisplayPlayerNames();
 }
