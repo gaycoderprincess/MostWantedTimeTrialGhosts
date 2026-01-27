@@ -1,4 +1,4 @@
-const int nLocalReplayVersion = 4;
+const int nLocalReplayVersion = 5;
 const int nMaxNumGhostsToCheck = 8;
 
 enum eNitroType {
@@ -31,6 +31,7 @@ enum eDifficulty {
 eDifficulty nDifficulty = DIFFICULTY_HARD;
 bool bChallengesOneGhostOnly = false;
 bool bChallengesPBGhost = false;
+bool bCheckFileIntegrity = false;
 
 bool bDebugInputsOnly = false;
 
@@ -172,6 +173,7 @@ struct tReplayTick {
 uint32_t nGlobalReplayTimer = 0;
 uint32_t nGlobalReplayTimerNoCountdown = 0;
 
+uint32_t nLocalGameFilesHash = 0;
 struct tReplayGhost {
 public:
 	std::vector<tReplayTick> aTicks;
@@ -180,6 +182,7 @@ public:
 	std::string sPlayerName;
 	IVehicle* pLastVehicle;
 	bool bHasCountdown;
+	uint32_t nGameFilesHash;
 	bool bIsPersonalBest;
 
 	tReplayGhost() {
@@ -210,6 +213,7 @@ public:
 		sPlayerName = "";
 		pLastVehicle = nullptr;
 		bHasCountdown = true;
+		nGameFilesHash = 0;
 		bIsPersonalBest = false;
 	}
 };
@@ -407,6 +411,7 @@ void SavePB(tReplayGhost* ghost, const std::string& car, const std::string& trac
 	auto name = GetLocalPlayerName();
 	if (sPlayerNameOverride[0]) name = sPlayerNameOverride;
 	outFile.write(name, 32);
+	outFile.write((char*)&nLocalGameFilesHash, sizeof(nLocalGameFilesHash));
 	int count = ghost->aTicks.size();
 	outFile.write((char*)&count, sizeof(count));
 	outFile.write((char*)&ghost->aTicks[0], sizeof(ghost->aTicks[0]) * count);
@@ -455,6 +460,7 @@ void LoadPB(tReplayGhost* ghost, const std::string& car, const std::string& trac
 #endif
 
 	int tmptime, tmppoints, tmpnitro, tmpspdbrk, tmplaps;
+	uint32_t fileHash = 0;
 	Physics::Upgrades::Package tmpphysics;
 	Physics::Tunings tmptuning;
 	char tmpplayername[32];
@@ -474,6 +480,10 @@ void LoadPB(tReplayGhost* ghost, const std::string& car, const std::string& trac
 	inFile.read((char*)&tmpphysics, sizeof(tmpphysics));
 	inFile.read((char*)&tmptuning, sizeof(tmptuning));
 	inFile.read(tmpplayername, sizeof(tmpplayername));
+	if (fileVersion >= 5) {
+		inFile.read((char*)&fileHash, sizeof(fileHash));
+		if (!fileHash) fileHash = 0xFFFFFFFF;
+	}
 	//if (tmpsize != sizeof(tReplayTick)) {
 	//	WriteLog("Outdated ghost for " + fileName);
 	//	return;
@@ -515,6 +525,7 @@ void LoadPB(tReplayGhost* ghost, const std::string& car, const std::string& trac
 	ghost->nFinishTime = tmptime;
 	ghost->nFinishPoints = tmppoints;
 	ghost->bHasCountdown = fileVersion >= 3;
+	ghost->nGameFilesHash = fileHash;
 
 	// don't needlessly load the full ghost data when previewing times in the menu
 	if (TheGameFlowManager.CurrentGameFlowState == GAMEFLOW_STATE_IN_FRONTEND) return;
@@ -861,14 +872,19 @@ void DisplayLeaderboard() {
 #else
 			bool isDrift = false;
 #endif
+			std::string str;
 			if (isDrift) {
-				DrawString(data, std::format("{}. {} - {}", ranking++, name, ghost.nFinishPoints));
+				str = std::format("{}. {} - {}", ranking++, name, ghost.nFinishPoints);
 			}
 			else {
 				auto time = GetTimeFromMilliseconds(ghost.nFinishTime);
 				time.pop_back();
-				DrawString(data, std::format("{}. {} - {}", ranking++, name, time));
+				str = std::format("{}. {} - {}", ranking++, name, time);
 			}
+			if (bCheckFileIntegrity && ghost.nGameFilesHash && ghost.nGameFilesHash != nLocalGameFilesHash) {
+				str += std::format(" (Game data mismatch, {:X})", ghost.nGameFilesHash);
+			}
+			DrawString(data, str);
 			data.y += fLeaderboardYSpacing;
 		}
 	}
@@ -949,4 +965,104 @@ void DoConfigLoad() {
 	file.read((char*)&nDifficulty, sizeof(nDifficulty));
 	file.read((char*)&bChallengesOneGhostOnly, sizeof(bChallengesOneGhostOnly));
 	file.read((char*)&bChallengesPBGhost, sizeof(bChallengesPBGhost));
+}
+
+void DebugMenu() {
+	ChloeMenuLib::BeginMenu();
+
+	QuickValueEditor("Verify Game Data Integrity", bCheckFileIntegrity);
+	QuickValueEditor("Show Inputs While Driving", bShowInputsWhileDriving);
+	QuickValueEditor("Player Name Override", sPlayerNameOverride, sizeof(sPlayerNameOverride));
+
+	if (TheGameFlowManager.CurrentGameFlowState == GAMEFLOW_STATE_IN_FRONTEND) {
+		QuickValueEditor("Replay Viewer", bViewReplayMode);
+		if (bViewReplayMode) {
+			if (DrawMenuOption(std::format("Replay Viewer Ghost - {}", bViewReplayTargetTime ? "Target Time" : "Personal Best"))) {
+				bViewReplayTargetTime = !bViewReplayTargetTime;
+			}
+		}
+		if (bChallengeSeriesMode) {
+			const char* difficultyNames[] = {
+					"Easy",
+					"Normal",
+					"Hard",
+					"Very Hard",
+			};
+			const char* difficultyDescs[] = {
+					"Easier ghosts",
+					"Average ghosts",
+					"Faster community ghosts",
+					"Speedrunners' community ghosts",
+			};
+			if (DrawMenuOption(std::format("Difficulty - {}", difficultyNames[nDifficulty]))) {
+				ChloeMenuLib::BeginMenu();
+				for (int i = 0; i < NUM_DIFFICULTY; i++) {
+					if (DrawMenuOption(difficultyNames[i], difficultyDescs[i])) {
+						nDifficulty = (eDifficulty)i;
+					}
+				}
+				ChloeMenuLib::EndMenu();
+			}
+			if (nDifficulty != DIFFICULTY_EASY) {
+				QuickValueEditor("Show Target Ghost Only", bChallengesOneGhostOnly);
+				QuickValueEditor("Show Personal Ghost", bChallengesPBGhost);
+			}
+		}
+		else {
+			QuickValueEditor("Opponent Ghosts Only", bOpponentsOnly);
+
+			if (bViewReplayMode) bOpponentsOnly = false;
+
+			if (DrawMenuOption("NOS")) {
+				ChloeMenuLib::BeginMenu();
+				if (DrawMenuOption("Off")) {
+					nNitroType = NITRO_OFF;
+				}
+				if (DrawMenuOption("On")) {
+					nNitroType = NITRO_ON;
+				}
+				if (DrawMenuOption("Infinite")) {
+					nNitroType = NITRO_INF;
+				}
+				ChloeMenuLib::EndMenu();
+			}
+
+			if (DrawMenuOption("Speedbreaker")) {
+				ChloeMenuLib::BeginMenu();
+				if (DrawMenuOption("Off")) {
+					nSpeedbreakerType = NITRO_OFF;
+				}
+				if (DrawMenuOption("On")) {
+					nSpeedbreakerType = NITRO_ON;
+				}
+				if (DrawMenuOption("Infinite")) {
+					nSpeedbreakerType = NITRO_INF;
+				}
+				ChloeMenuLib::EndMenu();
+			}
+		}
+	}
+
+	if (DrawMenuOption("Ghost Visuals")) {
+		ChloeMenuLib::BeginMenu();
+		if (DrawMenuOption("Hidden")) {
+			nGhostVisuals = GHOST_HIDE;
+		}
+		if (DrawMenuOption("Shown")) {
+			nGhostVisuals = GHOST_SHOW;
+		}
+		if (DrawMenuOption("Hide Too Close")) {
+			nGhostVisuals = GHOST_HIDE_NEARBY;
+		}
+		ChloeMenuLib::EndMenu();
+	}
+
+	auto status = GRaceStatus::fObj;
+	if (status && status->mRaceParms) {
+		DrawMenuOption(std::format("Race - {}", GRaceParameters::GetEventID(status->mRaceParms)));
+	}
+
+	DrawMenuOption(std::format("Game Data Hash: {:X}", nLocalGameFilesHash));
+
+	ChloeMenuLib::EndMenu();
 }

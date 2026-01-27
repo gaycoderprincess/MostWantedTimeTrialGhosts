@@ -176,8 +176,9 @@ void DebugMenu() {
 	auto status = GRaceStatus::fObj;
 	if (status && status->mRaceParms) {
 		DrawMenuOption(std::format("Race - {}", GRaceParameters::GetEventID(status->mRaceParms)));
-		DrawMenuOption(std::format("Context - {}", (int)status->mRaceContext));
 	}
+
+	DrawMenuOption(std::format("Game Data Hash: {:X}", nLocalGameFilesHash));
 
 	ChloeMenuLib::EndMenu();
 }
@@ -266,6 +267,7 @@ BOOL WINAPI DllMain(HINSTANCE, DWORD fdwReason, LPVOID) {
 			NyaHooks::SimServiceHook::Init();
 			NyaHooks::SimServiceHook::aFunctions.push_back(MainLoop);
 			NyaHooks::LateInitHook::Init();
+			NyaHooks::LateInitHook::aPreFunctions.push_back(FileIntegrity::VerifyGameFiles);
 			NyaHooks::LateInitHook::aFunctions.push_back([]() {
 				NyaHooks::PlaceD3DHooks();
 				NyaHooks::D3DEndSceneHook::aPreFunctions.push_back(CollectPlayerPos);
