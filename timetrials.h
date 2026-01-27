@@ -707,7 +707,14 @@ void TimeTrialLoop() {
 		}
 	}
 
-#ifndef TIMETRIALS_CARBON
+#ifdef TIMETRIALS_CARBON
+	auto raceType = GRaceParameters::GetRaceType(GRaceStatus::fObj->mRaceParms);
+	bool isDrift = raceType == GRace::kRaceType_DriftRace || raceType == GRace::kRaceType_CanyonDrift;
+	bool isPlayerDrifting = GetLocalPlayerVehicle()->GetDriverStyle() == STYLE_DRIFT;
+	if (isDrift != isPlayerDrifting) {
+		GetLocalPlayerVehicle()->SetDriverStyle(isDrift ? STYLE_DRIFT : STYLE_RACING);
+	}
+#else
 	GetUserProfile()->TheOptionsSettings.TheGameplaySettings.JumpCam = false;
 	for (int i = 0; i < GRaceStatus::fObj->mRacerCount; i++) {
 		auto racer = &GRaceStatus::fObj->mRacerInfo[i];

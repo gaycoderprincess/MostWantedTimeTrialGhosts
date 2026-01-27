@@ -273,6 +273,12 @@ BOOL WINAPI DllMain(HINSTANCE, DWORD fdwReason, LPVOID) {
 				NyaHooks::D3DEndSceneHook::aFunctions.push_back(CheckPlayerPos);
 				NyaHooks::D3DResetHook::aFunctions.push_back(OnD3DReset);
 
+				// exopts - reenable barriers
+				NyaHookLib::WriteString(0x8B2810, "SCENERY_GROUP_");
+				NyaHookLib::WriteString(0x8B2820, "PLAYER_BARRIERS_");
+				NyaHookLib::WriteString(0x8B2834, "BARRIERS_");
+				NyaHookLib::WriteString(0x8B2840, "BARRIER_");
+
 				Scheduler::fgScheduler->fTimeStep = 1.0 / 120.0; // set sim framerate
 				*(void**)0x92C534 = (void*)&VehicleConstructHooked;
 				if (GetModuleHandleA("NFSMWLimitAdjuster.asi") || std::filesystem::exists("NFSMWLimitAdjuster.ini")) {
