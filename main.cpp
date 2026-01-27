@@ -124,6 +124,8 @@ void OnEventFinished(ISimable* a1) {
 	Game_NotifyRaceFinished(a1);
 
 	if ((!a1 || a1 == GetLocalPlayerSimable()) && !GetLocalPlayerVehicle()->IsDestroyed()) {
+		bVerifyPlayerFinished = true;
+
 		DLLDirSetter _setdir;
 		OnFinishRace();
 
@@ -166,14 +168,14 @@ BOOL WINAPI DllMain(HINSTANCE, DWORD fdwReason, LPVOID) {
 			GetCurrentDirectoryW(MAX_PATH, gDLLDir);
 
 			NyaHooks::SimServiceHook::Init();
-			NyaHooks::SimServiceHook::aFunctions.push_back(MainLoop);
+			NyaHooks::SimServiceHook::aPreFunctions.push_back(CheckPlayerPos);
+			NyaHooks::SimServiceHook::aPreFunctions.push_back(MainLoop);
+			NyaHooks::SimServiceHook::aPostFunctions.push_back(CollectPlayerPos);
 			NyaHooks::LateInitHook::Init();
 			NyaHooks::LateInitHook::aPreFunctions.push_back(FileIntegrity::VerifyGameFiles);
 			NyaHooks::LateInitHook::aFunctions.push_back([]() {
 				NyaHooks::PlaceD3DHooks();
-				NyaHooks::D3DEndSceneHook::aPreFunctions.push_back(CollectPlayerPos);
 				NyaHooks::D3DEndSceneHook::aFunctions.push_back(D3DHookMain);
-				NyaHooks::D3DEndSceneHook::aFunctions.push_back(CheckPlayerPos);
 				NyaHooks::D3DResetHook::aFunctions.push_back(OnD3DReset);
 
 				ApplyVerificationPatches();

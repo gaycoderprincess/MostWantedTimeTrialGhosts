@@ -65,13 +65,24 @@ void ApplyVerificationPatches() {
 #endif
 }
 
+bool bVerifyPlayerCollected = false;
+void InvalidatePlayerPos() {
+	bVerifyPlayerCollected = false;
+}
+
+bool bVerifyPlayerFinished = false;
 tReplayTick VerifyPlayer;
 void CollectPlayerPos() {
+	bVerifyPlayerCollected = false;
 	if (TheGameFlowManager.CurrentGameFlowState != GAMEFLOW_STATE_RACING) return;
 	if (IsInLoadingScreen()) return;
 
 	if (auto ply = GetLocalPlayerVehicle()) {
+		if (ply->IsStaging()) bVerifyPlayerFinished = false;
+
+		if (bVerifyPlayerFinished) return;
 		VerifyPlayer.Collect(ply);
+		bVerifyPlayerCollected = true;
 	}
 }
 
@@ -79,6 +90,8 @@ void CheckPlayerPos() {
 	if (TheGameFlowManager.CurrentGameFlowState != GAMEFLOW_STATE_RACING) return;
 	if (IsInLoadingScreen()) return;
 	if (bViewReplayMode) return;
+	if (!bVerifyPlayerCollected) return;
+	if (bVerifyPlayerFinished) return;
 
 	if (auto ply = GetLocalPlayerVehicle()) {
 		auto tmp = VerifyPlayer;
