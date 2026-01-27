@@ -225,6 +225,7 @@ std::vector<tReplayGhost> OpponentGhosts;
 bool bGhostsLoaded = false;
 std::vector<tReplayTick> aRecordingTicks;
 
+// if this fails the ghosts are paused
 bool ShouldGhostRun() {
 	if (IsInNIS()) return false;
 	if (!GRaceStatus::fObj) return false;
@@ -244,6 +245,12 @@ void InvalidateGhost() {
 	OpponentGhosts.clear();
 	aRecordingTicks.clear();
 	aLeaderboardGhosts.clear();
+}
+
+void InvalidateLocalGhost() {
+	nGlobalReplayTimer = 0;
+	nGlobalReplayTimerNoCountdown = 0;
+	aRecordingTicks.clear();
 }
 
 void RunGhost(IVehicle* veh, tReplayGhost* ghost) {
@@ -643,6 +650,9 @@ void OnFinishRace() {
 			auto car = GetLocalPlayerVehicle();
 			SavePB(ghost, car->GetVehicleName(), GRaceParameters::GetEventID(GRaceStatus::fObj->mRaceParms), GetRaceNumLaps(), car->GetCustomizations());
 
+			// invalidate all ghosts to make sure the pb is re-read for the leaderboard
+			InvalidateGhost();
+
 #ifdef TIMETRIALS_CHALLENGESERIES
 			OnChallengeSeriesEventPB();
 #endif
@@ -710,7 +720,7 @@ tReplayGhost SelectTopGhost(const std::string& car, const std::string& track, in
 }
 
 void OnRaceRestart() {
-	InvalidateGhost();
+	InvalidateLocalGhost();
 }
 
 tReplayGhost* GetViewReplayGhost() {
@@ -733,7 +743,7 @@ void TimeTrialLoop() {
 			veh->mCOMObject->Find<IRBVehicle>()->EnableObjectCollisions(false);
 		}
 
-		InvalidateGhost();
+		InvalidateLocalGhost();
 		return;
 	}
 
