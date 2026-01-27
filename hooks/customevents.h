@@ -167,7 +167,7 @@ int __thiscall GetNumOpponentsHooked(GRaceParameters* pThis) {
 
 	if (bViewReplayMode) return 0;
 	if (bChallengesOneGhostOnly) return 1;
-	return nDifficulty != DIFFICULTY_EASY ? std::min(event->nNumGhosts, 3) : 1; // only spawn one ghost for easy difficulty
+	return nDifficulty != DIFFICULTY_EASY ? std::min(event->nNumGhosts[nDifficulty], 3) : 1; // only spawn one ghost for easy difficulty
 }
 
 bool __thiscall GetIsDDayRaceHooked(GRaceParameters* pThis) {

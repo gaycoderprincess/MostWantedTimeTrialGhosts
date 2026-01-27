@@ -1,6 +1,6 @@
 #include "compression.h"
 
-const int nLocalReplayVersion = 5;
+const int nLocalReplayVersion = 6;
 const int nMaxNumGhostsToCheck = 8;
 
 enum eNitroType {
@@ -184,6 +184,7 @@ public:
 	std::string sPlayerName;
 	IVehicle* pLastVehicle;
 	bool bHasCountdown;
+	bool bHasCountdownFinalChase;
 	uint32_t nGameFilesHash;
 	bool bIsPersonalBest;
 
@@ -196,13 +197,14 @@ public:
 	}
 
 	uint32_t GetCurrentTick() const {
-		if (!bHasCountdown) return nGlobalReplayTimerNoCountdown;
+		auto hasCountdown = !strcmp(GRaceParameters::GetEventID(GRaceStatus::fObj->mRaceParms), "1.8.1") ? bHasCountdownFinalChase : bHasCountdown;
+		if (!hasCountdown) return nGlobalReplayTimerNoCountdown;
 
 		// take countdown time and use globaltimernocountdown to accomodate for it
 		// the countdown seems to be inconsistent otherwise
 		auto finishTick = (nFinishTime * 120) / 1000;
 		auto totalTicks = aTicks.size();
-		if (GetLocalPlayerVehicle()->IsStaging()) {
+		if (GetLocalPlayerVehicle()->IsStaging() || GetLocalPlayerInterface<IHumanAI>()->GetAiControl()) {
 			return nGlobalReplayTimer;
 		}
 		return nGlobalReplayTimerNoCountdown + (totalTicks - finishTick);
@@ -215,6 +217,7 @@ public:
 		sPlayerName = "";
 		pLastVehicle = nullptr;
 		bHasCountdown = true;
+		bHasCountdownFinalChase = true;
 		nGameFilesHash = 0;
 		bIsPersonalBest = false;
 	}
@@ -447,14 +450,14 @@ void LoadPB(tReplayGhost* ghost, const std::string& car, const std::string& trac
 	if (std::filesystem::exists(newFileName)) {
 		decompress = DecompressPB(newFileName);
 		if (!decompress) {
-			if (TheGameFlowManager.CurrentGameFlowState != GAMEFLOW_STATE_IN_FRONTEND) {
+			if (TheGameFlowManager.CurrentGameFlowState > GAMEFLOW_STATE_IN_FRONTEND) {
 				WriteLog("Invalid ghost for " + fileName);
 			}
 			return;
 		}
 	}
 	else {
-		if (TheGameFlowManager.CurrentGameFlowState != GAMEFLOW_STATE_IN_FRONTEND) {
+		if (TheGameFlowManager.CurrentGameFlowState > GAMEFLOW_STATE_IN_FRONTEND) {
 			WriteLog("No ghost found for " + fileName);
 		}
 		return;
@@ -466,7 +469,7 @@ void LoadPB(tReplayGhost* ghost, const std::string& car, const std::string& trac
 	if (std::filesystem::exists(newFileName)) {
 		decompress = DecompressPB(newFileName);
 		if (!decompress) {
-			if (TheGameFlowManager.CurrentGameFlowState != GAMEFLOW_STATE_IN_FRONTEND) {
+			if (TheGameFlowManager.CurrentGameFlowState > GAMEFLOW_STATE_IN_FRONTEND) {
 				WriteLog("Invalid ghost for " + fileName);
 			}
 			return;
@@ -476,14 +479,14 @@ void LoadPB(tReplayGhost* ghost, const std::string& car, const std::string& trac
 		if (std::filesystem::exists(fileName)) {
 			decompress = ReadRawPB(fileName);
 			if (!decompress) {
-				if (TheGameFlowManager.CurrentGameFlowState != GAMEFLOW_STATE_IN_FRONTEND) {
+				if (TheGameFlowManager.CurrentGameFlowState > GAMEFLOW_STATE_IN_FRONTEND) {
 					WriteLog("Invalid ghost for " + fileName);
 				}
 				return;
 			}
 		}
 		else {
-			if (TheGameFlowManager.CurrentGameFlowState != GAMEFLOW_STATE_IN_FRONTEND) {
+			if (TheGameFlowManager.CurrentGameFlowState > GAMEFLOW_STATE_IN_FRONTEND) {
 				WriteLog("No ghost found for " + fileName);
 			}
 			return;
@@ -585,7 +588,7 @@ void LoadPB(tReplayGhost* ghost, const std::string& car, const std::string& trac
 	if (folder) {
 		strcpy_s(tmpplayername, folder);
 	}
-	if (TheGameFlowManager.CurrentGameFlowState == GAMEFLOW_STATE_IN_FRONTEND) {
+	if (TheGameFlowManager.CurrentGameFlowState <= GAMEFLOW_STATE_IN_FRONTEND) {
 		tmpplayername[31] = 0;
 	}
 	else {
@@ -595,10 +598,11 @@ void LoadPB(tReplayGhost* ghost, const std::string& car, const std::string& trac
 	ghost->nFinishTime = tmptime;
 	ghost->nFinishPoints = tmppoints;
 	ghost->bHasCountdown = fileVersion >= 3;
+	ghost->bHasCountdownFinalChase = fileVersion >= 6;
 	ghost->nGameFilesHash = fileHash;
 
 	// don't needlessly load the full ghost data when previewing times in the menu
-	if (TheGameFlowManager.CurrentGameFlowState == GAMEFLOW_STATE_IN_FRONTEND) return;
+	if (TheGameFlowManager.CurrentGameFlowState <= GAMEFLOW_STATE_IN_FRONTEND) return;
 
 	ghost->aTicks.reserve(count);
 	for (int i = 0; i < count; i++) {
@@ -646,6 +650,7 @@ void OnFinishRace() {
 			ghost->nFinishTime = replayTime;
 			ghost->nFinishPoints = replayPoints;
 			ghost->bHasCountdown = true;
+			ghost->bHasCountdownFinalChase = true;
 
 			auto car = GetLocalPlayerVehicle();
 			SavePB(ghost, car->GetVehicleName(), GRaceParameters::GetEventID(GRaceStatus::fObj->mRaceParms), GetRaceNumLaps(), car->GetCustomizations());
@@ -671,10 +676,10 @@ std::vector<tReplayGhost> CollectReplayGhosts(const std::string& car, const std:
 	auto difficulty = nDifficulty;
 	if (forFullLeaderboard) difficulty = DIFFICULTY_HARD;
 
-	if (difficulty != DIFFICULTY_NORMAL && std::filesystem::exists("CwoeeGhosts/Challenges")) {
+	if (difficulty != DIFFICULTY_NORMAL && std::filesystem::exists(gDLLPath.string() + "/CwoeeGhosts/Challenges")) {
 		// check all subdirectories for community ghosts
 		std::vector<std::string> folders;
-		for (const auto& entry : std::filesystem::directory_iterator("CwoeeGhosts/Challenges")) {
+		for (const auto& entry : std::filesystem::directory_iterator(gDLLPath.string() + "/CwoeeGhosts/Challenges")) {
 			if (!entry.is_directory()) continue;
 
 			folders.push_back(entry.path().filename().string());
@@ -736,7 +741,7 @@ void TimeTrialLoop() {
 		return;
 	}
 
-	if (IsInLoadingScreen() || GetLocalPlayerInterface<IHumanAI>()->GetAiControl()) {
+	if (IsInLoadingScreen()) {
 		auto cars = VEHICLE_LIST::GetList(VEHICLE_AIRACERS);
 		for (int i = 0; i < cars.size(); i++) {
 			auto veh = cars[i];
@@ -813,7 +818,11 @@ void TimeTrialLoop() {
 	}
 #endif
 
+#ifdef TIMETRIALS_CARBON
 	if (ply->IsStaging()) {
+#else
+	if (ply->IsStaging() || ply->mCOMObject->Find<IHumanAI>()->GetAiControl()) {
+#endif
 		nGlobalReplayTimerNoCountdown = 0;
 	}
 
@@ -844,7 +853,7 @@ void TimeTrialLoop() {
 	}
 
 	RecordGhost(ply);
-	if (!ply->IsStaging()) {
+	if (!ply->IsStaging() || ply->mCOMObject->Find<IHumanAI>()->GetAiControl()) {
 		nGlobalReplayTimerNoCountdown++;
 	}
 	nGlobalReplayTimer++;
@@ -909,7 +918,7 @@ float fLeaderboardYSpacing = 0.03;
 float fLeaderboardSize = 0.03;
 float fLeaderboardOutlineSize = 0.02;
 void DisplayLeaderboard() {
-	if (bChallengeSeriesMode && (GetLocalPlayerVehicle()->IsStaging()) || GetIsGamePaused()) {
+	if (bChallengeSeriesMode && GetLocalPlayerVehicle()->IsStaging() || GetLocalPlayerInterface<IHumanAI>()->GetAiControl() || GetIsGamePaused()) {
 		std::vector<std::string> uniquePlayers;
 
 		int numOnLeaderboard = 0;
@@ -1026,6 +1035,32 @@ void DisplayPlayerNames() {
 	}
 }
 
+void TimeTrialRenderLoop() {
+	if (TheGameFlowManager.CurrentGameFlowState != GAMEFLOW_STATE_RACING) {
+		InvalidateGhost();
+		return;
+	}
+	if (IsInLoadingScreen()) return;
+
+	DisplayLeaderboard();
+
+	if (!ShouldGhostRun()) return;
+
+	if (bViewReplayMode) {
+		auto ghost = GetViewReplayGhost();
+
+		auto tick = ghost->GetCurrentTick();
+		if (ghost->aTicks.size() > tick) {
+			DisplayInputs(&ghost->aTicks[tick].v1.inputs);
+		}
+	}
+	else if (bShowInputsWhileDriving) {
+		DisplayInputs(GetLocalPlayerInterface<IInput>()->GetControls());
+	}
+
+	DisplayPlayerNames();
+}
+
 void DoConfigSave() {
 	std::ofstream file("CwoeeGhosts/config.sav", std::iostream::out | std::iostream::binary);
 	if (!file.is_open()) return;
@@ -1088,7 +1123,9 @@ void DebugMenu() {
 			}
 			if (nDifficulty != DIFFICULTY_EASY) {
 				QuickValueEditor("Show Target Ghost Only", bChallengesOneGhostOnly);
-				QuickValueEditor("Show Personal Ghost", bChallengesPBGhost);
+				if (DrawMenuOption(std::format("Show Personal Ghost - {}", bChallengesPBGhost))) {
+					bChallengesPBGhost = !bChallengesPBGhost;
+				}
 			}
 		}
 		else {

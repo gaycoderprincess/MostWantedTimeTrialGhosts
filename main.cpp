@@ -96,29 +96,8 @@ void MainLoop() {
 
 void RenderLoop() {
 	VerifyTimers();
-
+	TimeTrialRenderLoop();
 	g_WorldLodLevel = std::min(g_WorldLodLevel, 2); // force world detail to one lower than max for props
-
-	if (TheGameFlowManager.CurrentGameFlowState != GAMEFLOW_STATE_RACING) return;
-	if (IsInLoadingScreen()) return;
-
-	DisplayLeaderboard();
-
-	if (!ShouldGhostRun()) return;
-
-	if (bViewReplayMode) {
-		auto ghost = GetViewReplayGhost();
-
-		auto tick = ghost->GetCurrentTick();
-		if (ghost->aTicks.size() > tick) {
-			DisplayInputs(&ghost->aTicks[tick].v1.inputs);
-		}
-	}
-	else if (bShowInputsWhileDriving) {
-		DisplayInputs(GetLocalPlayerInterface<IInput>()->GetControls());
-	}
-
-	DisplayPlayerNames();
 }
 
 auto Game_NotifyRaceFinished = (void(*)(ISimable*))0x6119F0;
@@ -126,8 +105,6 @@ void OnEventFinished(ISimable* a1) {
 	Game_NotifyRaceFinished(a1);
 
 	if ((!a1 || a1 == GetLocalPlayerSimable()) && !GetLocalPlayerVehicle()->IsDestroyed()) {
-		bVerifyPlayerFinished = true;
-
 		DLLDirSetter _setdir;
 		OnFinishRace();
 
@@ -171,14 +148,14 @@ BOOL WINAPI DllMain(HINSTANCE, DWORD fdwReason, LPVOID) {
 			GetCurrentDirectoryW(MAX_PATH, gDLLDir);
 
 			NyaHooks::SimServiceHook::Init();
-			NyaHooks::SimServiceHook::aPreFunctions.push_back(CheckPlayerPos);
 			NyaHooks::SimServiceHook::aPreFunctions.push_back(MainLoop);
-			NyaHooks::SimServiceHook::aPostFunctions.push_back(CollectPlayerPos);
 			NyaHooks::LateInitHook::Init();
 			NyaHooks::LateInitHook::aPreFunctions.push_back(FileIntegrity::VerifyGameFiles);
 			NyaHooks::LateInitHook::aFunctions.push_back([]() {
 				NyaHooks::PlaceD3DHooks();
+				NyaHooks::D3DEndSceneHook::aPreFunctions.push_back(CollectPlayerPos);
 				NyaHooks::D3DEndSceneHook::aFunctions.push_back(D3DHookMain);
+				NyaHooks::D3DEndSceneHook::aFunctions.push_back(CheckPlayerPos);
 				NyaHooks::D3DResetHook::aFunctions.push_back(OnD3DReset);
 
 				ApplyVerificationPatches();

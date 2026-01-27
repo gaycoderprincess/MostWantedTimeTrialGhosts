@@ -70,9 +70,6 @@ void InvalidatePlayerPos() {
 	bVerifyPlayerCollected = false;
 }
 
-// only needed for MW, not set in carbon - MW anticheat checks are way more strict and finishing trips them for some reason
-bool bVerifyPlayerFinished = false;
-
 tReplayTick VerifyPlayer;
 void CollectPlayerPos() {
 	bVerifyPlayerCollected = false;
@@ -80,9 +77,6 @@ void CollectPlayerPos() {
 	if (IsInLoadingScreen()) return;
 
 	if (auto ply = GetLocalPlayerVehicle()) {
-		if (ply->IsStaging()) bVerifyPlayerFinished = false;
-
-		if (bVerifyPlayerFinished) return;
 		VerifyPlayer.Collect(ply);
 		bVerifyPlayerCollected = true;
 	}
@@ -93,7 +87,6 @@ void CheckPlayerPos() {
 	if (IsInLoadingScreen()) return;
 	if (bViewReplayMode) return;
 	if (!bVerifyPlayerCollected) return;
-	if (bVerifyPlayerFinished) return;
 
 	if (auto ply = GetLocalPlayerVehicle()) {
 		auto tmp = VerifyPlayer;

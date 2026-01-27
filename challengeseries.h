@@ -17,12 +17,13 @@ public:
 	std::string sCarPreset;
 	int nLapCountOverride = 0;
 
-	int nNumGhosts = 0;
 	std::string sCarNameForGhost;
 	bool bPBGhostLoading = false;
 	bool bTargetGhostLoading = false;
+	bool bTargetGhostsLoadedWithPlayerPB = false;
 	tReplayGhost PBGhost = {};
 	tReplayGhost aTargetGhosts[NUM_DIFFICULTY] = {};
+	int nNumGhosts[NUM_DIFFICULTY] = {};
 
 	ChallengeSeriesEvent(const char* eventName, const char* carPreset, int lapCount = 0) : sEventName(eventName), sCarPreset(carPreset), nLapCountOverride(lapCount) {}
 
@@ -32,14 +33,14 @@ public:
 
 	int GetLapCount() {
 		if (nLapCountOverride > 0) return nLapCountOverride;
-		return GRaceParameters::GetNumLaps(GetRace());
+		return nLapCountOverride = GRaceParameters::GetNumLaps(GetRace());
 	}
 
 	void ClearPBGhost() {
 		PBGhost = {};
 	}
 
-	const std::string GetCarModelName() {
+	std::string GetCarModelName() const {
 		if (!sCarNameForGhost.empty()) return sCarNameForGhost;
 		return GetCarNameForGhost(sCarPreset);
 	}
@@ -61,7 +62,7 @@ public:
 	tReplayGhost GetTargetGhost() {
 		while (bTargetGhostLoading) { Sleep(0); }
 
-		if (aTargetGhosts[nDifficulty].nFinishTime != 0) return aTargetGhosts[nDifficulty];
+		if (bTargetGhostsLoadedWithPlayerPB == bChallengesPBGhost && aTargetGhosts[nDifficulty].nFinishTime != 0) return aTargetGhosts[nDifficulty];
 
 		bTargetGhostLoading = true;
 		tReplayGhost targetTime;
@@ -70,7 +71,8 @@ public:
 			times[0].aTicks.clear(); // just in case
 			targetTime = aTargetGhosts[nDifficulty] = times[0];
 		}
-		nNumGhosts = times.size();
+		nNumGhosts[nDifficulty] = times.size();
+		bTargetGhostsLoadedWithPlayerPB = bChallengesPBGhost;
 		bTargetGhostLoading = false;
 		return targetTime;
 	}
@@ -125,9 +127,10 @@ void PrecacheAllChallengeGhosts() {
 }
 
 void OnChallengeSeriesLoaded() {
-	// precache model names so the thread doesn't have to check attrib
+	// precache attrib stuff so the thread doesn't have to check it
 	for (auto& event : aNewChallengeSeries) {
 		event.GetCarModelName();
+		event.GetLapCount();
 	}
 
 	std::thread(PrecacheAllChallengeGhosts).detach();
