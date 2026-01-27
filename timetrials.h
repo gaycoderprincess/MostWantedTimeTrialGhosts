@@ -431,27 +431,62 @@ void LoadPB(tReplayGhost* ghost, const std::string& car, const std::string& trac
 	ghost->nFinishPoints = 0;
 
 	auto fileName = GetGhostFilename(car, track, lapCount, opponentId, upgrades, folder);
+#ifdef TIMETRIALS_COMPRESS_EXISTING
 	if (std::filesystem::exists(fileName)) {
 		if (CompressPB(fileName)) {
 			std::filesystem::remove(fileName);
 		}
 	}
 
+	CwoeeFileStream* decompress = nullptr;
+
 	auto newFileName = fileName + "2";
-	if (!std::filesystem::exists(newFileName)) {
+	if (std::filesystem::exists(newFileName)) {
+		decompress = DecompressPB(newFileName);
+		if (!decompress) {
+			if (TheGameFlowManager.CurrentGameFlowState != GAMEFLOW_STATE_IN_FRONTEND) {
+				WriteLog("Invalid ghost for " + fileName);
+			}
+			return;
+		}
+	}
+	else {
 		if (TheGameFlowManager.CurrentGameFlowState != GAMEFLOW_STATE_IN_FRONTEND) {
 			WriteLog("No ghost found for " + fileName);
 		}
 		return;
 	}
+#else
+	CwoeeFileStream* decompress = nullptr;
 
-	auto decompress = DecompressPB(fileName + "2");
-	if (!decompress) {
-		if (TheGameFlowManager.CurrentGameFlowState != GAMEFLOW_STATE_IN_FRONTEND) {
-			WriteLog("Invalid ghost for " + fileName);
+	auto newFileName = fileName + "2";
+	if (std::filesystem::exists(newFileName)) {
+		decompress = DecompressPB(newFileName);
+		if (!decompress) {
+			if (TheGameFlowManager.CurrentGameFlowState != GAMEFLOW_STATE_IN_FRONTEND) {
+				WriteLog("Invalid ghost for " + fileName);
+			}
+			return;
 		}
-		return;
 	}
+	else {
+		if (std::filesystem::exists(fileName)) {
+			decompress = ReadRawPB(fileName);
+			if (!decompress) {
+				if (TheGameFlowManager.CurrentGameFlowState != GAMEFLOW_STATE_IN_FRONTEND) {
+					WriteLog("Invalid ghost for " + fileName);
+				}
+				return;
+			}
+		}
+		else {
+			if (TheGameFlowManager.CurrentGameFlowState != GAMEFLOW_STATE_IN_FRONTEND) {
+				WriteLog("No ghost found for " + fileName);
+			}
+			return;
+		}
+	}
+#endif
 
 	auto& inFile = *decompress;
 

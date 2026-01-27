@@ -56,6 +56,16 @@ CwoeeFileStream* DecompressPB(const std::filesystem::path& filePath) {
 	return new CwoeeFileStream(decompressed, decompressedSize);
 }
 
+CwoeeFileStream* ReadRawPB(const std::filesystem::path& filePath) {
+	auto size = std::filesystem::file_size(filePath);
+	auto inFile = std::ifstream(filePath, std::ios::in | std::ios::binary);
+	if (!inFile.is_open()) return nullptr;
+
+	auto data = new uint8_t[size];
+	inFile.read((char*)data, size);
+	return new CwoeeFileStream(data, size);
+}
+
 bool CompressPB(const std::filesystem::path& filePath) {
 	auto size = std::filesystem::file_size(filePath);
 	auto inFile = std::ifstream(filePath, std::ios::in | std::ios::binary);
@@ -65,7 +75,7 @@ bool CompressPB(const std::filesystem::path& filePath) {
 	inFile.read((char*)data, size);
 
 	auto compressed = new uint8_t[size];
-	auto newSize = LZCompress(data, size, compressed);
+	auto newSize = HUFFCompress(data, size, compressed);
 
 	auto outFile = std::ofstream(filePath.string() + "2", std::ios::out | std::ios::binary);
 	if (!outFile.is_open()) return false;
