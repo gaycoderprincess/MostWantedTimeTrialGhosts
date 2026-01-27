@@ -19,6 +19,8 @@ public:
 
 	int nNumGhosts = 0;
 	std::string sCarNameForGhost;
+	bool bPBGhostLoading = false;
+	bool bTargetGhostLoading = false;
 	tReplayGhost PBGhost = {};
 	tReplayGhost aTargetGhosts[NUM_DIFFICULTY] = {};
 
@@ -37,23 +39,31 @@ public:
 		PBGhost = {};
 	}
 
-	std::string GetCarModelName() {
+	const std::string GetCarModelName() {
 		if (!sCarNameForGhost.empty()) return sCarNameForGhost;
 		return GetCarNameForGhost(sCarPreset);
 	}
 
 	tReplayGhost GetPBGhost() {
+		while (bPBGhostLoading) { Sleep(0); }
+
 		if (PBGhost.nFinishTime != 0) return PBGhost;
 
+		bPBGhostLoading = true;
 		tReplayGhost temp;
 		LoadPB(&temp, GetCarModelName(), sEventName, GetLapCount(), 0, nullptr);
+		temp.aTicks.clear(); // just in case
 		PBGhost = temp;
+		bPBGhostLoading = false;
 		return temp;
 	}
 
 	tReplayGhost GetTargetGhost() {
+		while (bTargetGhostLoading) { Sleep(0); }
+
 		if (aTargetGhosts[nDifficulty].nFinishTime != 0) return aTargetGhosts[nDifficulty];
 
+		bTargetGhostLoading = true;
 		tReplayGhost targetTime;
 		auto times = CollectReplayGhosts(GetCarModelName(), sEventName, GetLapCount(), nullptr);
 		if (!times.empty()) {
@@ -61,6 +71,7 @@ public:
 			targetTime = aTargetGhosts[nDifficulty] = times[0];
 		}
 		nNumGhosts = times.size();
+		bTargetGhostLoading = false;
 		return targetTime;
 	}
 };

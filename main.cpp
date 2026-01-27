@@ -1,6 +1,7 @@
 #include <windows.h>
 #include <format>
 #include <fstream>
+#include <thread>
 
 #include "nya_dx9_hookbase.h"
 #include "nya_commonhooklib.h"
@@ -18,6 +19,7 @@ bool bChallengeSeriesMode = false;
 #include "hooks/fixes.h"
 
 #ifdef TIMETRIALS_CHALLENGESERIES
+#include "challengeseries.h"
 #include "hooks/customevents.h"
 
 void SetChallengeSeriesMode(bool on) {

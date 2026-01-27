@@ -28,59 +28,6 @@ std::string GetTrackName(const std::string& eventId, uint32_t nameHash) {
 	return trackName;
 }
 
-std::string GetCarNameForGhost(const std::string& carPreset) {
-	auto carName = carPreset;
-	if (auto preset = FindFEPresetCar(FEHashUpper(carName.c_str()))) {
-		auto car = Attrib::FindCollection(Attrib::StringHash32("pvehicle"), preset->VehicleKey);
-		if (!car) {
-			MessageBoxA(0, std::format("Failed to find pvehicle for {} ({} {:X})", carPreset, preset->CarTypeName, preset->VehicleKey).c_str(), "nya?!~", MB_ICONERROR);
-			exit(0);
-		}
-		return *(const char**)Attrib::Collection::GetData(car, Attrib::StringHash32("CollectionName"), 0);
-	}
-	return carName;
-}
-
-class ChallengeSeriesEvent {
-public:
-	std::string sEventName;
-	std::string sCarPreset;
-	int nLapCountOverride = 0;
-
-	int nNumGhosts = 0;
-	tReplayGhost aTargetGhosts[NUM_DIFFICULTY] = {};
-
-	ChallengeSeriesEvent(const char* eventName, const char* carPreset, int lapCount = 0) : sEventName(eventName), sCarPreset(carPreset), nLapCountOverride(lapCount) {}
-
-	GRaceParameters* GetRace() const {
-		return GRaceDatabase::GetRaceFromHash(GRaceDatabase::mObj, Attrib::StringHash32(sEventName.c_str()));
-	}
-
-	int GetLapCount() {
-		if (nLapCountOverride > 0) return nLapCountOverride;
-		return GRaceParameters::GetNumLaps(GetRace());
-	}
-
-	tReplayGhost GetPBGhost() {
-		tReplayGhost temp;
-		LoadPB(&temp, GetCarNameForGhost(sCarPreset), sEventName, GetLapCount(), 0, nullptr);
-		return temp;
-	}
-
-	tReplayGhost GetTargetGhost() {
-		if (aTargetGhosts[nDifficulty].nFinishTime != 0) return aTargetGhosts[nDifficulty];
-
-		tReplayGhost targetTime;
-		auto times = CollectReplayGhosts(GetCarNameForGhost(sCarPreset), sEventName, GetLapCount(), nullptr);
-		if (!times.empty()) {
-			times[0].aTicks.clear(); // just in case
-			targetTime = aTargetGhosts[nDifficulty] = times[0];
-		}
-		nNumGhosts = times.size();
-		return targetTime;
-	}
-};
-
 std::vector<ChallengeSeriesEvent> aNewChallengeSeries = {
 	//ChallengeSeriesEvent("16.2.1", "M3GTRCAREERSTART"),
 	ChallengeSeriesEvent("16.2.1", "RAZORMUSTANG"),
@@ -121,36 +68,6 @@ std::vector<ChallengeSeriesEvent> aNewChallengeSeries = {
 	ChallengeSeriesEvent("1.8.1", "E3_DEMO_BMW"),
 	ChallengeSeriesEvent("2.2.1.r", "COP_CROSS"),
 };
-
-ChallengeSeriesEvent* GetChallengeEvent(uint32_t hash) {
-	for (auto& event : aNewChallengeSeries) {
-		if (!GRaceDatabase::GetRaceFromHash(GRaceDatabase::mObj, Attrib::StringHash32(event.sEventName.c_str()))) {
-			MessageBoxA(0, std::format("Failed to find event {}", event.sEventName).c_str(), "nya?!~", MB_ICONERROR);
-			exit(0);
-		}
-	}
-	for (auto& event : aNewChallengeSeries) {
-		if (Attrib::StringHash32(event.sEventName.c_str()) == hash) return &event;
-	}
-	return nullptr;
-}
-
-ChallengeSeriesEvent* GetChallengeEvent(const std::string& str) {
-	for (auto& event : aNewChallengeSeries) {
-		if (event.sEventName == str) return &event;
-	}
-	return nullptr;
-}
-
-int CalculateTotalTimes() {
-	uint32_t totalTime = 0;
-	for (auto& event : aNewChallengeSeries) {
-		auto time = event.GetPBGhost().nFinishTime;
-		if (!time) return 0;
-		totalTime += time;
-	}
-	return totalTime;
-}
 
 int GetNumChallengeSeriesEvents() {
 	return aNewChallengeSeries.size();
@@ -292,6 +209,8 @@ bool __thiscall GetIsEventCompleteHooked(GRaceDatabase* pThis, uint32_t raceHash
 }
 
 void ApplyCustomEventsHooks() {
+	NyaHooks::LateInitHook::aFunctions.push_back(OnChallengeSeriesLoaded);
+
 	NyaHookLib::PatchRelative(NyaHookLib::JMP, 0x5FBD20, &GetIsDDayRaceHooked);
 	NyaHookLib::PatchRelative(NyaHookLib::JMP, 0x56DC00, &GetIsFinalPursuitHooked);
 	NyaHookLib::PatchRelative(NyaHookLib::JMP, 0x5FC560, &GetIsFinalPursuitHooked);
