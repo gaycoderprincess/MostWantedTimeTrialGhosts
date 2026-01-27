@@ -970,7 +970,6 @@ void DoConfigLoad() {
 void DebugMenu() {
 	ChloeMenuLib::BeginMenu();
 
-	QuickValueEditor("Verify Game Data Integrity", bCheckFileIntegrity);
 	QuickValueEditor("Show Inputs While Driving", bShowInputsWhileDriving);
 	QuickValueEditor("Player Name Override", sPlayerNameOverride, sizeof(sPlayerNameOverride));
 
@@ -1062,6 +1061,7 @@ void DebugMenu() {
 		DrawMenuOption(std::format("Race - {}", GRaceParameters::GetEventID(status->mRaceParms)));
 	}
 
+	QuickValueEditor("Verify Game Data Integrity", bCheckFileIntegrity);
 	DrawMenuOption(std::format("Game Data Hash: {:X}", nLocalGameFilesHash));
 
 	ChloeMenuLib::EndMenu();
