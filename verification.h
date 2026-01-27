@@ -27,6 +27,44 @@ void VerifyTimers() {
 #endif
 }
 
+void ApplyVerificationPatches() {
+#ifdef TIMETRIALS_CARBON
+	// exopts - reenable barriers
+	NyaHookLib::WriteString(0x9D85C4, "BARRIER_SPLINE_4501");
+	NyaHookLib::WriteString(0x9D85D8, "BARRIER_SPLINE_4500");
+	NyaHookLib::WriteString(0x9D85EC, "BARRIER_SPLINE_4091");
+	NyaHookLib::WriteString(0x9D8600, "BARRIER_SPLINE_4090");
+	NyaHookLib::WriteString(0x9D8614, "BARRIER_SPLINE_306");
+	NyaHookLib::WriteString(0x9D8628, "BARRIER_SPLINE_305");
+	NyaHookLib::WriteString(0x9D8B30, "BARRIER_SPLINE_%d");
+
+	// exopts - drift stuff
+	NyaHookLib::Patch<uint8_t>(0x6BE947, 10);
+	NyaHookLib::Patch<uint8_t>(0x6AB943, 20);
+	NyaHookLib::Patch<uint8_t>(0x6AB945, 20);
+	Tweak_DriftRaceCollisionThreshold = 3.5;
+	AugmentedDriftWithEBrake = false;
+
+	// undo exopts gamespeed
+	static float f = 1.0;
+	NyaHookLib::Patch(0x7683BA, &f);
+	NyaHookLib::Patch(0x7683CB, &f);
+	NyaHookLib::Patch<uint16_t>(0x46CE42, 0x9090);
+#else
+	// exopts - reenable barriers
+	NyaHookLib::WriteString(0x8B2810, "SCENERY_GROUP_");
+	NyaHookLib::WriteString(0x8B2820, "PLAYER_BARRIERS_");
+	NyaHookLib::WriteString(0x8B2834, "BARRIERS_");
+	NyaHookLib::WriteString(0x8B2840, "BARRIER_");
+
+	// undo exopts gamespeed
+	static float f = 1.0;
+	NyaHookLib::Patch(0x6F4D1A, &f);
+	NyaHookLib::Patch(0x6F4D2B, &f);
+	NyaHookLib::Patch(0x78AA77, &f);
+#endif
+}
+
 tReplayTick VerifyPlayer;
 void CollectPlayerPos() {
 	if (TheGameFlowManager.CurrentGameFlowState != GAMEFLOW_STATE_RACING) return;

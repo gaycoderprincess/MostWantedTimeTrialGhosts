@@ -273,11 +273,7 @@ BOOL WINAPI DllMain(HINSTANCE, DWORD fdwReason, LPVOID) {
 				NyaHooks::D3DEndSceneHook::aFunctions.push_back(CheckPlayerPos);
 				NyaHooks::D3DResetHook::aFunctions.push_back(OnD3DReset);
 
-				// exopts - reenable barriers
-				NyaHookLib::WriteString(0x8B2810, "SCENERY_GROUP_");
-				NyaHookLib::WriteString(0x8B2820, "PLAYER_BARRIERS_");
-				NyaHookLib::WriteString(0x8B2834, "BARRIERS_");
-				NyaHookLib::WriteString(0x8B2840, "BARRIER_");
+				ApplyVerificationPatches();
 
 				Scheduler::fgScheduler->fTimeStep = 1.0 / 120.0; // set sim framerate
 				*(void**)0x92C534 = (void*)&VehicleConstructHooked;
@@ -322,12 +318,6 @@ BOOL WINAPI DllMain(HINSTANCE, DWORD fdwReason, LPVOID) {
 
 			NyaHookLib::Patch<uint8_t>(0x60A67A, 0xEB); // disable SpawnCop, fixes dday issues
 			NyaHookLib::Patch<uint8_t>(0x611440, 0xC3); // disable KnockoutRacer
-
-			// undo exopts gamespeed
-			static float f = 1.0;
-			NyaHookLib::Patch(0x6F4D1A, &f);
-			NyaHookLib::Patch(0x6F4D2B, &f);
-			NyaHookLib::Patch(0x78AA77, &f);
 
 			ApplyCarRenderHooks();
 			ApplyGameFixes();
