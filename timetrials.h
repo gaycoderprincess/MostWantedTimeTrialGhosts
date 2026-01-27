@@ -881,8 +881,13 @@ void DisplayLeaderboard() {
 				time.pop_back();
 				str = std::format("{}. {} - {}", ranking++, name, time);
 			}
-			if (bCheckFileIntegrity && ghost.nGameFilesHash && ghost.nGameFilesHash != nLocalGameFilesHash) {
-				str += std::format(" (Game data mismatch, {:X})", ghost.nGameFilesHash);
+			if (bCheckFileIntegrity) {
+				if (!ghost.nGameFilesHash) {
+					str += " (Old ghost, no game data info)";
+				}
+				else if (ghost.nGameFilesHash != nLocalGameFilesHash) {
+					str += std::format(" (Game data mismatch, {:X})", ghost.nGameFilesHash);
+				}
 			}
 			DrawString(data, str);
 			data.y += fLeaderboardYSpacing;
