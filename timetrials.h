@@ -240,13 +240,15 @@ bool ShouldGhostRun() {
 }
 
 std::vector<tReplayGhost> aLeaderboardGhosts;
-void InvalidateGhost() {
+void InvalidateGhost(bool resetTimers = true) {
 	bGhostsLoaded = false;
-	nGlobalReplayTimer = 0;
-	nGlobalReplayTimerNoCountdown = 0;
+	if (resetTimers) {
+		nGlobalReplayTimer = 0;
+		nGlobalReplayTimerNoCountdown = 0;
+		aRecordingTicks.clear();
+	}
 	PlayerPBGhost.Invalidate();
 	OpponentGhosts.clear();
-	aRecordingTicks.clear();
 	aLeaderboardGhosts.clear();
 }
 
@@ -656,7 +658,7 @@ void OnFinishRace() {
 			SavePB(ghost, car->GetVehicleName(), GRaceParameters::GetEventID(GRaceStatus::fObj->mRaceParms), GetRaceNumLaps(), car->GetCustomizations());
 
 			// invalidate all ghosts to make sure the pb is re-read for the leaderboard
-			InvalidateGhost();
+			InvalidateGhost(false);
 
 #ifdef TIMETRIALS_CHALLENGESERIES
 			OnChallengeSeriesEventPB();
