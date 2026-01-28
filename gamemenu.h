@@ -193,9 +193,10 @@ void __thiscall SetupTimeTrial(UIOptionsScreen* pThis) {
 	}
 }
 
+auto OptionsMenu_orig = (void(__thiscall*)(IconScrollerMenu*, IconOption*))nullptr;
 void __thiscall OptionsMenuHooked(IconScrollerMenu* pThis, IconOption* widget) {
 	IconScrollerMenu::AddOption(pThis, new OMTimeTrial(0x4DF98FB2, Attrib::StringHash32("GHOST_OPTIONS"), 0));
-	IconScrollerMenu::AddOption(pThis, widget);
+	OptionsMenu_orig(pThis, widget);
 }
 
 int AddToOptionsMenu(void* initFunc) {
@@ -224,7 +225,7 @@ void ApplyCustomMenuHooks() {
 	TimeTrialOption = AddToOptionsMenu((void*)SetupTimeTrial);
 	if (TimeTrialOption < 0) return;
 
-	NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x528F8C, &OptionsMenuHooked);
+	OptionsMenu_orig = (void(__thiscall*)(IconScrollerMenu*, IconOption*))NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x528F8C, &OptionsMenuHooked);
 	NyaHookLib::Patch<uint16_t>(0x51041A, 0x01B0); // default to options not changed to disable the exit prompt
 
 	SearchForString_orig = (const char*(__fastcall*)(void*, uint32_t))NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x57E924, &SearchForStringHooked);
