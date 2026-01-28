@@ -108,36 +108,3 @@ bool WriteCompressedPB(CwoeeOStream* file, const std::filesystem::path& filePath
 	outFile.write((char*)compressed, newSize);
 	return true;
 }
-
-/*if (std::filesystem::exists(fileName)) {
-	if (CompressPB(fileName)) {
-		std::filesystem::remove(fileName);
-	}
-}
-
-auto newFileName = fileName + "2";
-if (!std::filesystem::exists(newFileName)) {
-	if (TheGameFlowManager.CurrentGameFlowState != GAMEFLOW_STATE_IN_FRONTEND) {
-		WriteLog("No ghost found for " + fileName);
-	}
-	return;
-}
-
-uint32_t size = 0;
-auto decompress = DecompressPB(fileName + "2", &size);
-if (!decompress) {
-	if (TheGameFlowManager.CurrentGameFlowState != GAMEFLOW_STATE_IN_FRONTEND) {
-		WriteLog("Invalid ghost for " + fileName);
-	}
-	return;
-}
-
-class temp {
-public:
-	uint8_t* data;
-
-	temp(uint8_t* a) : data(a) {}
-	~temp() { delete[] data; }
-} dtor(decompress);
-
-auto inFile = IMemStream((char*)decompress, size);*/
