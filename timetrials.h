@@ -1,7 +1,7 @@
 #include "compression.h"
 
 const int nLocalReplayVersion = 6;
-const int nMaxNumGhostsToCheck = 8;
+const int nMaxNumGhostsToCheck = 16;
 
 enum eNitroType {
 	NITRO_OFF,
