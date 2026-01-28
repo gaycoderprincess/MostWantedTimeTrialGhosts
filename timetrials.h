@@ -477,6 +477,11 @@ void LoadPB(tReplayGhost* ghost, const std::string& car, const std::string& trac
 			}
 			return;
 		}
+
+		// delete old ghost if a new one exists
+		if (std::filesystem::exists(fileName)) {
+			std::filesystem::remove(fileName);
+		}
 	}
 	else {
 		if (std::filesystem::exists(fileName)) {
