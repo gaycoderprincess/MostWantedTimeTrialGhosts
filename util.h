@@ -20,7 +20,7 @@ bool IsInNIS() {
 }
 
 UserProfile* GetUserProfile() {
-	return FEDatabase->mUserProfile;
+	return FEDatabase->CurrentUserProfiles[0];
 }
 
 bool GetIsGamePaused() {
