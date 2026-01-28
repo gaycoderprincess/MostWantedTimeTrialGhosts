@@ -20,8 +20,9 @@ enum eGhostVisuals {
 	GHOST_HIDE,
 	GHOST_SHOW,
 	GHOST_HIDE_NEARBY,
+	NUM_GHOST_VISUALS
 };
-eGhostVisuals nGhostVisuals = GHOST_HIDE_NEARBY;
+int nGhostVisuals = GHOST_HIDE_NEARBY;
 bool bShowInputsWhileDriving = false;
 char sPlayerNameOverride[32] = "";
 enum eDifficulty {
@@ -30,7 +31,7 @@ enum eDifficulty {
 	DIFFICULTY_HARD, // quickest ghost only for every track
 	NUM_DIFFICULTY,
 };
-eDifficulty nDifficulty = DIFFICULTY_HARD;
+int nDifficulty = DIFFICULTY_HARD;
 bool bChallengesOneGhostOnly = false;
 bool bChallengesPBGhost = false;
 bool bCheckFileIntegrity = false;
@@ -1048,32 +1049,34 @@ void TimeTrialRenderLoop() {
 
 	if (!ShouldGhostRun()) return;
 
+	if (!GetIsGamePaused()) {
 #ifdef TIMETRIALS_CARBON
-	if (bViewReplayMode) {
-		auto ghost = GetViewReplayGhost();
+		if (bViewReplayMode) {
+			auto ghost = GetViewReplayGhost();
 
-		auto tick = ghost->GetCurrentTick();
-		if (ghost->aTicks.size() > tick) {
-			DisplayInputs(&ghost->aTicks[tick].v1.inputs);
+			auto tick = ghost->GetCurrentTick();
+			if (ghost->aTicks.size() > tick) {
+				DisplayInputs(&ghost->aTicks[tick].v1.inputs);
+			}
 		}
-	}
-	else if (bShowInputsWhileDriving) {
-		auto inputs = GetPlayerControls(GetLocalPlayerVehicle());
-		DisplayInputs(&inputs);
-	}
+		else if (bShowInputsWhileDriving) {
+			auto inputs = GetPlayerControls(GetLocalPlayerVehicle());
+			DisplayInputs(&inputs);
+		}
 #else
-	if (bViewReplayMode) {
-		auto ghost = GetViewReplayGhost();
+		if (bViewReplayMode) {
+			auto ghost = GetViewReplayGhost();
 
-		auto tick = ghost->GetCurrentTick();
-		if (ghost->aTicks.size() > tick) {
-			DisplayInputs(&ghost->aTicks[tick].v1.inputs);
+			auto tick = ghost->GetCurrentTick();
+			if (ghost->aTicks.size() > tick) {
+				DisplayInputs(&ghost->aTicks[tick].v1.inputs);
+			}
 		}
-	}
-	else if (bShowInputsWhileDriving) {
-		DisplayInputs(GetLocalPlayerInterface<IInput>()->GetControls());
-	}
+		else if (bShowInputsWhileDriving) {
+			DisplayInputs(GetLocalPlayerInterface<IInput>()->GetControls());
+		}
 #endif
+	}
 
 	DisplayPlayerNames();
 }

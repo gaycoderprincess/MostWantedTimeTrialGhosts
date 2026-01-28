@@ -19,6 +19,7 @@ bool bChallengeSeriesMode = false;
 #include "hooks/fixes.h"
 
 #ifdef TIMETRIALS_CHALLENGESERIES
+#include "gamemenu.h"
 #include "challengeseries.h"
 #include "hooks/customevents.h"
 
@@ -215,6 +216,8 @@ BOOL WINAPI DllMain(HINSTANCE, DWORD fdwReason, LPVOID) {
 			SetChallengeSeriesMode(true);
 			// remove quick race
 			NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x54507B, 0x57397D);
+
+			ApplyCustomMenuHooks();
 #else
 			UnlockAllThings = true;
 			// remove challenge series
