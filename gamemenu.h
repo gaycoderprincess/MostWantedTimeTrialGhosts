@@ -1,9 +1,5 @@
 class TTDifficulty : public FEToggleWidget {
 public:
-	void* operator new(size_t size) {
-		return GAME_malloc(size);
-	}
-
 	TTDifficulty(bool state) : FEToggleWidget(state) {}
 
 	void Act(const char* a2, uint32_t a3) override {
@@ -46,10 +42,6 @@ public:
 
 class TTGhostVisuals : public FEToggleWidget {
 public:
-	void* operator new(size_t size) {
-		return GAME_malloc(size);
-	}
-
 	TTGhostVisuals(bool state) : FEToggleWidget(state) {}
 
 	void Act(const char* a2, uint32_t a3) override {
@@ -90,10 +82,6 @@ public:
 
 class TTPBGhost : public FEToggleWidget {
 public:
-	void* operator new(size_t size) {
-		return GAME_malloc(size);
-	}
-
 	TTPBGhost(bool state) : FEToggleWidget(state) {}
 
 	void Act(const char* a2, uint32_t a3) override {
@@ -121,10 +109,6 @@ public:
 
 class TTInputDisplay : public FEToggleWidget {
 public:
-	void* operator new(size_t size) {
-		return GAME_malloc(size);
-	}
-
 	TTInputDisplay(bool state) : FEToggleWidget(state) {}
 
 	void Act(const char* a2, uint32_t a3) override {
@@ -166,7 +150,7 @@ void __thiscall SetupTimeTrial(UIOptionsScreen* pThis) {
 }
 
 void ApplyCustomMenuHooks() {
-	NyaHooks::OptionsMenuHook::AddMenuOption((void*)SetupTimeTrial, 0x4DF98FB2, Attrib::StringHash32("GHOST_OPTIONS"));
+	NyaHooks::OptionsMenuHook::AddNewMenu((void*)SetupTimeTrial, 0x4DF98FB2, Attrib::StringHash32("GHOST_OPTIONS"));
 	NyaHooks::OptionsMenuHook::AddStringRecord(Attrib::StringHash32("GHOST_OPTIONS"), "Time Trials");
 	NyaHooks::OptionsMenuHook::AddStringRecord(Attrib::StringHash32("GHOST_OPTIONS_H"), "TIME TRIALS");
 	NyaHooks::OptionsMenuHook::AddStringRecord(Attrib::StringHash32("GHOST_OPTIONS_L"), "time trials");
