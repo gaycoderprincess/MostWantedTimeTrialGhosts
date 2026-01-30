@@ -18,32 +18,15 @@ bool bChallengeSeriesMode = false;
 #include "hooks/carrender.h"
 #include "hooks/fixes.h"
 
-#ifdef TIMETRIALS_CHALLENGESERIES
 #include "gamemenu.h"
 #include "challengeseries.h"
 #include "hooks/customevents.h"
-
-void SetChallengeSeriesMode(bool on) {
-	bChallengeSeriesMode = on;
-	if (on) {
-		bViewReplayMode = false;
-		bOpponentsOnly = true;
-		nNitroType = NITRO_ON;
-		nSpeedbreakerType = NITRO_ON;
-		ApplyCustomEventsHooks();
-	}
-	else {
-		bOpponentsOnly = false;
-	}
-}
-#endif
 
 ISimable* VehicleConstructHooked(Sim::Param params) {
 	DLLDirSetter _setdir;
 
 	auto vehicle = (VehicleParams*)params.mData;
-#ifdef TIMETRIALS_CHALLENGESERIES
-	if (vehicle->carClass == DRIVER_HUMAN && !FindFEPresetCar(bStringHashUpper(pSelectedEvent->sCarPreset.c_str()))) {
+	if (bChallengeSeriesMode && vehicle->carClass == DRIVER_HUMAN && !FindFEPresetCar(bStringHashUpper(pSelectedEvent->sCarPreset.c_str()))) {
 		static FECustomizationRecord customizations;
 		customizations = CreateStockCustomizations(Attrib::StringHash32(pSelectedEvent->sCarPreset.c_str()));
 		if (pSelectedEvent->sCarPreset == "gti") {
@@ -62,7 +45,6 @@ ISimable* VehicleConstructHooked(Sim::Param params) {
 			SetRaceNumLaps(pSelectedEventParams, pSelectedEvent->nLapCountOverride);
 		}
 	}
-#endif
 	if (vehicle->carClass == DRIVER_RACER) {
 		// copy player car for all opponents
 		auto player = GetLocalPlayerVehicle();
@@ -205,6 +187,8 @@ BOOL WINAPI DllMain(HINSTANCE, DWORD fdwReason, LPVOID) {
 			NyaHookLib::Patch<uint8_t>(0x60A67A, 0xEB); // disable SpawnCop, fixes dday issues
 			NyaHookLib::Patch<uint8_t>(0x611440, 0xC3); // disable KnockoutRacer
 
+			NyaHookLib::Patch<uint16_t>(0x7AA753, 0x9090); // remove quickplay
+
 			ApplyCarRenderHooks();
 			ApplyGameFixes();
 
@@ -212,17 +196,10 @@ BOOL WINAPI DllMain(HINSTANCE, DWORD fdwReason, LPVOID) {
 
 			DoConfigLoad();
 
-#ifdef TIMETRIALS_CHALLENGESERIES
-			SetChallengeSeriesMode(true);
-			// remove quick race
-			NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x54507B, 0x57397D);
-
+			SetupCustomEventsHooks();
 			ApplyCustomMenuHooks();
-#else
+
 			UnlockAllThings = true;
-			// remove challenge series
-			NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x545037, 0x57397D);
-#endif
 
 			WriteLog("Mod initialized");
 		} break;

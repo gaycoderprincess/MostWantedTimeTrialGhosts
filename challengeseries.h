@@ -116,7 +116,12 @@ void OnChallengeSeriesEventPB() {
 	event->ClearPBGhost();
 }
 
-void PrecacheAllChallengeGhosts() {
+void PrecacheChallengeGhost(ChallengeSeriesEvent* event) {
+	event->GetPBGhost();
+	event->GetTargetGhost();
+}
+
+/*void PrecacheAllChallengeGhosts() {
 	// all pbs first, all targets after
 	for (auto& event : aNewChallengeSeries) {
 		event.GetPBGhost();
@@ -124,7 +129,7 @@ void PrecacheAllChallengeGhosts() {
 	for (auto& event : aNewChallengeSeries) {
 		event.GetTargetGhost();
 	}
-}
+}*/
 
 void OnChallengeSeriesLoaded() {
 	// precache attrib stuff so the thread doesn't have to check it
@@ -133,5 +138,7 @@ void OnChallengeSeriesLoaded() {
 		event.GetLapCount();
 	}
 
-	std::thread(PrecacheAllChallengeGhosts).detach();
+	for (auto& event : aNewChallengeSeries) {
+		std::thread(PrecacheChallengeGhost, &event).detach();
+	}
 }

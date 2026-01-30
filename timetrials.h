@@ -281,21 +281,23 @@ void RunGhost(IVehicle* veh, tReplayGhost* ghost) {
 }
 
 void RecordGhost(IVehicle* veh) {
-	switch (nNitroType) {
-		case NITRO_OFF:
-			veh->mCOMObject->Find<IEngine>()->ChargeNOS(-1);
-			break;
-		case NITRO_INF:
-			veh->mCOMObject->Find<IEngine>()->ChargeNOS(1);
-			break;
-	}
-	switch (nSpeedbreakerType) {
-		case NITRO_OFF:
-			veh->mCOMObject->Find<IPlayer>()->ResetGameBreaker(false);
-			break;
-		case NITRO_INF:
-			veh->mCOMObject->Find<IPlayer>()->ChargeGameBreaker(1);
-			break;
+	if (!bChallengeSeriesMode) {
+		switch (nNitroType) {
+			case NITRO_OFF:
+				veh->mCOMObject->Find<IEngine>()->ChargeNOS(-1);
+				break;
+			case NITRO_INF:
+				veh->mCOMObject->Find<IEngine>()->ChargeNOS(1);
+				break;
+		}
+		switch (nSpeedbreakerType) {
+			case NITRO_OFF:
+				veh->mCOMObject->Find<IPlayer>()->ResetGameBreaker(false);
+				break;
+			case NITRO_INF:
+				veh->mCOMObject->Find<IPlayer>()->ChargeGameBreaker(1);
+				break;
+		}
 	}
 
 	if (sPlayerNameOverride[0]) {
@@ -326,25 +328,27 @@ std::string GetGhostFilename(const std::string& car, const std::string& track, i
 		path += std::format("_lap{}", lapCount);
 	}
 
-	switch (nNitroType) {
-		case NITRO_OFF:
-			path += "_nos0";
-			break;
-		case NITRO_INF:
-			path += "_nosinf";
-			break;
-		default:
-			break;
-	}
-	switch (nSpeedbreakerType) {
-		case NITRO_OFF:
-			path += "_spdbrk0";
-			break;
-		case NITRO_INF:
-			path += "_spdbrkinf";
-			break;
-		default:
-			break;
+	if (!bChallengeSeriesMode) {
+		switch (nNitroType) {
+			case NITRO_OFF:
+				path += "_nos0";
+				break;
+			case NITRO_INF:
+				path += "_nosinf";
+				break;
+			default:
+				break;
+		}
+		switch (nSpeedbreakerType) {
+			case NITRO_OFF:
+				path += "_spdbrk0";
+				break;
+			case NITRO_INF:
+				path += "_spdbrkinf";
+				break;
+			default:
+				break;
+		}
 	}
 
 	// read tunings
@@ -396,6 +400,9 @@ void SavePB(tReplayGhost* ghost, const std::string& car, const std::string& trac
 	char signature[4] = "nya";
 	int fileVersion = nLocalReplayVersion;
 
+	int nitroType = bChallengeSeriesMode ? NITRO_ON : nNitroType;
+	int speedbreakerType = bChallengeSeriesMode ? NITRO_ON : nSpeedbreakerType;
+
 	size_t size = sizeof(tReplayTick);
 	outFile.write(signature, sizeof(signature));
 	outFile.write((char*)&fileVersion, sizeof(fileVersion));
@@ -404,8 +411,8 @@ void SavePB(tReplayGhost* ghost, const std::string& car, const std::string& trac
 	WriteStringToFile(outFile, track.c_str());
 	outFile.write((char*)&ghost->nFinishTime, sizeof(ghost->nFinishTime));
 	outFile.write((char*)&ghost->nFinishPoints, sizeof(ghost->nFinishPoints));
-	outFile.write((char*)&nNitroType, sizeof(nNitroType));
-	outFile.write((char*)&nSpeedbreakerType, sizeof(nSpeedbreakerType));
+	outFile.write((char*)&nitroType, sizeof(nitroType));
+	outFile.write((char*)&speedbreakerType, sizeof(speedbreakerType));
 	outFile.write((char*)&lapCount, sizeof(lapCount));
 #ifndef TIMETRIALS_CARBON
 	if (upgrades) {
@@ -573,14 +580,20 @@ void LoadPB(tReplayGhost* ghost, const std::string& car, const std::string& trac
 		WriteLog("Mismatched ghost for " + fileName);
 		return;
 	}
-	if (tmplaps != lapCount || tmpnitro != nNitroType || tmpspdbrk != nSpeedbreakerType) {
+	if (tmplaps != lapCount) {
 		WriteLog("Mismatched ghost for " + fileName);
 		return;
 	}
-	if (upgrades && !bChallengeSeriesMode) {
-		if (memcmp(&playerPhysics, &tmpphysics, sizeof(playerPhysics)) != 0 || memcmp(&playerTuning, &tmptuning, sizeof(playerTuning)) != 0) {
+	if (!bChallengeSeriesMode) {
+		if (tmpnitro != nNitroType || tmpspdbrk != nSpeedbreakerType) {
 			WriteLog("Mismatched ghost for " + fileName);
 			return;
+		}
+		if (upgrades) {
+			if (memcmp(&playerPhysics, &tmpphysics, sizeof(playerPhysics)) != 0 || memcmp(&playerTuning, &tmptuning, sizeof(playerTuning)) != 0) {
+				WriteLog("Mismatched ghost for " + fileName);
+				return;
+			}
 		}
 	}
 	int count = 0;
@@ -666,9 +679,9 @@ void OnFinishRace() {
 			// invalidate all ghosts to make sure the pb is re-read for the leaderboard
 			InvalidateGhost(false);
 
-#ifdef TIMETRIALS_CHALLENGESERIES
-			OnChallengeSeriesEventPB();
-#endif
+			if (bChallengeSeriesMode) {
+				OnChallengeSeriesEventPB();
+			}
 		}
 		//if (!ghost->nCurrentSessionPBTime || replayTime < ghost->nCurrentSessionPBTime) {
 		//	ghost->nCurrentSessionPBTime = replayTime;
@@ -847,7 +860,7 @@ void TimeTrialLoop() {
 #endif
 
 		auto opponents = VEHICLE_LIST::GetList(VEHICLE_AIRACERS);
-		if (bOpponentsOnly) {
+		if (bOpponentsOnly || bChallengeSeriesMode) {
 			for (int i = 0; i < opponents.size() && i < OpponentGhosts.size(); i++) {
 				RunGhost(opponents[i], &OpponentGhosts[i]);
 			}
