@@ -164,6 +164,10 @@ BOOL WINAPI DllMain(HINSTANCE, DWORD fdwReason, LPVOID) {
 					MessageBoxA(nullptr, "Incompatible mod detected! Please remove NFSMWLimitAdjuster from your game before using this mod.", "nya?!~", MB_ICONERROR);
 					exit(0);
 				}
+				if (GetModuleHandleA("NFSMWExtraOptions.asi") || std::filesystem::exists("NFSMWExtraOptionsSettings.ini") || std::filesystem::exists("scripts/NFSMWExtraOptionsSettings.ini")) {
+					MessageBoxA(nullptr, "Potential unfair advantage detected! Please remove NFSMWExtraOptions from your game before using this mod.", "nya?!~", MB_ICONERROR);
+					exit(0);
+				}
 			});
 
 			// use SuspensionRacer instead of SuspensionSimple for racers - fixes popped tire behavior

@@ -66,8 +66,7 @@ InputControls GetPlayerControls(IVehicle* veh) {
 	out.fActionButton = GetLocalPlayer()->InGameBreaker();
 	return out;
 }
-#endif
-
+#else
 float GetPlayerSpeedtrapScore(IVehicle* pVehicle) {
 	float f = 0;
 	if (auto racer = GetRacerInfoFromHandle(pVehicle->mCOMObject->Find<ISimable>()->GetOwnerHandle())) {
@@ -77,6 +76,7 @@ float GetPlayerSpeedtrapScore(IVehicle* pVehicle) {
 	}
 	return f;
 }
+#endif
 
 struct tReplayTick {
 	struct tTickVersion1 {
