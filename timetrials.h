@@ -287,7 +287,9 @@ void RunGhost(IVehicle* veh, tReplayGhost* ghost) {
 	ghost->pLastVehicle = veh;
 
 	if (auto racer = GetRacerInfoFromHandle(veh->mCOMObject->Find<ISimable>()->GetOwnerHandle())) {
-		SetRacerName(racer, ghost->sPlayerName.empty() ? "RACER" : ghost->sPlayerName.c_str());
+		auto name = ghost->sPlayerName;
+		if (name.empty()) name = ghost->bIsPersonalBest ? "PERSONAL BEST" : "RACER";
+		SetRacerName(racer, name.c_str());
 	}
 
 	if (!ghost->IsValid()) {
@@ -855,6 +857,7 @@ void TimeTrialLoop() {
 		auto laps = GetRaceNumLaps();
 		auto upgrades = ply->GetCustomizations();
 		LoadPB(&PlayerPBGhost, car, track, laps, 0, upgrades);
+		PlayerPBGhost.bIsPersonalBest = true;
 
 		OpponentGhosts.clear();
 
@@ -1116,7 +1119,7 @@ void DisplayPlayerNames() {
 			auto car = ghost->pLastVehicle;
 			if (!IsVehicleValidAndActive(car)) continue;
 
-			auto name = ghost == &PlayerPBGhost ? ghost->sPlayerName : GetRealPlayerName(ghost->sPlayerName);
+			auto name = ghost->bIsPersonalBest ? ghost->sPlayerName : GetRealPlayerName(ghost->sPlayerName);
 
 			UMath::Vector3 dim;
 			car->mCOMObject->Find<IRigidBody>()->GetDimension(&dim);
