@@ -201,6 +201,7 @@ BOOL WINAPI DllMain(HINSTANCE, DWORD fdwReason, LPVOID) {
 			NyaHookLib::Patch(0x5A3A7C + 1, "E3_DEMO_BMW");
 			NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x6F48DB, &GetCareerCarType);
 #else
+			NyaHookLib::Patch(0x8F5CFC, 0); // tollbooth -> sprint
 			NyaHookLib::Patch(0x8F5D04, 0); // speedtrap -> sprint
 			NyaHookLib::Patch<uint8_t>(0x60A7B0, 0xC3); // disable speedtrap trigger code
 			NyaHookLib::Patch<uint8_t>(0x5F4E50, 0xC3); // remove speedtraps
