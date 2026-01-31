@@ -734,9 +734,6 @@ void OnFinishRace() {
 			auto car = GetLocalPlayerVehicle();
 			SavePB(ghost, car->GetVehicleName(), GRaceParameters::GetEventID(GRaceStatus::fObj->mRaceParms), GetRaceNumLaps(), car->GetCustomizations());
 
-			// invalidate all ghosts to make sure the pb is re-read for the leaderboard
-			InvalidateGhost(false);
-
 			if (bChallengeSeriesMode) {
 				OnChallengeSeriesEventPB();
 			}
@@ -816,6 +813,8 @@ tReplayGhost* GetGhostForOpponent(int id) {
 	bool showPB = false;
 	if (bChallengeSeriesMode && bChallengesPBGhost) showPB = true;
 	if (IsPracticeMode() && !bPracticeOpponentsOnly) showPB = true;
+
+	if (showPB && !PlayerPBGhost.IsValid()) showPB = false;
 
 	if (showPB && id == 0) return &PlayerPBGhost;
 	if (showPB) id -= 1;
@@ -1007,6 +1006,12 @@ std::string GetRealPlayerName(const std::string& ghostName) {
 	return ghostName;
 }
 
+std::string GetGameDataHashName(uint32_t hash) {
+	if (hash == 0x4C19AA83) return "1.3 Black Edition";
+	if (hash == 0x562CA1F7) return "Xbox 360 Stuff Pack v4.1";
+	return std::format("{:X}", hash);
+}
+
 float fLeaderboardX = 0.03;
 float fLeaderboardY = 0.6;
 float fLeaderboardYSpacing = 0.03;
@@ -1074,7 +1079,7 @@ void DisplayLeaderboard() {
 					str += " (Old ghost, no game data info)";
 				}
 				else if (ghost.nGameFilesHash != nLocalGameFilesHash) {
-					str += std::format(" (Game data mismatch, {:X})", ghost.nGameFilesHash);
+					str += std::format(" (Game data mismatch, {})", GetGameDataHashName(ghost.nGameFilesHash));
 				}
 			}
 			DrawString(data, str);
@@ -1091,11 +1096,15 @@ void DisplayPlayerNames() {
 		const float fPlayerNameFadeEnd = 150.0;
 		const float fPlayerNameAlpha = 200.0;
 
-		for (auto& ghost : OpponentGhosts) {
-			auto car = ghost.pLastVehicle;
+		auto count = VEHICLE_LIST::GetList(VEHICLE_AIRACERS).size();
+		for (int i = 0; i < count; i++) {
+			auto ghost = GetGhostForOpponent(i);
+			if (!ghost) continue;
+
+			auto car = ghost->pLastVehicle;
 			if (!IsVehicleValidAndActive(car)) continue;
 
-			auto name = ghost.bIsPersonalBest ? ghost.sPlayerName : GetRealPlayerName(ghost.sPlayerName);
+			auto name = ghost->bIsPersonalBest ? ghost->sPlayerName : GetRealPlayerName(ghost->sPlayerName);
 
 			UMath::Vector3 dim;
 			car->mCOMObject->Find<IRigidBody>()->GetDimension(&dim);

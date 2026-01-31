@@ -100,12 +100,6 @@ void CheckPlayerPos() {
 }
 
 namespace FileIntegrity {
-	std::string GetGameDataHashName(uint32_t hash) {
-		if (hash == 0x4C19AA83) return "1.3 Black Edition";
-		if (hash == 0x562CA1F7) return "Xbox 360 Stuff Pack v4.1";
-		return std::format("{:X}", hash);
-	}
-
 	const char* aFilesToCheck[] = {
 			"GLOBAL/ATTRIBUTES.BIN",
 			"GLOBAL/FE_ATTRIB.BIN",
