@@ -134,14 +134,103 @@ public:
 	}
 };
 
+class TTNOS : public FEToggleWidget {
+public:
+	TTNOS(bool state) : FEToggleWidget(state) {}
+
+	void Act(const char* a2, uint32_t a3) override {
+		if (a3 == 0x9120409E) {
+			nNitroType--;
+			if (nNitroType < 0) nNitroType = NUM_NITRO-1;
+		}
+		if (a3 == 0xB5971BF1) {
+			nNitroType++;
+			if (nNitroType >= NUM_NITRO) nNitroType = 0;
+		}
+
+		bMovedLastUpdate = true;
+		BlinkArrows(a3);
+		Draw();
+	}
+	void Draw() override {
+		if (auto title = pTitle) {
+			title->LabelHash = Attrib::StringHash32("GHOST_NITRO");
+			title->Flags |= 0x400000;
+			title->Flags = title->Flags & 0xFFBFFFFD | 0x400000;
+		}
+		if (auto title = pData) {
+			switch (nNitroType) {
+				case NITRO_OFF:
+					FEPrintf(title, "Off");
+					break;
+				case NITRO_ON:
+					FEPrintf(title, "On");
+					break;
+				case NITRO_INF:
+					FEPrintf(title, "Infinite");
+					break;
+			}
+		}
+	}
+};
+
+class TTSpdbrk : public FEToggleWidget {
+public:
+	TTSpdbrk(bool state) : FEToggleWidget(state) {}
+
+	void Act(const char* a2, uint32_t a3) override {
+		if (a3 == 0x9120409E) {
+			nSpeedbreakerType--;
+			if (nSpeedbreakerType < 0) nSpeedbreakerType = NUM_NITRO-1;
+		}
+		if (a3 == 0xB5971BF1) {
+			nSpeedbreakerType++;
+			if (nSpeedbreakerType >= NUM_NITRO) nSpeedbreakerType = 0;
+		}
+
+		bMovedLastUpdate = true;
+		BlinkArrows(a3);
+		Draw();
+	}
+	void Draw() override {
+		if (auto title = pTitle) {
+			title->LabelHash = Attrib::StringHash32("GHOST_SPDBRK");
+			title->Flags |= 0x400000;
+			title->Flags = title->Flags & 0xFFBFFFFD | 0x400000;
+		}
+		if (auto title = pData) {
+			switch (nSpeedbreakerType) {
+				case NITRO_OFF:
+					FEPrintf(title, "Off");
+					break;
+				case NITRO_ON:
+					FEPrintf(title, "On");
+					break;
+				case NITRO_INF:
+					FEPrintf(title, "Infinite");
+					break;
+			}
+		}
+	}
+};
+
 void __thiscall SetupTimeTrial(UIOptionsScreen* pThis) {
 	FEngSetLanguageHash(pThis->PackageFilename, 0x42ADB44C, Attrib::StringHash32(pThis->mCalledFromPauseMenu ? "GHOST_OPTIONS_H" : "GHOST_OPTIONS_L"));
 
+	bool showChallengeSeries = bChallengeSeriesMode || TheGameFlowManager.CurrentGameFlowState == GAMEFLOW_STATE_IN_FRONTEND;
+	bool showCareer = bCareerMode || TheGameFlowManager.CurrentGameFlowState == GAMEFLOW_STATE_IN_FRONTEND;
+	bool showQR = (!bChallengeSeriesMode && !bCareerMode) || TheGameFlowManager.CurrentGameFlowState == GAMEFLOW_STATE_IN_FRONTEND;
+
 	if (TheGameFlowManager.CurrentGameFlowState != GAMEFLOW_STATE_RACING) {
-		UIWidgetMenu::AddToggleOption(pThis, new TTDifficulty(true), true);
+		if (showChallengeSeries) UIWidgetMenu::AddToggleOption(pThis, new TTDifficulty(true), true);
 		UIWidgetMenu::AddToggleOption(pThis, new TTGhostVisuals(true), true);
-		UIWidgetMenu::AddToggleOption(pThis, new TTPBGhost(true), true);
+		if (showChallengeSeries) UIWidgetMenu::AddToggleOption(pThis, new TTPBGhost(true), true);
 		UIWidgetMenu::AddToggleOption(pThis, new TTInputDisplay(true), true);
+
+		if (showQR) {
+			UIWidgetMenu::AddToggleOption(pThis, new TTNOS(true), true);
+			UIWidgetMenu::AddToggleOption(pThis, new TTSpdbrk(true), true);
+		}
 	}
 	else {
 		UIWidgetMenu::AddToggleOption(pThis, new TTGhostVisuals(true), true);
@@ -158,4 +247,6 @@ void ApplyCustomMenuHooks() {
 	NyaHooks::OptionsMenuHook::AddStringRecord(Attrib::StringHash32("GHOST_VISUALS"), "Ghosts");
 	NyaHooks::OptionsMenuHook::AddStringRecord(Attrib::StringHash32("PB_GHOST"), "Show Personal Best");
 	NyaHooks::OptionsMenuHook::AddStringRecord(Attrib::StringHash32("INPUT_DISPLAY"), "Input Display");
+	NyaHooks::OptionsMenuHook::AddStringRecord(Attrib::StringHash32("GHOST_NITRO"), "N20");
+	NyaHooks::OptionsMenuHook::AddStringRecord(Attrib::StringHash32("GHOST_SPDBRK"), "Speedbreaker");
 }

@@ -9,6 +9,7 @@
 #include "nfsmw.h"
 #include "chloemenulib.h"
 
+bool bCareerMode = false;
 bool bChallengeSeriesMode = false;
 
 #include "util.h"
@@ -45,7 +46,16 @@ ISimable* VehicleConstructHooked(Sim::Param params) {
 			SetRaceNumLaps(pSelectedEventParams, pSelectedEvent->nLapCountOverride);
 		}
 	}
-	if (vehicle->carClass == DRIVER_RACER) {
+
+	bool replaceRacers = true;
+	if (bCareerMode) {
+		auto race = GetCurrentRace();
+		if (race && (GRaceParameters::GetIsBossRace(race) || GRaceParameters::GetIsDDayRace(race))) {
+			replaceRacers = false;
+		}
+	}
+
+	if (replaceRacers && vehicle->carClass == DRIVER_RACER) {
 		// copy player car for all opponents
 		auto player = GetLocalPlayerVehicle();
 		vehicle->matched = nullptr;
@@ -97,6 +107,7 @@ void OnEventFinished(ISimable* a1) {
 }
 
 float TrafficDensityHooked() {
+	if (!GRaceStatus::fObj || !GRaceStatus::fObj->mRaceParms) return 1.0;
 	return 0.0;
 }
 
@@ -117,6 +128,10 @@ float __thiscall RaceTimeHooked(GTimer* pThis) {
 
 float __thiscall GetTimeLimitHooked(GRaceParameters* pThis) {
 	return 120;
+}
+
+const char* __thiscall GetCareerCarType(GRaceParameters* pThis) {
+	return nullptr;
 }
 
 BOOL WINAPI DllMain(HINSTANCE, DWORD fdwReason, LPVOID) {
@@ -169,7 +184,6 @@ BOOL WINAPI DllMain(HINSTANCE, DWORD fdwReason, LPVOID) {
 			NyaHookLib::Patch<uint8_t>(0x47DDD6, 0xEB); // disable CameraMover::MinGapCars
 
 			// remove career mode and multiplayer
-			NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x544FEF, 0x57397D);
 			NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x545103, 0x57397D);
 			NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x545147, 0x57397D);
 
@@ -177,12 +191,27 @@ BOOL WINAPI DllMain(HINSTANCE, DWORD fdwReason, LPVOID) {
 
 			NyaHookLib::Fill(0x6876FB, 0x90, 5); // don't run PVehicle::UpdateListing when changing driver class
 
-			NyaHookLib::Patch(0x8F5CFC, 0); // tollbooth -> sprint
-			NyaHookLib::Patch(0x8F5CF4, 1); // lap knockout -> circuit
+#ifdef TIMETRIALS_CAREER
+			bCareerMode = true;
+			NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x54507B, 0x57397D); // quick race
+			NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x545037, 0x57397D); // challenge series
+
+			// change prologue m3 to razor m3
+			NyaHookLib::Patch(0x57F60D + 1, "E3_DEMO_BMW");
+			NyaHookLib::Patch(0x5A3A7C + 1, "E3_DEMO_BMW");
+			NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x6F48DB, &GetCareerCarType);
+#else
 			NyaHookLib::Patch(0x8F5D04, 0); // speedtrap -> sprint
 			NyaHookLib::Patch<uint8_t>(0x60A7B0, 0xC3); // disable speedtrap trigger code
 			NyaHookLib::Patch<uint8_t>(0x5F4E50, 0xC3); // remove speedtraps
 			NyaHookLib::Patch<uint8_t>(0x5DDCB6, 0xEB); // remove speedtraps
+
+			NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x544FEF, 0x57397D); // career mode
+
+			UnlockAllThings = true;
+#endif
+
+			NyaHookLib::Patch(0x8F5CF4, 1); // lap knockout -> circuit
 
 			NyaHookLib::Patch<uint8_t>(0x60A67A, 0xEB); // disable SpawnCop, fixes dday issues
 			NyaHookLib::Patch<uint8_t>(0x611440, 0xC3); // disable KnockoutRacer
@@ -198,8 +227,6 @@ BOOL WINAPI DllMain(HINSTANCE, DWORD fdwReason, LPVOID) {
 
 			SetupCustomEventsHooks();
 			ApplyCustomMenuHooks();
-
-			UnlockAllThings = true;
 
 			WriteLog("Mod initialized");
 		} break;

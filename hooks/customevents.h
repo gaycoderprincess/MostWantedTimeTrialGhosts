@@ -66,6 +66,7 @@ std::vector<ChallengeSeriesEvent> aNewChallengeSeries = {
 	ChallengeSeriesEvent("19.8.32", "911turbo"),
 	ChallengeSeriesEvent("1.2.1", "CS_CAR_19"),
 	ChallengeSeriesEvent("1.8.1", "E3_DEMO_BMW"),
+	ChallengeSeriesEvent("16.2.3", "BL2"),
 	ChallengeSeriesEvent("2.2.1.r", "COP_CROSS"),
 };
 
@@ -208,67 +209,17 @@ bool __thiscall GetIsEventCompleteHooked(GRaceDatabase* pThis, uint32_t raceHash
 	return false;
 }
 
-class CwoeePatchWithUndo {
-public:
-	uintptr_t nLocation;
-	uint8_t* pOldBytes;
-	uint8_t* pNewBytes;
-	size_t nNumBytes;
-
-	static inline std::vector<CwoeePatchWithUndo*> patches;
-
-	CwoeePatchWithUndo(uintptr_t location, size_t numBytes, void(*pFunction)()) : nLocation(location), nNumBytes(numBytes) {
-		pOldBytes = new uint8_t[nNumBytes];
-		memcpy(pOldBytes, (void*)nLocation, nNumBytes);
-
-		pFunction();
-
-		pNewBytes = new uint8_t[nNumBytes];
-		memcpy(pNewBytes, (void*)nLocation, nNumBytes);
-
-		UndoPatch();
-
-		patches.push_back(this);
-	}
-
-	template<typename T>
-	CwoeePatchWithUndo(NyaHookLib::eOffsetInstruction type, uintptr_t location, T dest) : nLocation(location), nNumBytes(5) {
-		pOldBytes = new uint8_t[nNumBytes];
-		memcpy(pOldBytes, (void*)nLocation, nNumBytes);
-
-		NyaHookLib::PatchRelative(type, location, dest);
-
-		pNewBytes = new uint8_t[nNumBytes];
-		memcpy(pNewBytes, (void*)nLocation, nNumBytes);
-
-		UndoPatch();
-
-		patches.push_back(this);
-	}
-
-	void ApplyPatch() const {
-		for (int i = 0; i < nNumBytes; i++) {
-			NyaHookLib::Patch<uint8_t>(nLocation + i, pNewBytes[i]);
-		}
-	}
-
-	void UndoPatch() const {
-		for (int i = 0; i < nNumBytes; i++) {
-			NyaHookLib::Patch<uint8_t>(nLocation + i, pOldBytes[i]);
-		}
-	}
-};
-
+std::vector<NyaHookLib::PatchWithUndo*> aChallengeSeriesHooks;
 void ApplyCustomEventsHooks() {
 	bChallengeSeriesMode = true;
-	for (auto& patch : CwoeePatchWithUndo::patches) {
+	for (auto& patch : aChallengeSeriesHooks) {
 		patch->ApplyPatch();
 	}
 }
 
 void UndoCustomEventsHooks() {
 	bChallengeSeriesMode = false;
-	for (auto& patch : CwoeePatchWithUndo::patches) {
+	for (auto& patch : aChallengeSeriesHooks) {
 		patch->UndoPatch();
 	}
 }
@@ -290,20 +241,20 @@ void SetupCustomEventsHooks() {
 
 	NyaHooks::LateInitHook::aFunctions.push_back(OnChallengeSeriesLoaded);
 
-	new CwoeePatchWithUndo(NyaHookLib::JMP, 0x5FBD20, &GetIsDDayRaceHooked);
-	new CwoeePatchWithUndo(NyaHookLib::JMP, 0x56DC00, &GetIsFinalPursuitHooked);
-	new CwoeePatchWithUndo(NyaHookLib::JMP, 0x5FC560, &GetIsFinalPursuitHooked);
+	new NyaHookLib::PatchWithUndo(&aChallengeSeriesHooks, NyaHookLib::JMP, 0x5FBD20, &GetIsDDayRaceHooked);
+	new NyaHookLib::PatchWithUndo(&aChallengeSeriesHooks, NyaHookLib::JMP, 0x56DC00, &GetIsFinalPursuitHooked);
+	new NyaHookLib::PatchWithUndo(&aChallengeSeriesHooks, NyaHookLib::JMP, 0x5FC560, &GetIsFinalPursuitHooked);
 
 	NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x7AEA30, &GetIsEventCompleteHooked);
-	new CwoeePatchWithUndo(NyaHookLib::CALL, 0x443004, &GetIsFinalPursuitForCopSpawnsHooked);
-	new CwoeePatchWithUndo(NyaHookLib::CALL, 0x44430A, &GetIsFinalPursuitForCopSpawnsHooked);
-	new CwoeePatchWithUndo(NyaHookLib::CALL, 0x71A826, &GetIsFinalPursuitForCopSpawnsHooked);
-	new CwoeePatchWithUndo(NyaHookLib::JMP, 0x6F19DB, 0x6F1C1F); // disable milestone display
-	new CwoeePatchWithUndo(NyaHookLib::CALL, 0x6412C1, &FinalPursuitEndHooked);
+	new NyaHookLib::PatchWithUndo(&aChallengeSeriesHooks, NyaHookLib::CALL, 0x443004, &GetIsFinalPursuitForCopSpawnsHooked);
+	new NyaHookLib::PatchWithUndo(&aChallengeSeriesHooks, NyaHookLib::CALL, 0x44430A, &GetIsFinalPursuitForCopSpawnsHooked);
+	new NyaHookLib::PatchWithUndo(&aChallengeSeriesHooks, NyaHookLib::CALL, 0x71A826, &GetIsFinalPursuitForCopSpawnsHooked);
+	new NyaHookLib::PatchWithUndo(&aChallengeSeriesHooks, NyaHookLib::JMP, 0x6F19DB, 0x6F1C1F); // disable milestone display
+	new NyaHookLib::PatchWithUndo(&aChallengeSeriesHooks, NyaHookLib::CALL, 0x6412C1, &FinalPursuitEndHooked);
 
-	new CwoeePatchWithUndo(NyaHookLib::CALL, 0x6F48DB, &GetChallengeSeriesCarType);
-	//new CwoeePatchWithUndo(NyaHookLib::CALL, 0x6F4945, &GetChallengeSeriesCarPerformance);
-	new CwoeePatchWithUndo(NyaHookLib::JMP, 0x5FC180, &GetIsChallengeSeriesRace);
+	new NyaHookLib::PatchWithUndo(&aChallengeSeriesHooks, NyaHookLib::CALL, 0x6F48DB, &GetChallengeSeriesCarType);
+	//new NyaHookLib::PatchWithUndo(&aChallengeSeriesHooks, NyaHookLib::CALL, 0x6F4945, &GetChallengeSeriesCarPerformance);
+	new NyaHookLib::PatchWithUndo(&aChallengeSeriesHooks, NyaHookLib::JMP, 0x5FC180, &GetIsChallengeSeriesRace);
 
 	// change event list
 	NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x7AE97F, &GetNumChallengeSeriesEvents);
@@ -328,17 +279,17 @@ void SetupCustomEventsHooks() {
 	NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x7A4375, &GetChallengeSeriesEventDescription2);
 	NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x7A437B, &GetChallengeSeriesEventDescription3);
 
-	new CwoeePatchWithUndo(NyaHookLib::CALL, 0x426CA6, &GetNumOpponentsHooked);
-	new CwoeePatchWithUndo(NyaHookLib::CALL, 0x431533, &GetNumOpponentsHooked);
-	new CwoeePatchWithUndo(NyaHookLib::CALL, 0x611902, &GetNumOpponentsHooked);
-	new CwoeePatchWithUndo(NyaHookLib::CALL, 0x61DCB7, &GetNumOpponentsHooked);
+	new NyaHookLib::PatchWithUndo(&aChallengeSeriesHooks, NyaHookLib::CALL, 0x426CA6, &GetNumOpponentsHooked);
+	new NyaHookLib::PatchWithUndo(&aChallengeSeriesHooks, NyaHookLib::CALL, 0x431533, &GetNumOpponentsHooked);
+	new NyaHookLib::PatchWithUndo(&aChallengeSeriesHooks, NyaHookLib::CALL, 0x611902, &GetNumOpponentsHooked);
+	new NyaHookLib::PatchWithUndo(&aChallengeSeriesHooks, NyaHookLib::CALL, 0x61DCB7, &GetNumOpponentsHooked);
 
 	NyaHookLib::Patch<uint16_t>(0x7AE9E6, 0x9090); // don't check unlock states
 
 	// don't spawn boss characters
-	new CwoeePatchWithUndo(0x5FD30C, 2, [](){ NyaHookLib::Patch<uint16_t>(0x5FD30C, 0x9090); });
-	new CwoeePatchWithUndo(0x5FD31A, 2, [](){ NyaHookLib::Patch<uint16_t>(0x5FD31A, 0x9090); });
+	new NyaHookLib::PatchWithUndo(&aChallengeSeriesHooks, 0x5FD30C, 2, [](){ NyaHookLib::Patch<uint16_t>(0x5FD30C, 0x9090); });
+	new NyaHookLib::PatchWithUndo(&aChallengeSeriesHooks, 0x5FD31A, 2, [](){ NyaHookLib::Patch<uint16_t>(0x5FD31A, 0x9090); });
 
 	// don't sabotage engine
-	new CwoeePatchWithUndo(0x60AB66, 1, [](){ NyaHookLib::Patch<uint8_t>(0x60AB66, 0xEB); });
+	new NyaHookLib::PatchWithUndo(&aChallengeSeriesHooks, 0x60AB66, 1, [](){ NyaHookLib::Patch<uint8_t>(0x60AB66, 0xEB); });
 }

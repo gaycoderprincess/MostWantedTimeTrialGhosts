@@ -7,6 +7,7 @@ enum eNitroType {
 	NITRO_OFF,
 	NITRO_ON,
 	NITRO_INF,
+	NUM_NITRO
 };
 int nNitroType = NITRO_ON;
 int nSpeedbreakerType = NITRO_ON;
@@ -67,6 +68,16 @@ InputControls GetPlayerControls(IVehicle* veh) {
 }
 #endif
 
+float GetPlayerSpeedtrapScore(IVehicle* pVehicle) {
+	float f = 0;
+	if (auto racer = GetRacerInfoFromHandle(pVehicle->mCOMObject->Find<ISimable>()->GetOwnerHandle())) {
+		for (int i = 0; i < racer->mSpeedTrapsCrossed; i++) {
+			f += racer->mSpeedTrapSpeed[i];
+		}
+	}
+	return f;
+}
+
 struct tReplayTick {
 	struct tTickVersion1 {
 		struct {
@@ -82,7 +93,7 @@ struct tReplayTick {
 		float raceProgress;
 	} v2;
 	struct tTickVersion3 {
-		int driftPoints;
+		int points;
 	} v4;
 
 	void Collect(IVehicle* pVehicle) {
@@ -93,15 +104,23 @@ struct tReplayTick {
 		v1.car.tvel = *rb->GetAngularVelocity();
 		v1.car.gear = pVehicle->mCOMObject->Find<ITransmission>()->GetGear();
 		v1.car.nitro = pVehicle->mCOMObject->Find<IEngine>()->GetNOSCapacity();
+
+		GRace::Type raceType = GRace::kRaceType_P2P;
+		if (GRaceStatus::fObj && GRaceStatus::fObj->mRaceParms) {
+			raceType = GRaceParameters::GetRaceType(GRaceStatus::fObj->mRaceParms);
+		}
 #ifdef TIMETRIALS_CARBON
 		v1.inputs = GetPlayerControls(pVehicle);
 
-		auto raceType = GRaceParameters::GetRaceType(GRaceStatus::fObj->mRaceParms);
 		if (raceType == GRace::kRaceType_DriftRace || raceType == GRace::kRaceType_CanyonDrift) {
-			v4.driftPoints = DALRacer::GetDriftScoreReport(nullptr, 0)->totalPoints;
+			v4.points = DALRacer::GetDriftScoreReport(nullptr, 0)->totalPoints;
 		}
 #else
 		v1.inputs = *pVehicle->mCOMObject->Find<IInput>()->GetControls();
+
+		if (raceType == GRace::kRaceType_SpeedTrap) {
+			v4.points = GetPlayerSpeedtrapScore(pVehicle);
+		}
 #endif
 
 		v2.raceProgress = 0;
@@ -226,7 +245,7 @@ public:
 tReplayGhost PlayerPBGhost;
 std::vector<tReplayGhost> OpponentGhosts;
 
-bool bGhostsLoaded = false;
+std::string sGhostsLoaded;
 std::vector<tReplayTick> aRecordingTicks;
 
 // if this fails the ghosts are paused
@@ -242,7 +261,7 @@ bool ShouldGhostRun() {
 
 std::vector<tReplayGhost> aLeaderboardGhosts;
 void InvalidateGhost(bool resetTimers = true) {
-	bGhostsLoaded = false;
+	sGhostsLoaded.clear();
 	if (resetTimers) {
 		nGlobalReplayTimer = 0;
 		nGlobalReplayTimerNoCountdown = 0;
@@ -311,11 +330,27 @@ void RecordGhost(IVehicle* veh) {
 	aRecordingTicks.push_back(state);
 }
 
+GRaceParameters* GetCurrentRace() {
+	if (GRaceStatus::fObj && GRaceStatus::fObj->mRaceParms) {
+		return GRaceStatus::fObj->mRaceParms;
+	}
+	return GRaceDatabase::GetStartupRace(GRaceDatabase::mObj);
+}
+
 std::string GetGhostFilename(const std::string& car, const std::string& track, int lapCount, int opponentId, const GameCustomizationRecord* upgrades, const char* folder = nullptr) {
+	bool doNOSSpdbrkChecks = !bChallengeSeriesMode && !bCareerMode;
+	bool doUpgradeChecks = !bChallengeSeriesMode && !bCareerMode;
+	bool doCarChecks = !bCareerMode;
+	bool bossRace = bCareerMode && (GRaceParameters::GetIsBossRace(GetCurrentRace()) || GRaceParameters::GetIsDDayRace(GetCurrentRace())) && strcmp(GRaceParameters::GetEventID(GetCurrentRace()), "16.1.0");
+	if (bossRace && opponentId == 0 && !folder) bossRace = false;
+
 	std::string path = gDLLPath.string();
 	path += "/CwoeeGhosts/";
-	if (bChallengeSeriesMode) {
+	if (bChallengeSeriesMode || (bCareerMode && bossRace)) {
 		path += opponentId == 0 && !folder ? "ChallengePBs/" : "Challenges/";
+	}
+	else if (bCareerMode) {
+		path += opponentId == 0 && !folder ? "CareerPBs/" : "Career/";
 	}
 	else {
 		path += "Practice/";
@@ -323,12 +358,19 @@ std::string GetGhostFilename(const std::string& car, const std::string& track, i
 	if (folder) {
 		path += std::format("{}/", folder);
 	}
-	path += std::format("{}_{}", track, car);
+	path += track;
+	if (doCarChecks || bossRace) {
+		auto carName = car;
+		if (!doCarChecks) {
+			carName = VEHICLE_LIST::GetList(VEHICLE_AIRACERS)[0]->GetVehicleName();
+		}
+		path += std::format("_{}", carName);
+	}
 	if (lapCount > 1) {
 		path += std::format("_lap{}", lapCount);
 	}
 
-	if (!bChallengeSeriesMode) {
+	if (doNOSSpdbrkChecks) {
 		switch (nNitroType) {
 			case NITRO_OFF:
 				path += "_nos0";
@@ -353,7 +395,7 @@ std::string GetGhostFilename(const std::string& car, const std::string& track, i
 
 	// read tunings
 #ifndef TIMETRIALS_CARBON
-	if (!bChallengeSeriesMode) {
+	if (doUpgradeChecks) {
 		path += "_up";
 		for (int i = 0; i < Physics::Upgrades::PUT_MAX; i++) {
 			int level = 0;
@@ -391,6 +433,9 @@ std::string GetGhostFilename(const std::string& car, const std::string& track, i
 
 void SavePB(tReplayGhost* ghost, const std::string& car, const std::string& track, int lapCount, const GameCustomizationRecord* upgrades) {
 	std::filesystem::create_directory("CwoeeGhosts");
+#ifdef TIMETRIALS_CAREER
+	std::filesystem::create_directory("CwoeeGhosts/CareerPBs");
+#endif
 	std::filesystem::create_directory("CwoeeGhosts/ChallengePBs");
 	std::filesystem::create_directory("CwoeeGhosts/Practice");
 
@@ -442,6 +487,10 @@ void SavePB(tReplayGhost* ghost, const std::string& car, const std::string& trac
 }
 
 void LoadPB(tReplayGhost* ghost, const std::string& car, const std::string& track, int lapCount, int opponentId, const GameCustomizationRecord* upgrades, const char* folder = nullptr) {
+	bool doNOSSpdbrkChecks = !bChallengeSeriesMode && !bCareerMode;
+	bool doUpgradeChecks = !bChallengeSeriesMode && !bCareerMode;
+	bool doCarChecks = !bCareerMode;
+
 	ghost->aTicks.clear();
 	ghost->nFinishTime = 0;
 	ghost->nFinishPoints = 0;
@@ -576,7 +625,7 @@ void LoadPB(tReplayGhost* ghost, const std::string& car, const std::string& trac
 	//	WriteLog("Outdated ghost for " + fileName);
 	//	return;
 	//}
-	if (tmpcar != car || tmptrack != track) {
+	if ((doCarChecks && tmpcar != car) || tmptrack != track) {
 		WriteLog("Mismatched ghost for " + fileName);
 		return;
 	}
@@ -584,16 +633,14 @@ void LoadPB(tReplayGhost* ghost, const std::string& car, const std::string& trac
 		WriteLog("Mismatched ghost for " + fileName);
 		return;
 	}
-	if (!bChallengeSeriesMode) {
-		if (tmpnitro != nNitroType || tmpspdbrk != nSpeedbreakerType) {
+	if (doNOSSpdbrkChecks && (tmpnitro != nNitroType || tmpspdbrk != nSpeedbreakerType)) {
+		WriteLog("Mismatched ghost for " + fileName);
+		return;
+	}
+	if (doUpgradeChecks && upgrades) {
+		if (memcmp(&playerPhysics, &tmpphysics, sizeof(playerPhysics)) != 0 || memcmp(&playerTuning, &tmptuning, sizeof(playerTuning)) != 0) {
 			WriteLog("Mismatched ghost for " + fileName);
 			return;
-		}
-		if (upgrades) {
-			if (memcmp(&playerPhysics, &tmpphysics, sizeof(playerPhysics)) != 0 || memcmp(&playerTuning, &tmptuning, sizeof(playerTuning)) != 0) {
-				WriteLog("Mismatched ghost for " + fileName);
-				return;
-			}
 		}
 	}
 	int count = 0;
@@ -647,22 +694,28 @@ void OnChallengeSeriesEventPB();
 
 uint32_t nLastFinishTime = 0;
 void OnFinishRace() {
+	if (!GRaceStatus::fObj) return;
+	if (!GRaceStatus::fObj->mRaceParms) return;
+
 	auto ghost = &PlayerPBGhost;
 
 	uint32_t replayTime = nLastFinishTime = (nGlobalReplayTimerNoCountdown / 120.0) * 1000;
 	uint32_t replayPoints = 0;
-#ifdef TIMETRIALS_CARBON
 	auto raceType = GRaceParameters::GetRaceType(GRaceStatus::fObj->mRaceParms);
-	bool isDrift = raceType == GRace::kRaceType_DriftRace || raceType == GRace::kRaceType_CanyonDrift;
-	if (isDrift) {
+#ifdef TIMETRIALS_CARBON
+	bool isPointBased = raceType == GRace::kRaceType_DriftRace || raceType == GRace::kRaceType_CanyonDrift;
+	if (isPointBased) {
 		replayPoints = DALRacer::GetDriftScoreReport(nullptr, 0)->totalPoints;
 	}
 #else
-	bool isDrift = false;
+	bool isPointBased = raceType == GRace::kRaceType_SpeedTrap;
+	if (isPointBased) {
+		replayPoints = GetPlayerSpeedtrapScore(GetLocalPlayerVehicle());
+	}
 #endif
 	if (!bViewReplayMode && replayTime > 1000) {
 		bool isBetter = !ghost->nFinishTime || replayTime < ghost->nFinishTime;
-		if (isDrift) {
+		if (isPointBased) {
 			isBetter = !ghost->nFinishTime || replayPoints > ghost->nFinishPoints;
 		}
 		if (isBetter) {
@@ -713,7 +766,10 @@ std::vector<tReplayGhost> CollectReplayGhosts(const std::string& car, const std:
 		}
 	}
 
-	if (forFullLeaderboard || (bChallengesPBGhost && !bViewReplayMode)) {
+	bool showPBGhost = forFullLeaderboard || bChallengesPBGhost;
+	if (bCareerMode) showPBGhost = false;
+
+	if (showPBGhost) {
 		tReplayGhost temp;
 		LoadPB(&temp, car, track, laps, 0, upgrades);
 		temp.bIsPersonalBest = true;
@@ -762,6 +818,14 @@ void TimeTrialLoop() {
 		return;
 	}
 
+	bool isInRace = GRaceStatus::fObj && GRaceStatus::fObj->mRaceParms;
+	if (isInRace && bCareerMode && GRaceParameters::GetIsPursuitRace(GRaceStatus::fObj->mRaceParms)) isInRace = false;
+
+	if (!isInRace) {
+		InvalidateGhost();
+		return;
+	}
+
 	if (IsInLoadingScreen()) {
 		auto cars = VEHICLE_LIST::GetList(VEHICLE_AIRACERS);
 		for (int i = 0; i < cars.size(); i++) {
@@ -774,7 +838,7 @@ void TimeTrialLoop() {
 	}
 
 	auto ply = GetLocalPlayerVehicle();
-	if (!bGhostsLoaded) {
+	if (sGhostsLoaded != GRaceParameters::GetEventID(GRaceStatus::fObj->mRaceParms)) {
 		auto car = ply->GetVehicleName();
 		auto track = GRaceParameters::GetEventID(GRaceStatus::fObj->mRaceParms);
 		auto laps = GetRaceNumLaps();
@@ -783,7 +847,7 @@ void TimeTrialLoop() {
 
 		OpponentGhosts.clear();
 
-		if (bChallengeSeriesMode) {
+		if (bCareerMode || bChallengeSeriesMode) {
 			aLeaderboardGhosts = CollectReplayGhosts(car, track, laps, upgrades, true);
 
 			if (bChallengesOneGhostOnly || bViewReplayMode || nDifficulty == DIFFICULTY_EASY) {
@@ -810,7 +874,7 @@ void TimeTrialLoop() {
 			}
 		}
 
-		bGhostsLoaded = true;
+		sGhostsLoaded = track;
 	}
 
 	if (!ShouldGhostRun()) return;
@@ -832,11 +896,17 @@ void TimeTrialLoop() {
 	}
 #else
 	GetUserProfile()->TheOptionsSettings.TheGameplaySettings.JumpCam = false;
+#ifdef TIMETRIALS_CAREER
+	// for speedtraps
+	GetUserProfile()->TheOptionsSettings.TheGameplaySettings.SpeedoUnits = 1;
+	GetUserProfile()->PlayersCarStable.SoldHistoryBounty = 10000000;
+#else
 	for (int i = 0; i < GRaceStatus::fObj->mRacerCount; i++) {
 		auto racer = &GRaceStatus::fObj->mRacerInfo[i];
 		racer->mSpeedTrapsCrossed = 0;
 		for (auto& speed : racer->mSpeedTrapSpeed) { speed = 0; }
 	}
+#endif
 #endif
 
 #ifdef TIMETRIALS_CARBON
@@ -860,7 +930,7 @@ void TimeTrialLoop() {
 #endif
 
 		auto opponents = VEHICLE_LIST::GetList(VEHICLE_AIRACERS);
-		if (bOpponentsOnly || bChallengeSeriesMode) {
+		if (bOpponentsOnly || bChallengeSeriesMode || bCareerMode) {
 			for (int i = 0; i < opponents.size() && i < OpponentGhosts.size(); i++) {
 				RunGhost(opponents[i], &OpponentGhosts[i]);
 			}
@@ -939,7 +1009,12 @@ float fLeaderboardYSpacing = 0.03;
 float fLeaderboardSize = 0.03;
 float fLeaderboardOutlineSize = 0.02;
 void DisplayLeaderboard() {
-	if (bChallengeSeriesMode && GetLocalPlayerVehicle()->IsStaging() || GetLocalPlayerInterface<IHumanAI>()->GetAiControl() || GetIsGamePaused()) {
+	if (!bChallengeSeriesMode && !bCareerMode) return;
+	if (gMoviePlayer) return;
+	if (!GRaceStatus::fObj) return;
+	if (!GRaceStatus::fObj->mRaceParms) return;
+
+	if ((GetLocalPlayerVehicle()->IsStaging() || GetLocalPlayerInterface<IHumanAI>()->GetAiControl() || GetIsGamePaused())) {
 		std::vector<std::string> uniquePlayers;
 
 		int numOnLeaderboard = 0;
@@ -975,14 +1050,14 @@ void DisplayLeaderboard() {
 				data.SetColor(255, 255, 255, 255);
 			}
 
-#ifdef TIMETRIALS_CARBON
 			auto raceType = GRaceParameters::GetRaceType(GRaceStatus::fObj->mRaceParms);
-			bool isDrift = raceType == GRace::kRaceType_DriftRace || raceType == GRace::kRaceType_CanyonDrift;
+#ifdef TIMETRIALS_CARBON
+			bool isPointBased = raceType == GRace::kRaceType_DriftRace || raceType == GRace::kRaceType_CanyonDrift;
 #else
-			bool isDrift = false;
+			bool isPointBased = raceType == GRace::kRaceType_SpeedTrap;
 #endif
 			std::string str;
-			if (isDrift) {
+			if (isPointBased) {
 				str = std::format("{}. {} - {}", ranking++, name, ghost.nFinishPoints);
 			}
 			else {

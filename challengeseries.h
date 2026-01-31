@@ -117,8 +117,10 @@ void OnChallengeSeriesEventPB() {
 }
 
 void PrecacheChallengeGhost(ChallengeSeriesEvent* event) {
+	bChallengeSeriesMode = true;
 	event->GetPBGhost();
 	event->GetTargetGhost();
+	bChallengeSeriesMode = false;
 }
 
 /*void PrecacheAllChallengeGhosts() {
@@ -132,6 +134,8 @@ void PrecacheChallengeGhost(ChallengeSeriesEvent* event) {
 }*/
 
 void OnChallengeSeriesLoaded() {
+	if (bCareerMode) return;
+
 	// precache attrib stuff so the thread doesn't have to check it
 	for (auto& event : aNewChallengeSeries) {
 		event.GetCarModelName();
