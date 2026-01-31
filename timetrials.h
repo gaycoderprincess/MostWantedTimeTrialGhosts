@@ -1009,8 +1009,12 @@ std::string GetRealPlayerName(const std::string& ghostName) {
 }
 
 std::string GetGameDataHashName(uint32_t hash) {
+#ifdef TIMETRIALS_CARBON
+	if (hash == 0x54278FA4) return "1.4 Collector's Edition";
+#else
 	if (hash == 0x4C19AA83) return "1.3 Black Edition";
 	if (hash == 0x562CA1F7) return "Xbox 360 Stuff Pack v4.1";
+#endif
 	return std::format("{:X}", hash);
 }
 
