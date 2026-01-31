@@ -62,6 +62,8 @@ void ApplyVerificationPatches() {
 	NyaHookLib::Patch(0x6F4D1A, &f);
 	NyaHookLib::Patch(0x6F4D2B, &f);
 	NyaHookLib::Patch(0x78AA77, &f);
+
+	NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x663EE8, 0x64B380); // remove exopts loop, disables hotkeys
 #endif
 }
 
