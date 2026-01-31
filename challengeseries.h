@@ -20,7 +20,6 @@ public:
 	std::string sCarNameForGhost;
 	bool bPBGhostLoading = false;
 	bool bTargetGhostLoading = false;
-	bool bTargetGhostsLoadedWithPlayerPB = false;
 	tReplayGhost PBGhost = {};
 	tReplayGhost aTargetGhosts[NUM_DIFFICULTY] = {};
 	int nNumGhosts[NUM_DIFFICULTY] = {};
@@ -62,7 +61,7 @@ public:
 	tReplayGhost GetTargetGhost() {
 		while (bTargetGhostLoading) { Sleep(0); }
 
-		if (bTargetGhostsLoadedWithPlayerPB == bChallengesPBGhost && aTargetGhosts[nDifficulty].nFinishTime != 0) return aTargetGhosts[nDifficulty];
+		if (aTargetGhosts[nDifficulty].nFinishTime != 0) return aTargetGhosts[nDifficulty];
 
 		bTargetGhostLoading = true;
 		tReplayGhost targetTime;
@@ -72,7 +71,6 @@ public:
 			targetTime = aTargetGhosts[nDifficulty] = times[0];
 		}
 		nNumGhosts[nDifficulty] = times.size();
-		bTargetGhostsLoadedWithPlayerPB = bChallengesPBGhost;
 		bTargetGhostLoading = false;
 		return targetTime;
 	}

@@ -16,7 +16,7 @@ bool bTrackReversed = false; // todo
 
 bool bViewReplayMode = false;
 bool bViewReplayTargetTime = false;
-bool bOpponentsOnly = false;
+bool bPracticeOpponentsOnly = false;
 enum eGhostVisuals {
 	GHOST_HIDE,
 	GHOST_SHOW,
@@ -38,6 +38,10 @@ bool bChallengesPBGhost = false;
 bool bCheckFileIntegrity = false;
 
 bool bDebugInputsOnly = false;
+
+bool IsPracticeMode() {
+	return !bChallengeSeriesMode && !bCareerMode;
+}
 
 #ifdef TIMETRIALS_CARBON
 struct InputControls {
@@ -279,6 +283,7 @@ void InvalidateLocalGhost() {
 }
 
 void RunGhost(IVehicle* veh, tReplayGhost* ghost) {
+	if (!ghost) return;
 	ghost->pLastVehicle = veh;
 
 	if (auto racer = GetRacerInfoFromHandle(veh->mCOMObject->Find<ISimable>()->GetOwnerHandle())) {
@@ -338,8 +343,8 @@ GRaceParameters* GetCurrentRace() {
 }
 
 std::string GetGhostFilename(const std::string& car, const std::string& track, int lapCount, int opponentId, const GameCustomizationRecord* upgrades, const char* folder = nullptr) {
-	bool doNOSSpdbrkChecks = !bChallengeSeriesMode && !bCareerMode;
-	bool doUpgradeChecks = !bChallengeSeriesMode && !bCareerMode;
+	bool doNOSSpdbrkChecks = IsPracticeMode();
+	bool doUpgradeChecks = IsPracticeMode();
 	bool doCarChecks = !bCareerMode;
 	bool bossRace = bCareerMode && (GRaceParameters::GetIsBossRace(GetCurrentRace()) || GRaceParameters::GetIsDDayRace(GetCurrentRace())) && strcmp(GRaceParameters::GetEventID(GetCurrentRace()), "16.1.0");
 	if (bossRace && opponentId == 0 && !folder) bossRace = false;
@@ -487,8 +492,8 @@ void SavePB(tReplayGhost* ghost, const std::string& car, const std::string& trac
 }
 
 void LoadPB(tReplayGhost* ghost, const std::string& car, const std::string& track, int lapCount, int opponentId, const GameCustomizationRecord* upgrades, const char* folder = nullptr) {
-	bool doNOSSpdbrkChecks = !bChallengeSeriesMode && !bCareerMode;
-	bool doUpgradeChecks = !bChallengeSeriesMode && !bCareerMode;
+	bool doNOSSpdbrkChecks = IsPracticeMode();
+	bool doUpgradeChecks = IsPracticeMode();
 	bool doCarChecks = !bCareerMode;
 
 	ghost->aTicks.clear();
@@ -766,10 +771,7 @@ std::vector<tReplayGhost> CollectReplayGhosts(const std::string& car, const std:
 		}
 	}
 
-	bool showPBGhost = forFullLeaderboard || bChallengesPBGhost;
-	if (bCareerMode) showPBGhost = false;
-
-	if (showPBGhost) {
+	if (forFullLeaderboard) {
 		tReplayGhost temp;
 		LoadPB(&temp, car, track, laps, 0, upgrades);
 		temp.bIsPersonalBest = true;
@@ -808,6 +810,17 @@ void OnRaceRestart() {
 tReplayGhost* GetViewReplayGhost() {
 	if (bChallengeSeriesMode && bViewReplayTargetTime && !OpponentGhosts.empty()) return &OpponentGhosts[0];
 	return &PlayerPBGhost;
+}
+
+tReplayGhost* GetGhostForOpponent(int id) {
+	bool showPB = false;
+	if (bChallengeSeriesMode && bChallengesPBGhost) showPB = true;
+	if (IsPracticeMode() && !bPracticeOpponentsOnly) showPB = true;
+
+	if (showPB && id == 0) return &PlayerPBGhost;
+	if (showPB) id -= 1;
+	if (id >= OpponentGhosts.size()) return nullptr;
+	return &OpponentGhosts[id];
 }
 
 void InvalidatePlayerPos();
@@ -867,7 +880,6 @@ void TimeTrialLoop() {
 		}
 		else {
 			int opponentCount = VEHICLE_LIST::GetList(VEHICLE_AIRACERS).size();
-			if (!bOpponentsOnly) opponentCount--;
 			for (int i = 0; i < opponentCount; i++) {
 				OpponentGhosts.push_back({});
 				LoadPB(&OpponentGhosts[i], car, track, laps, i+1, upgrades);
@@ -930,16 +942,8 @@ void TimeTrialLoop() {
 #endif
 
 		auto opponents = VEHICLE_LIST::GetList(VEHICLE_AIRACERS);
-		if (bOpponentsOnly || bChallengeSeriesMode || bCareerMode) {
-			for (int i = 0; i < opponents.size() && i < OpponentGhosts.size(); i++) {
-				RunGhost(opponents[i], &OpponentGhosts[i]);
-			}
-		}
-		else {
-			for (int i = 0; i < opponents.size(); i++) {
-				auto ghost = i == 0 ? &PlayerPBGhost : &OpponentGhosts[i-1];
-				RunGhost(opponents[i], ghost);
-			}
+		for (int i = 0; i < opponents.size(); i++) {
+			RunGhost(opponents[i], GetGhostForOpponent(i));
 		}
 	}
 
@@ -1009,7 +1013,7 @@ float fLeaderboardYSpacing = 0.03;
 float fLeaderboardSize = 0.03;
 float fLeaderboardOutlineSize = 0.02;
 void DisplayLeaderboard() {
-	if (!bChallengeSeriesMode && !bCareerMode) return;
+	if (IsPracticeMode()) return;
 	if (gMoviePlayer) return;
 	if (!GRaceStatus::fObj) return;
 	if (!GRaceStatus::fObj->mRaceParms) return;
@@ -1184,6 +1188,10 @@ void DoConfigSave() {
 	file.write((char*)&nDifficulty, sizeof(nDifficulty));
 	file.write((char*)&bChallengesOneGhostOnly, sizeof(bChallengesOneGhostOnly));
 	file.write((char*)&bChallengesPBGhost, sizeof(bChallengesPBGhost));
+	file.write((char*)&bCheckFileIntegrity, sizeof(bCheckFileIntegrity));
+	file.write((char*)&bPracticeOpponentsOnly, sizeof(bPracticeOpponentsOnly));
+	file.write((char*)&nNitroType, sizeof(nNitroType));
+	file.write((char*)&nSpeedbreakerType, sizeof(nSpeedbreakerType));
 }
 
 void DoConfigLoad() {
@@ -1197,6 +1205,10 @@ void DoConfigLoad() {
 	file.read((char*)&nDifficulty, sizeof(nDifficulty));
 	file.read((char*)&bChallengesOneGhostOnly, sizeof(bChallengesOneGhostOnly));
 	file.read((char*)&bChallengesPBGhost, sizeof(bChallengesPBGhost));
+	file.read((char*)&bCheckFileIntegrity, sizeof(bCheckFileIntegrity));
+	file.read((char*)&bPracticeOpponentsOnly, sizeof(bPracticeOpponentsOnly));
+	file.read((char*)&nNitroType, sizeof(nNitroType));
+	file.read((char*)&nSpeedbreakerType, sizeof(nSpeedbreakerType));
 }
 
 void DebugMenu() {
@@ -1242,9 +1254,9 @@ void DebugMenu() {
 			}
 		}
 		else {
-			QuickValueEditor("Opponent Ghosts Only", bOpponentsOnly);
+			QuickValueEditor("Opponent Ghosts Only", bPracticeOpponentsOnly);
 
-			if (bViewReplayMode) bOpponentsOnly = false;
+			if (bViewReplayMode) bPracticeOpponentsOnly = false;
 
 			if (DrawMenuOption("NOS")) {
 				ChloeMenuLib::BeginMenu();

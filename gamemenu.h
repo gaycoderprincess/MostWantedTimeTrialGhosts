@@ -107,6 +107,33 @@ public:
 	}
 };
 
+class TTPBGhostPractice : public FEToggleWidget {
+public:
+	TTPBGhostPractice(bool state) : FEToggleWidget(state) {}
+
+	void Act(const char* a2, uint32_t a3) override {
+		if (a3 == 0x9120409E || a3 == 0xB5971BF1) {
+			bPracticeOpponentsOnly = !bPracticeOpponentsOnly;
+		}
+
+		bMovedLastUpdate = true;
+		BlinkArrows(a3);
+		Draw();
+	}
+	void Draw() override {
+		if (auto title = pTitle) {
+			title->LabelHash = Attrib::StringHash32("PB_GHOST");
+			title->Flags |= 0x400000;
+			title->Flags = title->Flags & 0xFFBFFFFD | 0x400000;
+		}
+		if (auto title = pData) {
+			title->LabelHash = !bPracticeOpponentsOnly ? 0x16FDEF36 : 0xF6BBD534;
+			title->Flags |= 0x400000;
+			title->Flags = title->Flags & 0xFFBFFFFD | 0x400000;
+		}
+	}
+};
+
 class TTInputDisplay : public FEToggleWidget {
 public:
 	TTInputDisplay(bool state) : FEToggleWidget(state) {}
@@ -224,20 +251,18 @@ void __thiscall SetupTimeTrial(UIOptionsScreen* pThis) {
 	bool showCareer = bCareerMode;
 	bool showQR = !bChallengeSeriesMode && !bCareerMode;
 
-	if (TheGameFlowManager.CurrentGameFlowState != GAMEFLOW_STATE_RACING) {
-		if (showChallengeSeries) UIWidgetMenu::AddToggleOption(pThis, new TTDifficulty(true), true);
-		UIWidgetMenu::AddToggleOption(pThis, new TTGhostVisuals(true), true);
-		if (showChallengeSeries) UIWidgetMenu::AddToggleOption(pThis, new TTPBGhost(true), true);
-		UIWidgetMenu::AddToggleOption(pThis, new TTInputDisplay(true), true);
-
-		if (showQR) {
-			UIWidgetMenu::AddToggleOption(pThis, new TTNOS(true), true);
-			UIWidgetMenu::AddToggleOption(pThis, new TTSpdbrk(true), true);
-		}
+	if (TheGameFlowManager.CurrentGameFlowState != GAMEFLOW_STATE_RACING && showChallengeSeries) {
+		UIWidgetMenu::AddToggleOption(pThis, new TTDifficulty(true), true);
 	}
-	else {
-		UIWidgetMenu::AddToggleOption(pThis, new TTGhostVisuals(true), true);
-		UIWidgetMenu::AddToggleOption(pThis, new TTInputDisplay(true), true);
+
+	UIWidgetMenu::AddToggleOption(pThis, new TTGhostVisuals(true), true);
+	if (showChallengeSeries) UIWidgetMenu::AddToggleOption(pThis, new TTPBGhost(true), true);
+	if (showQR) UIWidgetMenu::AddToggleOption(pThis, new TTPBGhostPractice(true), true);
+	UIWidgetMenu::AddToggleOption(pThis, new TTInputDisplay(true), true);
+
+	if (TheGameFlowManager.CurrentGameFlowState != GAMEFLOW_STATE_RACING && showQR) {
+		UIWidgetMenu::AddToggleOption(pThis, new TTNOS(true), true);
+		UIWidgetMenu::AddToggleOption(pThis, new TTSpdbrk(true), true);
 	}
 }
 
