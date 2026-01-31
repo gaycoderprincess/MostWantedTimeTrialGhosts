@@ -768,15 +768,6 @@ std::vector<tReplayGhost> CollectReplayGhosts(const std::string& car, const std:
 		}
 	}
 
-	if (forFullLeaderboard) {
-		tReplayGhost temp;
-		LoadPB(&temp, car, track, laps, 0, upgrades);
-		temp.bIsPersonalBest = true;
-		if (temp.nFinishTime) {
-			ghosts.push_back(temp);
-		}
-	}
-
 	for (int i = 0; i < nMaxNumGhostsToCheck; i++) {
 		tReplayGhost temp;
 		LoadPB(&temp, car, track, laps, i+1, upgrades);
@@ -815,6 +806,14 @@ tReplayGhost* GetGhostForOpponent(int id) {
 	if (IsPracticeMode() && !bPracticeOpponentsOnly) showPB = true;
 
 	if (showPB && !PlayerPBGhost.IsValid()) showPB = false;
+
+	if (showPB && VEHICLE_LIST::GetList(VEHICLE_AIRACERS).size() == 1 && !OpponentGhosts.empty() && OpponentGhosts[0].IsValid()) {
+		if (PlayerPBGhost.nFinishPoints && OpponentGhosts[0].nFinishPoints) {
+			return PlayerPBGhost.nFinishPoints > OpponentGhosts[0].nFinishPoints ? &PlayerPBGhost : &OpponentGhosts[0];
+		}
+
+		return PlayerPBGhost.nFinishTime < OpponentGhosts[0].nFinishTime ? &PlayerPBGhost : &OpponentGhosts[0];
+	}
 
 	if (showPB && id == 0) return &PlayerPBGhost;
 	if (showPB) id -= 1;
@@ -1026,8 +1025,21 @@ void DisplayLeaderboard() {
 	if ((GetLocalPlayerVehicle()->IsStaging() || GetLocalPlayerInterface<IHumanAI>()->GetAiControl() || GetIsGamePaused())) {
 		std::vector<std::string> uniquePlayers;
 
+		auto leaderboard = aLeaderboardGhosts;
+		if (PlayerPBGhost.IsValid()) {
+			tReplayGhost dummy;
+			dummy.sPlayerName = sPlayerNameOverride[0] ? sPlayerNameOverride : GetLocalPlayerName();
+			dummy.nFinishTime = PlayerPBGhost.nFinishTime;
+			dummy.nFinishPoints = PlayerPBGhost.nFinishPoints;
+			dummy.nGameFilesHash = PlayerPBGhost.nGameFilesHash;
+			dummy.bIsPersonalBest = true;
+			leaderboard.push_back(dummy);
+
+			std::sort(leaderboard.begin(), leaderboard.end(), [](const tReplayGhost& a, const tReplayGhost& b) { if (a.nFinishPoints && b.nFinishPoints) { return a.nFinishPoints > b.nFinishPoints; } return a.nFinishTime < b.nFinishTime; });
+		}
+		
 		int numOnLeaderboard = 0;
-		for (auto& ghost : aLeaderboardGhosts) {
+		for (auto& ghost : leaderboard) {
 			auto name = ghost.bIsPersonalBest ? ghost.sPlayerName : GetRealPlayerName(ghost.sPlayerName);
 			if (std::find(uniquePlayers.begin(), uniquePlayers.end(), name) != uniquePlayers.end()) continue;
 			uniquePlayers.push_back(name);
@@ -1043,7 +1055,7 @@ void DisplayLeaderboard() {
 		data.size = fLeaderboardSize;
 		data.outlinea = 255;
 		data.outlinedist = fLeaderboardOutlineSize;
-		for (auto& ghost : aLeaderboardGhosts) {
+		for (auto& ghost : leaderboard) {
 			auto name = ghost.bIsPersonalBest ? ghost.sPlayerName : GetRealPlayerName(ghost.sPlayerName);
 			if (std::find(uniquePlayers.begin(), uniquePlayers.end(), name) != uniquePlayers.end()) continue;
 			uniquePlayers.push_back(name);
@@ -1104,7 +1116,7 @@ void DisplayPlayerNames() {
 			auto car = ghost->pLastVehicle;
 			if (!IsVehicleValidAndActive(car)) continue;
 
-			auto name = ghost->bIsPersonalBest ? ghost->sPlayerName : GetRealPlayerName(ghost->sPlayerName);
+			auto name = ghost == &PlayerPBGhost ? ghost->sPlayerName : GetRealPlayerName(ghost->sPlayerName);
 
 			UMath::Vector3 dim;
 			car->mCOMObject->Find<IRigidBody>()->GetDimension(&dim);
