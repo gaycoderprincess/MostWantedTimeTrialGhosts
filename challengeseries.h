@@ -117,10 +117,8 @@ void OnChallengeSeriesEventPB() {
 }
 
 void PrecacheChallengeGhost(ChallengeSeriesEvent* event) {
-	bChallengeSeriesMode = true;
 	event->GetPBGhost();
 	event->GetTargetGhost();
-	bChallengeSeriesMode = false;
 }
 
 /*void PrecacheAllChallengeGhosts() {
@@ -142,6 +140,7 @@ void OnChallengeSeriesLoaded() {
 		event.GetLapCount();
 	}
 
+	bChallengeSeriesMode = true;
 	for (auto& event : aNewChallengeSeries) {
 		std::thread(PrecacheChallengeGhost, &event).detach();
 	}

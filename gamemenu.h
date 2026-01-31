@@ -217,9 +217,12 @@ public:
 void __thiscall SetupTimeTrial(UIOptionsScreen* pThis) {
 	FEngSetLanguageHash(pThis->PackageFilename, 0x42ADB44C, Attrib::StringHash32(pThis->mCalledFromPauseMenu ? "GHOST_OPTIONS_H" : "GHOST_OPTIONS_L"));
 
-	bool showChallengeSeries = bChallengeSeriesMode || TheGameFlowManager.CurrentGameFlowState == GAMEFLOW_STATE_IN_FRONTEND;
-	bool showCareer = bCareerMode || TheGameFlowManager.CurrentGameFlowState == GAMEFLOW_STATE_IN_FRONTEND;
-	bool showQR = (!bChallengeSeriesMode && !bCareerMode) || TheGameFlowManager.CurrentGameFlowState == GAMEFLOW_STATE_IN_FRONTEND;
+	//bool showChallengeSeries = bChallengeSeriesMode || TheGameFlowManager.CurrentGameFlowState == GAMEFLOW_STATE_IN_FRONTEND;
+	//bool showCareer = bCareerMode || TheGameFlowManager.CurrentGameFlowState == GAMEFLOW_STATE_IN_FRONTEND;
+	//bool showQR = (!bChallengeSeriesMode && !bCareerMode) || TheGameFlowManager.CurrentGameFlowState == GAMEFLOW_STATE_IN_FRONTEND;
+	bool showChallengeSeries = bChallengeSeriesMode;
+	bool showCareer = bCareerMode;
+	bool showQR = !bChallengeSeriesMode && !bCareerMode;
 
 	if (TheGameFlowManager.CurrentGameFlowState != GAMEFLOW_STATE_RACING) {
 		if (showChallengeSeries) UIWidgetMenu::AddToggleOption(pThis, new TTDifficulty(true), true);
