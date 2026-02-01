@@ -59,7 +59,7 @@ std::vector<ChallengeSeriesEvent> aNewChallengeSeries = {
 	ChallengeSeriesEvent("1.2.3", "E3_DEMO_BMW"),
 	ChallengeSeriesEvent("13.5.1", "CE_ELISE"),
 	ChallengeSeriesEvent("1.1.1", "PresetCar/GTI_KURU", 1),
-	ChallengeSeriesEvent("19.8.32", "911turbo"),
+	ChallengeSeriesEvent("19.8.32", "PresetCar/911TURBO_CUSTOM"),
 	ChallengeSeriesEvent("1.2.1", "CS_CAR_19"),
 	ChallengeSeriesEvent("1.8.1", "E3_DEMO_BMW"),
 	ChallengeSeriesEvent("16.2.3", "BL2"),

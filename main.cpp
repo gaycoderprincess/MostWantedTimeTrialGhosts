@@ -29,7 +29,15 @@ ISimable* VehicleConstructHooked(Sim::Param params) {
 	auto vehicle = (VehicleParams*)params.mData;
 	if (bChallengeSeriesMode && vehicle->carClass == DRIVER_HUMAN) {
 		if (pSelectedEvent->sCarPreset.starts_with("PresetCar")) {
-			vehicle->customization->Tunings[vehicle->customization->ActiveTuning].Value[Physics::Tunings::AERODYNAMICS] = 1; // aerodynamics +5
+			if (vehicle->carType == Attrib::StringHash32("gti")) {
+				vehicle->customization->Tunings[vehicle->customization->ActiveTuning].Value[Physics::Tunings::AERODYNAMICS] = 1; // aerodynamics +5
+			}
+			
+			static Physics::Info::Performance temp;
+			temp.Acceleration = 1;
+			temp.TopSpeed = 1;
+			temp.Handling = 1;
+			vehicle->matched = &temp;
 		}
 		else if (!FindFEPresetCar(bStringHashUpper(pSelectedEvent->sCarPreset.c_str()))) {
 			static Physics::Info::Performance temp;
