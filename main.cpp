@@ -134,6 +134,41 @@ const char* __thiscall GetCareerCarType(GRaceParameters* pThis) {
 	return nullptr;
 }
 
+void __thiscall GenericResultDrawHooked(ResultStat* pThis) {
+	auto racer = pThis->RacerInfo;
+	FEPrintf(pThis->pTitle, racer->mName);
+	if (racer->mEngineBlown) {
+		FEngSetLanguageHash(pThis->pData, 0x1E66364);
+	}
+	else if (racer->mTotalled) {
+		FEngSetLanguageHash(pThis->pData, 0xB7B75185);
+	}
+	else if (racer->mKnockedOut) {
+		FEngSetLanguageHash(pThis->pData, 0x5D82DBA2);
+	}
+	else if (racer->mFinishedRacing) {
+		if (racer->mIndex == 0) {
+			auto time = GetTimeFromMilliseconds(nLastFinishTime);
+			time.pop_back();
+			FEPrintf(pThis->pData, time.c_str());
+		}
+		else {
+			if (auto ghost = GetGhostForOpponent(racer->mIndex - 1)) {
+				auto time = GetTimeFromMilliseconds(ghost->nFinishTime);
+				time.pop_back();
+				FEPrintf(pThis->pData, time.c_str());
+			}
+			else {
+				FEPrintf(pThis->pData, "N/A");
+			}
+		}
+	}
+	else {
+		FEngSetLanguageHash(pThis->pData, 0xFC1BF40);
+	}
+	FEPrintf(pThis->Position, "%d", racer->mRanking);
+}
+
 BOOL WINAPI DllMain(HINSTANCE, DWORD fdwReason, LPVOID) {
 	switch( fdwReason ) {
 		case DLL_PROCESS_ATTACH: {
@@ -181,6 +216,7 @@ BOOL WINAPI DllMain(HINSTANCE, DWORD fdwReason, LPVOID) {
 
 			NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x5A2CDC, &FinishTimeHooked);
 			NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x6F1E00, &RaceTimeHooked);
+			NyaHookLib::PatchRelative(NyaHookLib::JMP, 0x5953F0, &GenericResultDrawHooked);
 			NyaHookLib::PatchRelative(NyaHookLib::JMP, 0x5FC260, &GetTimeLimitHooked);
 			NyaHookLib::PatchRelative(NyaHookLib::JMP, 0x5FE090, &GetTimeLimitHooked);
 			NyaHookLib::Patch<uint8_t>(0x6F1DD5, 0xEB); // disable tollbooth time limit display on hud

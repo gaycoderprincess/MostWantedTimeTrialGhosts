@@ -287,9 +287,10 @@ void RunGhost(IVehicle* veh, tReplayGhost* ghost) {
 	ghost->pLastVehicle = veh;
 
 	if (auto racer = GetRacerInfoFromHandle(veh->mCOMObject->Find<ISimable>()->GetOwnerHandle())) {
-		auto name = ghost->sPlayerName;
-		if (name.empty()) name = ghost->bIsPersonalBest ? "PERSONAL BEST" : "RACER";
-		SetRacerName(racer, name.c_str());
+		if (ghost->sPlayerName.empty()) SetRacerName(racer, ghost->bIsPersonalBest ? "PERSONAL BEST" : "RACER");
+		else {
+			SetRacerName(racer, ghost->sPlayerName.c_str());
+		}
 	}
 
 	if (!ghost->IsValid()) {
