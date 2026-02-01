@@ -719,6 +719,7 @@ void OnFinishRace() {
 		}
 		if (isBetter) {
 			WriteLog(std::format("Saving new lap PB of {}ms {}pts", replayTime, replayPoints));
+			ghost->sPlayerName = sPlayerNameOverride[0] ? sPlayerNameOverride : GetLocalPlayerName();
 			ghost->aTicks = aRecordingTicks;
 			ghost->nFinishTime = replayTime;
 			ghost->nFinishPoints = replayPoints;
