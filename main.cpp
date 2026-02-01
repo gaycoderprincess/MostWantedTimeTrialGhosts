@@ -32,7 +32,7 @@ ISimable* VehicleConstructHooked(Sim::Param params) {
 			if (vehicle->carType == Attrib::StringHash32("gti")) {
 				vehicle->customization->Tunings[vehicle->customization->ActiveTuning].Value[Physics::Tunings::AERODYNAMICS] = 1; // aerodynamics +5
 			}
-			
+
 			static Physics::Info::Performance temp;
 			temp.Acceleration = 1;
 			temp.TopSpeed = 1;

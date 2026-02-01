@@ -45,7 +45,7 @@ std::vector<ChallengeSeriesEvent> aNewChallengeSeries = {
 	ChallengeSeriesEvent("8.2.1", "BL8"),
 	ChallengeSeriesEvent("7.2.1", "CE_GTRSTREET"),
 	ChallengeSeriesEvent("7.2.2", "BL7"),
-	ChallengeSeriesEvent("6.2.2", "CS_CAR_07"),
+	ChallengeSeriesEvent("6.2.2", "PresetCar/SUPRA_CUSTOM"),
 	ChallengeSeriesEvent("6.1.1", "BL6"),
 	ChallengeSeriesEvent("1.2.4", "CS_CAR_17"),
 	ChallengeSeriesEvent("5.2.2", "BL5"),
