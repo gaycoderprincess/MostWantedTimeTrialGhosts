@@ -1,5 +1,5 @@
 std::string GetCarName(const std::string& carModel) {
-	auto tmp = CreateStockCarRecord(carModel.c_str());
+	auto tmp = NyaHelpers::CreateStockCarRecord(carModel.c_str());
 	std::string carName = GetLocalizedString(FECarRecord::GetNameHash(&tmp));
 	if (carName == GetLocalizedString(0x9BB9CCC3)) { // unlocalized string
 		carName = carModel;
@@ -9,11 +9,7 @@ std::string GetCarName(const std::string& carModel) {
 		if (carModel == "bmwm3gtr") carName += " (Street)";
 	}
 
-	if (carName == "CEMTR" || carName == "GRAB" || carName == "PICKUPA" || carName == "PIZZA" || carName == "TAXI") {
-		carName = "TRAF" + carName;
-	}
 	if (carName == "CS_CLIO_TRAFPIZZA") carName = "TRAFPIZZA";
-	if (carName == "COPSPORT") carName = "COPCROSS";
 	return carName;
 }
 

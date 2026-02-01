@@ -29,7 +29,7 @@ ISimable* VehicleConstructHooked(Sim::Param params) {
 	auto vehicle = (VehicleParams*)params.mData;
 	if (bChallengeSeriesMode && vehicle->carClass == DRIVER_HUMAN && !FindFEPresetCar(bStringHashUpper(pSelectedEvent->sCarPreset.c_str()))) {
 		static FECustomizationRecord customizations;
-		customizations = CreateStockCustomizations(Attrib::StringHash32(pSelectedEvent->sCarPreset.c_str()));
+		customizations = NyaHelpers::CreateStockCarCustomizations(Attrib::StringHash32(pSelectedEvent->sCarPreset.c_str()));
 		if (pSelectedEvent->sCarPreset == "gti") {
 			customizations.Tunings[customizations.ActiveTuning].Value[Physics::Tunings::AERODYNAMICS] = 1; // aerodynamics +5
 		}

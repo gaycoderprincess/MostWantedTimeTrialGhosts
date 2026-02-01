@@ -195,50 +195,8 @@ NyaMat4x4 PrepareCameraMatrix(Camera* pCamera) {
 	return pCamera->CurrentKey.Matrix.Invert();
 }
 
-// todo this is probably bad
-GRacerInfo* GetRacerInfoFromHandle(HSIMABLE handle) {
-	auto race = GRaceStatus::fObj;
-	for (int i = 0; i < race->mRacerCount; i++) {
-		if (race->mRacerInfo[i].mhSimable == handle) return &race->mRacerInfo[i];
-	}
-	return nullptr;
-}
-
-FECustomizationRecord CreateStockCustomizations(uint32_t carModel) {
-	FECustomizationRecord record;
-	FECustomizationRecord::Default(&record);
-
-	FECarRecord tmp;
-	tmp.FEKey = carModel;
-	tmp.VehicleKey = carModel;
-	RideInfo info;
-	RideInfo::Init(&info, FECarRecord::GetType(&tmp), CarRenderUsage_Player, false, false);
-	RideInfo::SetStockParts(&info);
-	FECustomizationRecord::WriteRideIntoRecord(&record, &info);
-	return record;
-}
-
-uint32_t GetCarFEKey(uint32_t modelHash) {
-	auto collection = Attrib::FindCollection(Attrib::StringHash32("pvehicle"), modelHash);
-	if (!collection) return modelHash;
-
-	if (auto type = (uint32_t*)Attrib::Collection::GetData(collection, Attrib::StringHash32("frontend"), 0)) {
-		return type[1];
-	}
-	return modelHash;
-}
-
-FECarRecord CreateStockCarRecord(const char* carModel) {
-	uint32_t rideHash = Attrib::StringHash32(carModel);
-
-	FECarRecord car;
-	car.Handle = rideHash;
-	car.FEKey = GetCarFEKey(rideHash);
-	car.VehicleKey = rideHash;
-	car.FilterBits = 0x10001;
-	car.Customization = -1;
-	car.CareerHandle = -1;
-	return car;
+GRacerInfo* GetRacerInfoFromHandle(ISimable* handle) {
+	return GRaceStatus::GetRacerInfo(GRaceStatus::fObj, handle);
 }
 
 void SetRacerName(GRacerInfo* racer, const char* name) {

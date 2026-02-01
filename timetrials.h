@@ -73,7 +73,7 @@ InputControls GetPlayerControls(IVehicle* veh) {
 #else
 float GetPlayerSpeedtrapScore(IVehicle* pVehicle) {
 	float f = 0;
-	if (auto racer = GetRacerInfoFromHandle(pVehicle->mCOMObject->Find<ISimable>()->GetOwnerHandle())) {
+	if (auto racer = GetRacerInfoFromHandle(pVehicle->mCOMObject->Find<ISimable>())) {
 		for (int i = 0; i < racer->mSpeedTrapsCrossed; i++) {
 			f += racer->mSpeedTrapSpeed[i];
 		}
@@ -128,7 +128,7 @@ struct tReplayTick {
 #endif
 
 		v2.raceProgress = 0;
-		if (auto racer = GetRacerInfoFromHandle(pVehicle->mCOMObject->Find<ISimable>()->GetOwnerHandle())) {
+		if (auto racer = GetRacerInfoFromHandle(pVehicle->mCOMObject->Find<ISimable>())) {
 			v2.raceProgress = racer->mPctRaceComplete;
 		}
 	}
@@ -173,7 +173,7 @@ struct tReplayTick {
 		else {
 			pVehicle->mCOMObject->Find<IRBVehicle>()->EnableObjectCollisions(false);
 
-			if (auto racer = GetRacerInfoFromHandle(pVehicle->mCOMObject->Find<ISimable>()->GetOwnerHandle())) {
+			if (auto racer = GetRacerInfoFromHandle(pVehicle->mCOMObject->Find<ISimable>())) {
 				racer->mPctRaceComplete = v2.raceProgress;
 			}
 		}
@@ -280,7 +280,7 @@ void RunGhost(IVehicle* veh, tReplayGhost* ghost) {
 	if (!ghost) return;
 	ghost->pLastVehicle = veh;
 
-	if (auto racer = GetRacerInfoFromHandle(veh->mCOMObject->Find<ISimable>()->GetOwnerHandle())) {
+	if (auto racer = GetRacerInfoFromHandle(veh->mCOMObject->Find<ISimable>())) {
 		if (ghost->sPlayerName.empty()) SetRacerName(racer, ghost->bIsPersonalBest ? "PERSONAL BEST" : "RACER");
 		else {
 			SetRacerName(racer, ghost->sPlayerName.c_str());
@@ -319,7 +319,7 @@ void RecordGhost(IVehicle* veh) {
 	}
 
 	if (sPlayerNameOverride[0]) {
-		if (auto racer = GetRacerInfoFromHandle(GetLocalPlayerSimable()->GetOwnerHandle())) {
+		if (auto racer = GetRacerInfoFromHandle(GetLocalPlayerSimable())) {
 			SetRacerName(racer, sPlayerNameOverride);
 		}
 	}
