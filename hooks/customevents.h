@@ -58,16 +58,17 @@ std::vector<ChallengeSeriesEvent> aNewChallengeSeries = {
 	ChallengeSeriesEvent("19.8.52", "CS_CAR_PIZZA"),
 	ChallengeSeriesEvent("1.2.3", "E3_DEMO_BMW"),
 	ChallengeSeriesEvent("13.5.1", "CE_ELISE"),
+	ChallengeSeriesEvent("16.2.3", "BL2"),
+	ChallengeSeriesEvent("8.7.5", "PresetCar/PUNTO_CUSTOM"),
+	ChallengeSeriesEvent("3.5.2", "PresetCar/MURCIELAGO_CUSTOM"),
 	ChallengeSeriesEvent("1.1.1", "PresetCar/GTI_KURU", 1),
 	ChallengeSeriesEvent("19.8.32", "PresetCar/911TURBO_CUSTOM"),
 	ChallengeSeriesEvent("1.2.1", "CS_CAR_19"),
 	ChallengeSeriesEvent("1.8.1", "E3_DEMO_BMW"),
-	ChallengeSeriesEvent("16.2.3", "BL2"),
-	ChallengeSeriesEvent("8.7.5", "PresetCar/PUNTO_CUSTOM"),
+	ChallengeSeriesEvent("2.2.1.r", "COP_CROSS"),
+
 	//ChallengeSeriesEvent("7.2.1.r", "PresetCar/GALLARDO_CUSTOM"),
 	//ChallengeSeriesEvent("3.5.2", "PresetCar/TT_CUSTOM"),
-	ChallengeSeriesEvent("3.5.2", "PresetCar/MURCIELAGO_CUSTOM"),
-	ChallengeSeriesEvent("2.2.1.r", "COP_CROSS"),
 };
 
 int GetNumChallengeSeriesEvents() {
