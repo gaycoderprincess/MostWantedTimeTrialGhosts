@@ -776,6 +776,12 @@ std::vector<tReplayGhost> CollectReplayGhosts(const std::string& car, const std:
 		std::sort(ghosts.begin(), ghosts.end(), [](const tReplayGhost& a, const tReplayGhost& b) { if (a.nFinishPoints && b.nFinishPoints) { return a.nFinishPoints > b.nFinishPoints; } return a.nFinishTime < b.nFinishTime; });
 	}
 
+	if (forFullLeaderboard) {
+		for (auto& ghost: ghosts) {
+			ghost.aTicks.clear();
+		}
+	}
+
 	return ghosts;
 }
 
@@ -855,9 +861,6 @@ void TimeTrialLoop() {
 
 		if (bCareerMode || bChallengeSeriesMode) {
 			aLeaderboardGhosts = CollectReplayGhosts(car, track, laps, upgrades, true);
-			for (auto& leaderboard : aLeaderboardGhosts) {
-				leaderboard.aTicks.clear();
-			}
 
 			if (bChallengesOneGhostOnly || bViewReplayMode || nDifficulty == DIFFICULTY_EASY) {
 				auto opponent = SelectTopGhost(car, track, laps, upgrades);
@@ -972,8 +975,8 @@ float fInputBaseXPosition = 0.45;
 float fInputBaseYPosition = 0.85;
 
 void DrawInputTriangle(float posX, float posY, float sizeX, float sizeY, float inputValue, bool invertValue) {
-	float minX = std::min(posX - sizeX, posX + sizeX);
-	float maxX = std::max(posX - sizeX, posX + sizeX);
+	float minX = std::min(posX - sizeX, posX);
+	float maxX = std::max(posX - sizeX, posX);
 
 	DrawTriangle(posX, posY - sizeY, posX - sizeX, std::lerp(posY - sizeY, posY + sizeY, 0.5), posX,
 				 posY + sizeY, invertValue ? gInputRGBBackground : gInputRGBHighlight);
