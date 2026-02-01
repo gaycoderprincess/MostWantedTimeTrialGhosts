@@ -166,12 +166,6 @@ struct tReplayTick {
 		*pVehicle->mCOMObject->Find<IInput>()->GetControls() = v1.inputs;
 #endif
 
-#ifndef TIMETRIALS_CARBON
-		if (pVehicle->GetDriverClass() == DRIVER_RACER) {
-			pVehicle->SetDriverClass(DRIVER_NONE);
-		}
-#endif
-
 		if (pVehicle->GetDriverClass() == DRIVER_HUMAN) {
 			auto player = GetLocalPlayer();
 			if (player->InGameBreaker() != v1.inputs.fActionButton) player->ToggleGameBreaker();
@@ -294,9 +288,6 @@ void RunGhost(IVehicle* veh, tReplayGhost* ghost) {
 	}
 
 	if (!ghost->IsValid()) {
-#ifndef TIMETRIALS_CARBON
-		if (veh->GetDriverClass() == DRIVER_RACER) veh->SetDriverClass(DRIVER_NONE);
-#endif
 		veh->mCOMObject->Find<IRBVehicle>()->EnableObjectCollisions(false);
 		return;
 	}
@@ -864,6 +855,9 @@ void TimeTrialLoop() {
 
 		if (bCareerMode || bChallengeSeriesMode) {
 			aLeaderboardGhosts = CollectReplayGhosts(car, track, laps, upgrades, true);
+			for (auto& leaderboard : aLeaderboardGhosts) {
+				leaderboard.aTicks.clear();
+			}
 
 			if (bChallengesOneGhostOnly || bViewReplayMode || nDifficulty == DIFFICULTY_EASY) {
 				auto opponent = SelectTopGhost(car, track, laps, upgrades);
@@ -888,6 +882,10 @@ void TimeTrialLoop() {
 			}
 		}
 
+		if (bCareerMode) {
+			SetRacerAIEnabled(OpponentGhosts.empty());
+		}
+
 		sGhostsLoaded = track;
 	}
 
@@ -908,20 +906,32 @@ void TimeTrialLoop() {
 	if (isDrift != isPlayerDrifting) {
 		GetLocalPlayerVehicle()->SetDriverStyle(isDrift ? STYLE_DRIFT : STYLE_RACING);
 	}
+	DALOptions::SetJumpCamOn(nullptr, false);
 #else
 	GetUserProfile()->TheOptionsSettings.TheGameplaySettings.JumpCam = false;
-#ifdef TIMETRIALS_CAREER
-	// for speedtraps
-	GetUserProfile()->TheOptionsSettings.TheGameplaySettings.SpeedoUnits = 1;
-	GetUserProfile()->PlayersCarStable.SoldHistoryBounty = 10000000;
-#else
-	for (int i = 0; i < GRaceStatus::fObj->mRacerCount; i++) {
-		auto racer = &GRaceStatus::fObj->mRacerInfo[i];
-		racer->mSpeedTrapsCrossed = 0;
-		for (auto& speed : racer->mSpeedTrapSpeed) { speed = 0; }
+	if (bCareerMode) {
+		GetUserProfile()->TheOptionsSettings.TheGameplaySettings.SpeedoUnits = 1; // for speedtraps
+		GetUserProfile()->PlayersCarStable.SoldHistoryBounty = 10000000;
+	}
+	else {
+		for (int i = 0; i < GRaceStatus::fObj->mRacerCount; i++) {
+			auto racer = &GRaceStatus::fObj->mRacerInfo[i];
+			racer->mSpeedTrapsCrossed = 0;
+			for (auto& speed : racer->mSpeedTrapSpeed) { speed = 0; }
+		}
 	}
 #endif
+
+#ifdef TIMETRIALS_CARBON
+	if (bCareerMode && raceType != GRace::kRaceType_Canyon) {
+#else
+	if (bCareerMode) {
 #endif
+		auto opponents = VEHICLE_LIST::GetList(VEHICLE_AIRACERS);
+		for (int i = 0; i < opponents.size(); i++) {
+			opponents[i]->mCOMObject->Find<IRBVehicle>()->EnableObjectCollisions(false);
+		}
+	}
 
 #ifdef TIMETRIALS_CARBON
 	if (ply->IsStaging()) {
@@ -937,7 +947,7 @@ void TimeTrialLoop() {
 	else {
 		// set fixed start points, super ultra hack
 #ifdef TIMETRIALS_CARBON
-		if (GetLocalPlayerVehicle()->IsStaging() && !OpponentGhosts.empty() && OpponentGhosts[0].IsValid()) {
+		if (!bCareerMode && GetLocalPlayerVehicle()->IsStaging() && !OpponentGhosts.empty() && OpponentGhosts[0].IsValid()) {
 			InvalidatePlayerPos();
 			OpponentGhosts[0].aTicks[0].ApplyPhysics(GetLocalPlayerVehicle());
 		}
@@ -1109,7 +1119,7 @@ void DisplayLeaderboard() {
 }
 
 void DisplayPlayerNames() {
-	if (bChallengeSeriesMode && nGhostVisuals != GHOST_HIDE && !GetIsGamePaused()) {
+	if ((bChallengeSeriesMode || bCareerMode) && nGhostVisuals != GHOST_HIDE && !GetIsGamePaused()) {
 		const float fPlayerNameOffset = 0.031;
 		const float fPlayerNameSize = 0.022;
 		const float fPlayerNameFadeStart = 50.0;

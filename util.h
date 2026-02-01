@@ -249,6 +249,10 @@ const char* GetLocalPlayerName() {
 	return GetUserProfile()->m_aProfileName;
 }
 
+void SetRacerAIEnabled(bool enabled) {
+	NyaHookLib::Patch(0x892748, enabled ? 0x42AA80 : 0x43CE60); // replace AIVehicleRacecar update with AIVehicleEmpty update
+}
+
 std::filesystem::path gDLLPath;
 wchar_t gDLLDir[MAX_PATH];
 class DLLDirSetter {
