@@ -275,6 +275,6 @@ void ApplyCustomMenuHooks() {
 	NyaHooks::OptionsMenuHook::AddStringRecord(Attrib::StringHash32("GHOST_VISUALS"), "Ghosts");
 	NyaHooks::OptionsMenuHook::AddStringRecord(Attrib::StringHash32("PB_GHOST"), "Show Personal Best");
 	NyaHooks::OptionsMenuHook::AddStringRecord(Attrib::StringHash32("INPUT_DISPLAY"), "Input Display");
-	NyaHooks::OptionsMenuHook::AddStringRecord(Attrib::StringHash32("GHOST_NITRO"), "N20");
+	NyaHooks::OptionsMenuHook::AddStringRecord(Attrib::StringHash32("GHOST_NITRO"), "N2O");
 	NyaHooks::OptionsMenuHook::AddStringRecord(Attrib::StringHash32("GHOST_SPDBRK"), "Speedbreaker");
 }
