@@ -24,6 +24,8 @@ public:
 	tReplayGhost aTargetGhosts[NUM_DIFFICULTY] = {};
 	int nNumGhosts[NUM_DIFFICULTY] = {};
 
+	PresetCar PresetCarData = {};
+
 	ChallengeSeriesEvent(const char* eventName, const char* carPreset, int lapCount = 0) : sEventName(eventName), sCarPreset(carPreset), nLapCountOverride(lapCount) {}
 
 	GRaceParameters* GetRace() const {

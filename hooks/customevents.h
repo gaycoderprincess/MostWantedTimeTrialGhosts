@@ -58,7 +58,7 @@ std::vector<ChallengeSeriesEvent> aNewChallengeSeries = {
 	ChallengeSeriesEvent("19.8.52", "CS_CAR_PIZZA"),
 	ChallengeSeriesEvent("1.2.3", "E3_DEMO_BMW"),
 	ChallengeSeriesEvent("13.5.1", "CE_ELISE"),
-	ChallengeSeriesEvent("1.1.1", "gti", 1),
+	ChallengeSeriesEvent("1.1.1", "PresetCar/GTI_KURU", 1),
 	ChallengeSeriesEvent("19.8.32", "911turbo"),
 	ChallengeSeriesEvent("1.2.1", "CS_CAR_19"),
 	ChallengeSeriesEvent("1.8.1", "E3_DEMO_BMW"),
@@ -231,11 +231,43 @@ UIQRMainMenu* __thiscall UIQRMainMenu_Hooked(UIQRMainMenu* pThis, int a2) {
 	return UIQRMainMenu_orig(pThis, a2);
 }
 
+PresetCar* FindFEPresetCarHooked(uint32_t hash) {
+	for (auto& event : aNewChallengeSeries) {
+		if (event.sCarPreset.find('/') == std::string::npos) continue;
+		if (hash == bStringHashUpper(event.sCarPreset.c_str())) {
+			if (event.PresetCarData.PresetName[0]) return &event.PresetCarData;
+
+			std::ifstream file(std::format("{}/CwoeeGhosts/{}", gDLLPath.string(), event.sCarPreset), std::ios::in | std::ios::binary);
+			if (!file.is_open()) {
+				MessageBoxA(nullptr, std::format("Failed to find preset car {}", event.sCarPreset).c_str(), "nya?!~", MB_ICONERROR);
+				exit(0);
+			}
+
+			auto preset = &event.PresetCarData;
+			memset(preset, 0, sizeof(*preset));
+			file.read((char*)preset, sizeof(*preset));
+			preset->PhysicsLevel = 0xFFFFFFFF;
+			return preset;
+		}
+	}
+
+	auto node = PresetCarList.HeadNode.Next;
+	while (node != &PresetCarList.HeadNode) {
+		if (hash == FEHashUpper(node->PresetName)) {
+			return node;
+		}
+		node = node->Next;
+	}
+	return nullptr;
+}
+
 void SetupCustomEventsHooks() {
 	NyaHookLib::Patch(0x8F436C, &CreateQRChallengeSeries_Hooked);
 	UIQRMainMenu_orig = (UIQRMainMenu*(__thiscall*)(UIQRMainMenu*, int))NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x570803, &UIQRMainMenu_Hooked);
 
 	NyaHooks::LateInitHook::aFunctions.push_back(OnChallengeSeriesLoaded);
+
+	NyaHookLib::PatchRelative(NyaHookLib::JMP, 0x748130, &FindFEPresetCarHooked);
 
 	new NyaHookLib::PatchWithUndo(&aChallengeSeriesHooks, NyaHookLib::JMP, 0x5FBD20, &GetIsDDayRaceHooked);
 	new NyaHookLib::PatchWithUndo(&aChallengeSeriesHooks, NyaHookLib::JMP, 0x56DC00, &GetIsFinalPursuitHooked);

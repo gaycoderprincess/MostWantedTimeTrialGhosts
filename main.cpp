@@ -27,20 +27,19 @@ ISimable* VehicleConstructHooked(Sim::Param params) {
 	DLLDirSetter _setdir;
 
 	auto vehicle = (VehicleParams*)params.mData;
-	if (bChallengeSeriesMode && vehicle->carClass == DRIVER_HUMAN && !FindFEPresetCar(bStringHashUpper(pSelectedEvent->sCarPreset.c_str()))) {
-		static FECustomizationRecord customizations;
-		customizations = NyaHelpers::CreateStockCarCustomizations(Attrib::StringHash32(pSelectedEvent->sCarPreset.c_str()));
-		if (pSelectedEvent->sCarPreset == "gti") {
-			customizations.Tunings[customizations.ActiveTuning].Value[Physics::Tunings::AERODYNAMICS] = 1; // aerodynamics +5
+	if (bChallengeSeriesMode && vehicle->carClass == DRIVER_HUMAN) {
+		if (pSelectedEvent->sCarPreset.starts_with("PresetCar")) {
+			vehicle->customization->Tunings[vehicle->customization->ActiveTuning].Value[Physics::Tunings::AERODYNAMICS] = 1; // aerodynamics +5
 		}
-
-		static Physics::Info::Performance temp;
-		temp.Acceleration = 1;
-		temp.TopSpeed = 1;
-		temp.Handling = 1;
-		vehicle->matched = &temp;
-		vehicle->carType = Attrib::StringHash32(pSelectedEvent->sCarPreset.c_str());
-		vehicle->customization = &customizations;
+		else if (!FindFEPresetCar(bStringHashUpper(pSelectedEvent->sCarPreset.c_str()))) {
+			static Physics::Info::Performance temp;
+			temp.Acceleration = 1;
+			temp.TopSpeed = 1;
+			temp.Handling = 1;
+			vehicle->matched = &temp;
+			vehicle->carType = Attrib::StringHash32(pSelectedEvent->sCarPreset.c_str());
+			vehicle->customization = nullptr;
+		}
 
 		if (pSelectedEvent->nLapCountOverride > 0) {
 			SetRaceNumLaps(pSelectedEventParams, pSelectedEvent->nLapCountOverride);
