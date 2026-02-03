@@ -914,7 +914,6 @@ void TimeTrialLoop() {
 #else
 	GetUserProfile()->TheOptionsSettings.TheGameplaySettings.JumpCam = false;
 	if (bCareerMode) {
-		GetUserProfile()->TheOptionsSettings.TheGameplaySettings.SpeedoUnits = 1; // for speedtraps
 		GetUserProfile()->PlayersCarStable.SoldHistoryBounty = 10000000;
 	}
 	else {

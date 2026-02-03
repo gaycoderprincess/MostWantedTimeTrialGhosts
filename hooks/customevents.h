@@ -69,6 +69,8 @@ std::vector<ChallengeSeriesEvent> aNewChallengeSeries = {
 
 	//ChallengeSeriesEvent("7.2.1.r", "PresetCar/GALLARDO_CUSTOM"),
 	//ChallengeSeriesEvent("3.5.2", "PresetCar/TT_CUSTOM"),
+	// 1.7.3 razor drag
+	// 4.2.1 razor cuttable sprint
 };
 
 int GetNumChallengeSeriesEvents() {

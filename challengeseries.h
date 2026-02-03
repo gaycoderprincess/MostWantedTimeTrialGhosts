@@ -24,7 +24,9 @@ public:
 	tReplayGhost aTargetGhosts[NUM_DIFFICULTY] = {};
 	int nNumGhosts[NUM_DIFFICULTY] = {};
 
+#ifndef TIMETRIALS_CARBON
 	PresetCar PresetCarData = {};
+#endif
 
 	ChallengeSeriesEvent(const char* eventName, const char* carPreset, int lapCount = 0) : sEventName(eventName), sCarPreset(carPreset), nLapCountOverride(lapCount) {}
 

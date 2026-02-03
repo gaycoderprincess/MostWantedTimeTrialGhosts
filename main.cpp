@@ -248,6 +248,11 @@ BOOL WINAPI DllMain(HINSTANCE, DWORD fdwReason, LPVOID) {
 			NyaHookLib::Patch(0x57F60D + 1, "E3_DEMO_BMW");
 			NyaHookLib::Patch(0x5A3A7C + 1, "E3_DEMO_BMW");
 			NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x6F48DB, &GetCareerCarType);
+
+			// unlock all cars and upgrades
+			NyaHookLib::Patch<uint16_t>(0x58A9F8, 0x9090);
+			NyaHookLib::Patch<uint16_t>(0x58A8D8, 0x9090);
+			NyaHookLib::Patch<uint8_t>(0x576708, 0xEB);
 #else
 			NyaHookLib::Patch(0x8F5CFC, 0); // tollbooth -> sprint
 			NyaHookLib::Patch(0x8F5D04, 0); // speedtrap -> sprint
