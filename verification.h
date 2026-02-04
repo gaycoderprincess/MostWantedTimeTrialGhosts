@@ -8,8 +8,15 @@ void ImportIntegrityCheck() {
 }
 
 void VerifyTimers() {
-	bInitTicker(60000.0);
-#ifdef TIMETRIALS_CARBON
+#ifdef TIMETRIALS_UNDERGROUND2
+	bInitTicker();
+	ImportIntegrityCheck<0x43BDF8 + 2>(); // QueryPerformanceCounter
+	ImportIntegrityCheck<0x78311C>(); // QueryPerformanceCounter
+	ImportIntegrityCheck<0x6F5F06 + 2>(); // QueryPerformanceFrequency
+	ImportIntegrityCheck<0x783118>(); // QueryPerformanceFrequency
+	ImportIntegrityCheck<0x74B730 + 2>(); // GetTickCount
+	ImportIntegrityCheck<0x78320C>(); // GetTickCount
+#elif TIMETRIALS_CARBON
 	bInitTicker(60000.0);
 	ImportIntegrityCheck<0x86B1EE + 2>(); // QueryPerformanceCounter
 	ImportIntegrityCheck<0x9C1170>(); // QueryPerformanceCounter
@@ -18,6 +25,7 @@ void VerifyTimers() {
 	ImportIntegrityCheck<0x81C740 + 2>(); // GetTickCount
 	ImportIntegrityCheck<0x9C107C>(); // GetTickCount
 #else
+	bInitTicker(60000.0);
 	ImportIntegrityCheck<0x7C3F58 + 2>(); // QueryPerformanceCounter
 	ImportIntegrityCheck<0x89017C>(); // QueryPerformanceCounter
 	ImportIntegrityCheck<0x7C3F58 + 2>(); // QueryPerformanceFrequency
@@ -28,7 +36,18 @@ void VerifyTimers() {
 }
 
 void ApplyVerificationPatches() {
-#ifdef TIMETRIALS_CARBON
+#ifdef TIMETRIALS_UNDERGROUND2
+	// exopts - reenable barriers
+	NyaHookLib::WriteString(0x7A0780, "PLAYER_BARRIERS_%d");
+	NyaHookLib::WriteString(0x7A0794, "BARRIERS_%d");
+	NyaHookLib::Patch<uint64_t>(0x578070, 0x890000008A80BF0F);
+
+	// undo exopts gamespeed
+	static float f = 1.0;
+	NyaHookLib::Patch(0x601A65, &f);
+
+	NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x581470, 0x4022C0); // remove exopts loop, disables hotkeys
+#elif TIMETRIALS_CARBON
 	// exopts - reenable barriers
 	NyaHookLib::WriteString(0x9D85C4, "BARRIER_SPLINE_4501");
 	NyaHookLib::WriteString(0x9D85D8, "BARRIER_SPLINE_4500");
@@ -93,13 +112,30 @@ void CheckPlayerPos() {
 	if (auto ply = GetLocalPlayerVehicle()) {
 		auto tmp = VerifyPlayer;
 		tmp.Collect(ply);
+#ifdef TIMETRIAL_UNDERGROUND2
+		if (memcmp(&tmp, &VerifyPlayer.v1.state, sizeof(VerifyPlayer.v1.state))) {
+#else
 		if (memcmp(&tmp, &VerifyPlayer, sizeof(VerifyPlayer))) {
+#endif
 			exit(0);
 		}
 	}
 }
 
 namespace FileIntegrity {
+#ifdef TIMETRIALS_UNDERGROUND2
+	const char* aFilesToCheck[] = {
+			"GLOBAL/GLOBALB.LZC",
+			"TRACKS/L4RA.BUN",
+			"TRACKS/L4RB.BUN",
+			"TRACKS/L4RC.BUN",
+			"TRACKS/L4RD.BUN",
+			"TRACKS/L4RF.BUN",
+			"TRACKS/L4RG.BUN",
+			"TRACKS/L4RH.BUN",
+			"TRACKS/L4RR.BUN",
+	};
+#else
 	const char* aFilesToCheck[] = {
 			"GLOBAL/ATTRIBUTES.BIN",
 			"GLOBAL/FE_ATTRIB.BIN",
@@ -110,6 +146,7 @@ namespace FileIntegrity {
 			"TRACKS/L5RB.BUN",
 			//"TRACKS/STREAML5RB.BUN",
 	};
+#endif
 	char* aGameData = nullptr;
 	size_t nGameDataCursor = 0;
 

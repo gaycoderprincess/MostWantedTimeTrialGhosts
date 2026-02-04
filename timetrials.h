@@ -490,9 +490,7 @@ void LoadPB(tReplayGhost* ghost, const std::string& car, const std::string& trac
 	bool doUpgradeChecks = IsPracticeMode();
 	bool doCarChecks = !bCareerMode;
 
-	ghost->aTicks.clear();
-	ghost->nFinishTime = 0;
-	ghost->nFinishPoints = 0;
+	ghost->Invalidate();
 
 	auto fileName = GetGhostFilename(car, track, lapCount, opponentId, upgrades, folder);
 #ifdef TIMETRIALS_COMPRESS_EXISTING
