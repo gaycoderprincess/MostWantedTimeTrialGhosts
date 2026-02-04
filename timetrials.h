@@ -721,6 +721,7 @@ void OnFinishRace() {
 			ghost->aTicks = aRecordingTicks;
 			ghost->nFinishTime = replayTime;
 			ghost->nFinishPoints = replayPoints;
+			ghost->nGameFilesHash = nLocalGameFilesHash;
 			ghost->bHasCountdown = true;
 			ghost->bHasCountdownFinalChase = true;
 
