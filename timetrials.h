@@ -35,7 +35,8 @@ enum eDifficulty {
 int nDifficulty = DIFFICULTY_HARD;
 bool bChallengesOneGhostOnly = false;
 bool bChallengesPBGhost = false;
-bool bCheckFileIntegrity = false;
+bool bCheckFileIntegrity = TIMETRIALS_STRICT_FILEINTEGRITY;
+bool bSeparateByFileIntegrity = TIMETRIALS_STRICT_FILEINTEGRITY;
 
 bool bDebugInputsOnly = false;
 
@@ -646,6 +647,11 @@ void LoadPB(tReplayGhost* ghost, const std::string& car, const std::string& trac
 	if (fileVersion >= 5) {
 		inFile.read((char*)&fileHash, sizeof(fileHash));
 		if (!fileHash) fileHash = 0xFFFFFFFF;
+
+		if (bSeparateByFileIntegrity && fileHash != nLocalGameFilesHash) {
+			WriteLog("Mismatched game files for " + fileName);
+			return;
+		}
 	}
 	//if (tmpsize != sizeof(tReplayTick)) {
 	//	WriteLog("Outdated ghost for " + fileName);
@@ -1270,6 +1276,7 @@ void DoConfigSave() {
 	file.write((char*)&bPracticeOpponentsOnly, sizeof(bPracticeOpponentsOnly));
 	file.write((char*)&nNitroType, sizeof(nNitroType));
 	file.write((char*)&nSpeedbreakerType, sizeof(nSpeedbreakerType));
+	file.write((char*)&bSeparateByFileIntegrity, sizeof(bSeparateByFileIntegrity));
 }
 
 void DoConfigLoad() {
@@ -1287,6 +1294,7 @@ void DoConfigLoad() {
 	file.read((char*)&bPracticeOpponentsOnly, sizeof(bPracticeOpponentsOnly));
 	file.read((char*)&nNitroType, sizeof(nNitroType));
 	file.read((char*)&nSpeedbreakerType, sizeof(nSpeedbreakerType));
+	file.read((char*)&bSeparateByFileIntegrity, sizeof(bSeparateByFileIntegrity));
 }
 
 void ChallengeSeriesMenu();
