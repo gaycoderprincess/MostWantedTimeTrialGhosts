@@ -1289,9 +1289,20 @@ void DoConfigLoad() {
 	file.read((char*)&nSpeedbreakerType, sizeof(nSpeedbreakerType));
 }
 
+void ChallengeSeriesMenu();
 void DebugMenu() {
 	ChloeMenuLib::BeginMenu();
 
+#ifdef TIMETRIALS_PROSTREET
+	if (DrawMenuOption("Challenge Series")) {
+		ChloeMenuLib::BeginMenu();
+		ChallengeSeriesMenu();
+		ChloeMenuLib::EndMenu();
+	}
+
+	if (DrawMenuOption("Options")) {
+		ChloeMenuLib::BeginMenu();
+#endif
 	QuickValueEditor("Show Inputs While Driving", bShowInputsWhileDriving);
 	QuickValueEditor("Player Name Override", sPlayerNameOverride, sizeof(sPlayerNameOverride));
 
@@ -1389,6 +1400,11 @@ void DebugMenu() {
 
 	QuickValueEditor("Verify Game Data Integrity", bCheckFileIntegrity);
 	DrawMenuOption(std::format("Game Data Hash: {:X}", nLocalGameFilesHash));
+
+#ifdef TIMETRIALS_PROSTREET
+		ChloeMenuLib::EndMenu();
+	}
+#endif
 
 	ChloeMenuLib::EndMenu();
 }
