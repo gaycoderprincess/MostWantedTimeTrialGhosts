@@ -46,6 +46,10 @@ void ApplyVerificationPatches() {
 	static float f = 1.0;
 	NyaHookLib::Patch(0x601A65, &f);
 
+	// exopts - drift stuff
+	NyaHookLib::Patch<uint8_t>(0x56CC58, 5);
+	NyaHookLib::Patch<uint8_t>(0x56CC90, 5);
+
 	NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x581470, 0x4022C0); // remove exopts loop, disables hotkeys
 #elif TIMETRIALS_CARBON
 	// exopts - reenable barriers
