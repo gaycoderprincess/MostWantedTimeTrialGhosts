@@ -43,7 +43,7 @@ bool IsPracticeMode() {
 	return !bChallengeSeriesMode && !bCareerMode;
 }
 
-#ifdef TIMETRIALS_CARBON
+#if defined(TIMETRIALS_CARBON) | defined(TIMETRIALS_PROSTREET)
 struct InputControls {
 	float fBanking;
 	float fSteering;
@@ -70,12 +70,14 @@ InputControls GetPlayerControls(IVehicle* veh) {
 	out.fActionButton = GetLocalPlayer()->InGameBreaker();
 	return out;
 }
-#else
+#endif
+
+#ifndef TIMETRIALS_CARBON
 float GetPlayerSpeedtrapScore(IVehicle* pVehicle) {
 	float f = 0;
 	if (auto racer = GetRacerInfoFromHandle(pVehicle->mCOMObject->Find<ISimable>())) {
-		for (int i = 0; i < racer->mSpeedTrapsCrossed; i++) {
-			f += racer->mSpeedTrapSpeed[i];
+		for (int i = 0; i < racer->mStats.local.mSpeedTrapsCrossed; i++) {
+			f += racer->mStats.local.mSpeedTrapSpeed[i];
 		}
 	}
 	return f;
@@ -113,15 +115,17 @@ struct tReplayTick {
 		if (GRaceStatus::fObj && GRaceStatus::fObj->mRaceParms) {
 			raceType = GRaceParameters::GetRaceType(GRaceStatus::fObj->mRaceParms);
 		}
-#ifdef TIMETRIALS_CARBON
+#if defined(TIMETRIALS_CARBON) | defined(TIMETRIALS_PROSTREET)
 		v1.inputs = GetPlayerControls(pVehicle);
+#else
+		v1.inputs = *pVehicle->mCOMObject->Find<IInput>()->GetControls();
+#endif
 
+#ifdef TIMETRIALS_CARBON
 		if (raceType == GRace::kRaceType_DriftRace || raceType == GRace::kRaceType_CanyonDrift) {
 			v4.points = DALRacer::GetDriftScoreReport(nullptr, 0)->totalPoints;
 		}
 #else
-		v1.inputs = *pVehicle->mCOMObject->Find<IInput>()->GetControls();
-
 		if (raceType == GRace::kRaceType_SpeedTrap) {
 			v4.points = GetPlayerSpeedtrapScore(pVehicle);
 		}
@@ -129,7 +133,11 @@ struct tReplayTick {
 
 		v2.raceProgress = 0;
 		if (auto racer = GetRacerInfoFromHandle(pVehicle->mCOMObject->Find<ISimable>())) {
+#ifdef TIMETRIALS_PROSTREET
+			v2.raceProgress = racer->mStats.local.mPctRaceComplete;
+#else
 			v2.raceProgress = racer->mPctRaceComplete;
+#endif
 		}
 	}
 
@@ -149,11 +157,13 @@ struct tReplayTick {
 				trans->Shift((GearID)v1.car.gear);
 			}
 
+#ifndef TIMETRIALS_PROSTREET
 			engine->ChargeNOS(-engine->GetNOSCapacity());
 			engine->ChargeNOS(v1.car.nitro);
+#endif
 		}
 
-#ifdef TIMETRIALS_CARBON
+#if defined(TIMETRIALS_CARBON) | defined(TIMETRIALS_PROSTREET)
 		auto input = pVehicle->mCOMObject->Find<IInput>();
 		input->SetControlSteering(v1.inputs.fSteering);
 		input->SetControlOverSteer(v1.inputs.fOverSteer);
@@ -174,7 +184,11 @@ struct tReplayTick {
 			pVehicle->mCOMObject->Find<IRBVehicle>()->EnableObjectCollisions(false);
 
 			if (auto racer = GetRacerInfoFromHandle(pVehicle->mCOMObject->Find<ISimable>())) {
+#ifdef TIMETRIALS_PROSTREET
+				racer->mStats.local.mPctRaceComplete = v2.raceProgress;
+#else
 				racer->mPctRaceComplete = v2.raceProgress;
+#endif
 			}
 		}
 	}
@@ -299,6 +313,7 @@ void RunGhost(IVehicle* veh, tReplayGhost* ghost) {
 }
 
 void RecordGhost(IVehicle* veh) {
+#ifndef TIMETRIALS_PROSTREET
 	if (!bChallengeSeriesMode) {
 		switch (nNitroType) {
 			case NITRO_OFF:
@@ -317,6 +332,7 @@ void RecordGhost(IVehicle* veh) {
 				break;
 		}
 	}
+#endif
 
 	if (sPlayerNameOverride[0]) {
 		if (auto racer = GetRacerInfoFromHandle(GetLocalPlayerSimable())) {
@@ -340,8 +356,12 @@ std::string GetGhostFilename(const std::string& car, const std::string& track, i
 	bool doNOSSpdbrkChecks = IsPracticeMode();
 	bool doUpgradeChecks = IsPracticeMode();
 	bool doCarChecks = !bCareerMode;
+#ifdef TIMETRIALS_PROSTREET
+	bool bossRace = false;
+#else
 	bool bossRace = bCareerMode && (GRaceParameters::GetIsBossRace(GetCurrentRace()) || GRaceParameters::GetIsDDayRace(GetCurrentRace())) && strcmp(GRaceParameters::GetEventID(GetCurrentRace()), "16.1.0");
 	if (bossRace && opponentId == 0 && !folder) bossRace = false;
+#endif
 
 	std::string path = gDLLPath.string();
 	path += "/CwoeeGhosts/";
@@ -393,7 +413,7 @@ std::string GetGhostFilename(const std::string& car, const std::string& track, i
 	}
 
 	// read tunings
-#ifndef TIMETRIALS_CARBON
+#if !defined(TIMETRIALS_CARBON) & !defined(TIMETRIALS_PROSTREET)
 	if (doUpgradeChecks) {
 		path += "_up";
 		for (int i = 0; i < Physics::Upgrades::PUT_MAX; i++) {
@@ -455,6 +475,9 @@ void SavePB(tReplayGhost* ghost, const std::string& car, const std::string& trac
 	WriteStringToFile(outFile, track.c_str());
 	outFile.write((char*)&ghost->nFinishTime, sizeof(ghost->nFinishTime));
 	outFile.write((char*)&ghost->nFinishPoints, sizeof(ghost->nFinishPoints));
+#ifdef TIMETRIALS_PROSTREET
+	outFile.write((char*)&lapCount, sizeof(lapCount));
+#else
 	outFile.write((char*)&nitroType, sizeof(nitroType));
 	outFile.write((char*)&speedbreakerType, sizeof(speedbreakerType));
 	outFile.write((char*)&lapCount, sizeof(lapCount));
@@ -471,6 +494,7 @@ void SavePB(tReplayGhost* ghost, const std::string& car, const std::string& trac
 		outFile.write((char*)tmp1, sizeof(tmp1));
 		outFile.write((char*)tmp2, sizeof(tmp2));
 	}
+#endif
 	auto name = GetLocalPlayerName();
 	if (sPlayerNameOverride[0]) name = sPlayerNameOverride;
 	outFile.write(name, 32);
@@ -584,6 +608,7 @@ void LoadPB(tReplayGhost* ghost, const std::string& car, const std::string& trac
 		return;
 	}
 
+#ifndef TIMETRIALS_PROSTREET
 	Physics::Upgrades::Package playerPhysics = {};
 	Physics::Tunings playerTuning = {};
 #ifndef TIMETRIALS_CARBON
@@ -593,10 +618,12 @@ void LoadPB(tReplayGhost* ghost, const std::string& car, const std::string& trac
 	}
 #endif
 
-	int tmptime, tmppoints, tmpnitro, tmpspdbrk, tmplaps;
-	uint32_t fileHash = 0;
 	Physics::Upgrades::Package tmpphysics;
 	Physics::Tunings tmptuning;
+#endif
+
+	int tmptime, tmppoints, tmpnitro, tmpspdbrk, tmplaps;
+	uint32_t fileHash = 0;
 	char tmpplayername[32];
 	strcpy_s(tmpplayername, opponentId ? "OPPONENT GHOST" : "PB GHOST");
 	auto tmpcar = ReadStringFromFile(inFile);
@@ -611,8 +638,10 @@ void LoadPB(tReplayGhost* ghost, const std::string& car, const std::string& trac
 	inFile.read((char*)&tmpnitro, sizeof(tmpnitro));
 	inFile.read((char*)&tmpspdbrk, sizeof(tmpspdbrk));
 	inFile.read((char*)&tmplaps, sizeof(tmplaps));
+#ifndef TIMETRIALS_PROSTREET
 	inFile.read((char*)&tmpphysics, sizeof(tmpphysics));
 	inFile.read((char*)&tmptuning, sizeof(tmptuning));
+#endif
 	inFile.read(tmpplayername, sizeof(tmpplayername));
 	if (fileVersion >= 5) {
 		inFile.read((char*)&fileHash, sizeof(fileHash));
@@ -634,12 +663,14 @@ void LoadPB(tReplayGhost* ghost, const std::string& car, const std::string& trac
 		WriteLog("Mismatched ghost for " + fileName);
 		return;
 	}
+#ifndef TIMETRIALS_PROSTREET
 	if (doUpgradeChecks && upgrades) {
 		if (memcmp(&playerPhysics, &tmpphysics, sizeof(playerPhysics)) != 0 || memcmp(&playerTuning, &tmptuning, sizeof(playerTuning)) != 0) {
 			WriteLog("Mismatched ghost for " + fileName);
 			return;
 		}
 	}
+#endif
 	int count = 0;
 	inFile.read((char*)&count, sizeof(count));
 	if (count <= 100) {
@@ -830,7 +861,9 @@ void TimeTrialLoop() {
 	}
 
 	bool isInRace = GRaceStatus::fObj && GRaceStatus::fObj->mRaceParms;
+#ifndef TIMETRIALS_PROSTREET
 	if (isInRace && bCareerMode && GRaceParameters::GetIsPursuitRace(GRaceStatus::fObj->mRaceParms)) isInRace = false;
+#endif
 
 	if (!isInRace) {
 		InvalidateGhost();
@@ -894,6 +927,7 @@ void TimeTrialLoop() {
 
 	if (!ShouldGhostRun()) return;
 
+#ifndef TIMETRIALS_PROSTREET
 	ICopMgr::mDisableCops = !GRaceParameters::GetIsPursuitRace(GRaceStatus::fObj->mRaceParms);
 	if (!ICopMgr::mDisableCops && bViewReplayMode) {
 		auto cars = GetActiveVehicles(DRIVER_COP);
@@ -922,6 +956,7 @@ void TimeTrialLoop() {
 			for (auto& speed : racer->mSpeedTrapSpeed) { speed = 0; }
 		}
 	}
+#endif
 #endif
 
 #ifdef TIMETRIALS_CARBON
@@ -1038,7 +1073,9 @@ float fLeaderboardSize = 0.03;
 float fLeaderboardOutlineSize = 0.02;
 void DisplayLeaderboard() {
 	if (IsPracticeMode()) return;
+#ifndef TIMETRIALS_PROSTREET
 	if (gMoviePlayer) return;
+#endif
 	if (!GRaceStatus::fObj) return;
 	if (!GRaceStatus::fObj->mRaceParms) return;
 
@@ -1188,7 +1225,7 @@ void TimeTrialRenderLoop() {
 	if (!ShouldGhostRun()) return;
 
 	if (!GetIsGamePaused()) {
-#ifdef TIMETRIALS_CARBON
+#if defined(TIMETRIALS_CARBON) | defined(TIMETRIALS_PROSTREET)
 		if (bViewReplayMode) {
 			auto ghost = GetViewReplayGhost();
 
@@ -1299,6 +1336,7 @@ void DebugMenu() {
 
 			if (bViewReplayMode) bPracticeOpponentsOnly = false;
 
+#ifndef TIMETRIALS_PROSTREET
 			if (DrawMenuOption("NOS")) {
 				ChloeMenuLib::BeginMenu();
 				if (DrawMenuOption("Off")) {
@@ -1326,6 +1364,7 @@ void DebugMenu() {
 				}
 				ChloeMenuLib::EndMenu();
 			}
+#endif
 		}
 	}
 

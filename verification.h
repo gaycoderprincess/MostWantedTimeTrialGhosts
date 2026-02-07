@@ -8,7 +8,15 @@ void ImportIntegrityCheck() {
 }
 
 void VerifyTimers() {
-#ifdef TIMETRIALS_UNDERGROUND2
+#ifdef TIMETRIALS_PROSTREET
+	bInitTicker(60000.0);
+	ImportIntegrityCheck<0x430F07 + 2>(); // QueryPerformanceCounter
+	ImportIntegrityCheck<0x967178>(); // QueryPerformanceCounter
+	ImportIntegrityCheck<0x917B6E + 2>(); // QueryPerformanceFrequency
+	ImportIntegrityCheck<0x967130>(); // QueryPerformanceFrequency
+	ImportIntegrityCheck<0x9048A0 + 2>(); // GetTickCount
+	ImportIntegrityCheck<0x96708C>(); // GetTickCount
+#elif TIMETRIALS_UNDERGROUND2
 	bInitTicker();
 	ImportIntegrityCheck<0x43BDF8 + 2>(); // QueryPerformanceCounter
 	ImportIntegrityCheck<0x78311C>(); // QueryPerformanceCounter
@@ -36,7 +44,9 @@ void VerifyTimers() {
 }
 
 void ApplyVerificationPatches() {
-#ifdef TIMETRIALS_UNDERGROUND2
+#ifdef TIMETRIALS_PROSTREET
+
+#elif TIMETRIALS_UNDERGROUND2
 	// exopts - reenable barriers
 	NyaHookLib::WriteString(0x7A0780, "PLAYER_BARRIERS_%d");
 	NyaHookLib::WriteString(0x7A0794, "BARRIERS_%d");
@@ -149,6 +159,21 @@ namespace FileIntegrity {
 			//"TRACKS/STREAML2RA.BUN",
 			"TRACKS/L5RB.BUN",
 			//"TRACKS/STREAML5RB.BUN",
+
+			// prostreet tracks
+			"TRACKS/L6R_AutobahnDrift.BUN",
+			"TRACKS/L6R_Autopolis.BUN",
+			"TRACKS/L6R_ChicagoAirfield.BUN",
+			"TRACKS/L6R_Ebisu.BUN",
+			"TRACKS/L6R_INFINEON.BUN",
+			"TRACKS/L6R_LEIPZIG.BUN",
+			"TRACKS/L6R_MondelloPark.BUN",
+			"TRACKS/L6R_NevadaDrift.BUN",
+			"TRACKS/L6R_PortlandRaceway.BUN",
+			"TRACKS/L6R_ShutoDrift.BUN",
+			"TRACKS/L6R_ShutoExpressway.BUN",
+			"TRACKS/L6R_TexasSpeedway.BUN",
+			"TRACKS/L6R_WillowSprings.BUN",
 	};
 #endif
 	char* aGameData = nullptr;
