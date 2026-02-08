@@ -92,6 +92,16 @@ float GetPlayerSpeedtrapScore(IVehicle* pVehicle) {
 }
 #endif
 
+bool IsRacePointBased(GRace::Type raceType) {
+#ifdef TIMETRIALS_PROSTREET
+	return raceType == GRace::kRaceType_SpeedTrap || (raceType >= GRace::kRaceType_Drift_Min && raceType < GRace::kRaceType_Drift_Max);
+#elif TIMETRIALS_CARBON
+	return raceType == GRace::kRaceType_DriftRace || raceType == GRace::kRaceType_CanyonDrift;
+#else
+	return raceType == GRace::kRaceType_SpeedTrap;
+#endif
+}
+
 struct tReplayTick {
 	struct tTickVersion1 {
 		struct {
@@ -129,7 +139,14 @@ struct tReplayTick {
 		v1.inputs = *pVehicle->mCOMObject->Find<IInput>()->GetControls();
 #endif
 
-#ifdef TIMETRIALS_CARBON
+#ifdef TIMETRIALS_PROSTREET
+		if (raceType == GRace::kRaceType_SpeedTrap) {
+			v4.points = GetPlayerSpeedtrapScore(pVehicle);
+		}
+		else if (IsRacePointBased(raceType)) {
+			v4.points = GetRacerInfoFromHandle(GetLocalPlayerSimable())->mDriftScoring.mDriftScoreReport.totalPoints;
+		}
+#elif TIMETRIALS_CARBON
 		if (raceType == GRace::kRaceType_DriftRace || raceType == GRace::kRaceType_CanyonDrift) {
 			v4.points = DALRacer::GetDriftScoreReport(nullptr, 0)->totalPoints;
 		}
@@ -534,7 +551,7 @@ void LoadPB(tReplayGhost* ghost, const std::string& car, const std::string& trac
 	bool doNOSSpdbrkChecks = IsPracticeMode();
 	bool doUpgradeChecks = IsPracticeMode();
 #ifdef TIMETRIALS_PROSTREET
-	bool doCarChecks = !bChallengeSeriesMode || folder != nullptr || opponentId != 0;
+	bool doCarChecks = !bChallengeSeriesMode || folder != nullptr || opponentId == 0;
 #else
 	bool doCarChecks = !bCareerMode;
 #endif
@@ -780,13 +797,22 @@ void OnFinishRace() {
 	uint32_t replayTime = nLastFinishTime = (nGlobalReplayTimerNoCountdown / 120.0) * 1000;
 	uint32_t replayPoints = 0;
 	auto raceType = GRaceParameters::GetRaceType(GRaceStatus::fObj->mRaceParms);
-#ifdef TIMETRIALS_CARBON
-	bool isPointBased = raceType == GRace::kRaceType_DriftRace || raceType == GRace::kRaceType_CanyonDrift;
+	bool isPointBased = IsRacePointBased(raceType);
+#ifdef TIMETRIALS_PROSTREET
+	if (isPointBased) {
+		if (raceType == GRace::kRaceType_SpeedTrap) {
+			replayPoints = GetPlayerSpeedtrapScore(GetLocalPlayerVehicle());
+		}
+		else {
+			auto racer = GRaceStatus::GetRacerInfo(GRaceStatus::fObj, GetLocalPlayerSimable());
+			replayPoints = racer->mDriftScoring.mDriftScoreReport.totalPoints;
+		}
+	}
+#elif TIMETRIALS_CARBON
 	if (isPointBased) {
 		replayPoints = DALRacer::GetDriftScoreReport(nullptr, 0)->totalPoints;
 	}
 #else
-	bool isPointBased = raceType == GRace::kRaceType_SpeedTrap;
 	if (isPointBased) {
 		replayPoints = GetPlayerSpeedtrapScore(GetLocalPlayerVehicle());
 	}
@@ -1206,11 +1232,7 @@ void DisplayLeaderboard() {
 			}
 
 			auto raceType = GRaceParameters::GetRaceType(GRaceStatus::fObj->mRaceParms);
-#ifdef TIMETRIALS_CARBON
-			bool isPointBased = raceType == GRace::kRaceType_DriftRace || raceType == GRace::kRaceType_CanyonDrift;
-#else
-			bool isPointBased = raceType == GRace::kRaceType_SpeedTrap;
-#endif
+			bool isPointBased = IsRacePointBased(raceType);
 			std::string str;
 			if (isPointBased) {
 				str = std::format("{}. {} - {}", ranking++, name, ghost.nFinishPoints);
