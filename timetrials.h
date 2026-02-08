@@ -1012,20 +1012,7 @@ void TimeTrialLoop() {
 
 	if (!ShouldGhostRun()) return;
 
-#ifdef TIMETRIALS_PROSTREET
-	if (auto settings = GetLocalPlayer()->GetSettings()) {
-		settings->BestLineOn = gIngameSettings.BestLineOn;
-		settings->Transmission = gIngameSettings.Transmission;
-		settings->GripTransmission = gIngameSettings.Transmission;
-		settings->DriftTransmission = gIngameSettings.Transmission;
-		settings->SpeedTransmission = gIngameSettings.Transmission;
-	}
-
-	for (int i = 0; i < NUM_DRIVER_AIDS; i++) {
-		if (ply->GetDriverAidLevel((DriverAidType)i) == 0) continue;
-		ply->SetDriverAidLevel((DriverAidType)i, 0, true);
-	}
-#else
+#ifndef TIMETRIALS_PROSTREET
 	ICopMgr::mDisableCops = !GRaceParameters::GetIsPursuitRace(GRaceStatus::fObj->mRaceParms);
 	if (!ICopMgr::mDisableCops && bViewReplayMode) {
 		auto cars = GetActiveVehicles(DRIVER_COP);
