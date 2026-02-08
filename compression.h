@@ -73,6 +73,8 @@ CwoeeIStream* OpenCompressedPB(const std::filesystem::path& filePath) {
 }
 
 CwoeeIStream* OpenRawPB(const std::filesystem::path& filePath) {
+	if (!std::filesystem::exists(filePath)) return nullptr;
+
 	auto size = std::filesystem::file_size(filePath);
 	auto inFile = std::ifstream(filePath, std::ios::in | std::ios::binary);
 	if (!inFile.is_open()) return nullptr;
@@ -106,5 +108,12 @@ bool WriteCompressedPB(CwoeeOStream* file, const std::filesystem::path& filePath
 	auto outFile = std::ofstream(filePath.string() + "2", std::ios::out | std::ios::binary);
 	if (!outFile.is_open()) return false;
 	outFile.write((char*)compressed, newSize);
+	return true;
+}
+
+bool WriteRawPB(CwoeeOStream* file, const std::filesystem::path& filePath) {
+	auto outFile = std::ofstream(filePath.string(), std::ios::out | std::ios::binary);
+	if (!outFile.is_open()) return false;
+	outFile.write((char*)&file->aData[0], file->aData.size());
 	return true;
 }

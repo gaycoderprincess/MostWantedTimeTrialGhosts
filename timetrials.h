@@ -510,10 +510,17 @@ void SavePB(tReplayGhost* ghost, const std::string& car, const std::string& trac
 	outFile.write((char*)&count, sizeof(count));
 	outFile.write((char*)&ghost->aTicks[0], sizeof(ghost->aTicks[0]) * count);
 
+#ifdef TIMETRIALS_NO_COMPRESSION
+	if (!WriteRawPB(&outFile, fileName)) {
+		WriteLog("Failed to save " + fileName + "!");
+		return;
+	}
+#else
 	if (!WriteCompressedPB(&outFile, fileName)) {
 		WriteLog("Failed to save " + fileName + "!");
 		return;
 	}
+#endif
 }
 
 void LoadPB(tReplayGhost* ghost, const std::string& car, const std::string& track, int lapCount, int opponentId, const GameCustomizationRecord* upgrades, const char* folder = nullptr) {
@@ -524,6 +531,15 @@ void LoadPB(tReplayGhost* ghost, const std::string& car, const std::string& trac
 	ghost->Invalidate();
 
 	auto fileName = GetGhostFilename(car, track, lapCount, opponentId, upgrades, folder);
+#ifdef TIMETRIALS_NO_COMPRESSION
+	auto decompress = OpenRawPB(fileName);
+	if (!decompress) {
+		if (TheGameFlowManager.CurrentGameFlowState > GAMEFLOW_STATE_IN_FRONTEND) {
+			WriteLog("No ghost found for " + fileName);
+		}
+		return;
+	}
+#else
 #ifdef TIMETRIALS_COMPRESS_EXISTING
 	if (std::filesystem::exists(fileName)) {
 		if (CompressPB(fileName)) {
@@ -585,6 +601,7 @@ void LoadPB(tReplayGhost* ghost, const std::string& car, const std::string& trac
 		}
 	}
 #endif
+#endif
 
 	auto& inFile = *decompress;
 
@@ -642,14 +659,16 @@ void LoadPB(tReplayGhost* ghost, const std::string& car, const std::string& trac
 	else {
 		tmppoints = 0;
 	}
+#ifdef TIMETRIALS_PROSTREET
+	inFile.read((char*)&tmplaps, sizeof(tmplaps));
+#else
 	inFile.read((char*)&tmpnitro, sizeof(tmpnitro));
 	inFile.read((char*)&tmpspdbrk, sizeof(tmpspdbrk));
-	inFile.read((char*)&tmplaps, sizeof(tmplaps));
-#ifndef TIMETRIALS_PROSTREET
 	inFile.read((char*)&tmpphysics, sizeof(tmpphysics));
 	inFile.read((char*)&tmptuning, sizeof(tmptuning));
 #endif
 	inFile.read(tmpplayername, sizeof(tmpplayername));
+	WriteLog(std::format("tmpplayername {}", tmpplayername));
 	if (fileVersion >= 5) {
 		inFile.read((char*)&fileHash, sizeof(fileHash));
 		if (!fileHash) fileHash = 0xFFFFFFFF;
@@ -742,12 +761,9 @@ void LoadPB(tReplayGhost* ghost, const std::string& car, const std::string& trac
 void OnChallengeSeriesEventPB();
 
 uint32_t nLastFinishTime = 0;
-bool bJustFinished = false;
 void OnFinishRace() {
-	if (bJustFinished) return;
 	if (!GRaceStatus::fObj) return;
 	if (!GRaceStatus::fObj->mRaceParms) return;
-	bJustFinished = true;
 
 	auto ghost = &PlayerPBGhost;
 
@@ -952,10 +968,15 @@ void TimeTrialLoop() {
 	if (!ShouldGhostRun()) return;
 
 #ifdef TIMETRIALS_PROSTREET
-	auto finishReason = GRaceStatus::fObj->mRacerInfo[0].mStats.arbitrated.mFinishReason;
-	if (finishReason == GRacerInfo::kReason_Completed || finishReason == GRacerInfo::kReason_CrossedFinish) {
-		OnFinishRace();
-		return;
+	//auto finishReason = GRaceStatus::fObj->mRacerInfo[0].mStats.arbitrated.mFinishReason;
+	//if (finishReason == GRacerInfo::kReason_Completed || finishReason == GRacerInfo::kReason_CrossedFinish) {
+	//	OnFinishRace();
+	//	return;
+	//}
+
+	for (int i = 0; i < NUM_DRIVER_AIDS; i++) {
+		if (ply->GetDriverAidLevel((DriverAidType)i) == 0) continue;
+		ply->SetDriverAidLevel((DriverAidType)i, 0, true);
 	}
 #else
 	ICopMgr::mDisableCops = !GRaceParameters::GetIsPursuitRace(GRaceStatus::fObj->mRaceParms);
@@ -988,8 +1009,6 @@ void TimeTrialLoop() {
 	}
 #endif
 #endif
-
-	bJustFinished = false;
 
 #ifdef TIMETRIALS_CARBON
 	if (bCareerMode && raceType != GRace::kRaceType_Canyon) {
@@ -1153,7 +1172,9 @@ void DisplayLeaderboard() {
 			uniquePlayers.push_back(name);
 
 			if (ghost.bIsPersonalBest) {
-#ifdef TIMETRIALS_CARBON
+#ifdef TIMETRIALS_PROSTREET
+				data.SetColor(177, 211, 39, 255);
+#elif TIMETRIALS_CARBON
 				data.SetColor(126, 246, 240, 255);
 #else
 				data.SetColor(245, 185, 110, 255);
@@ -1413,6 +1434,13 @@ void DebugMenu() {
 				ChloeMenuLib::EndMenu();
 			}
 #endif
+		}
+	}
+	else {
+		if (bChallengeSeriesMode) {
+			if (DrawMenuOption(std::format("Show Personal Ghost - {}", bChallengesPBGhost))) {
+				bChallengesPBGhost = !bChallengesPBGhost;
+			}
 		}
 	}
 
