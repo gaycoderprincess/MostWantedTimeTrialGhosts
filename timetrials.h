@@ -533,7 +533,11 @@ void SavePB(tReplayGhost* ghost, const std::string& car, const std::string& trac
 void LoadPB(tReplayGhost* ghost, const std::string& car, const std::string& track, int lapCount, int opponentId, const GameCustomizationRecord* upgrades, const char* folder = nullptr) {
 	bool doNOSSpdbrkChecks = IsPracticeMode();
 	bool doUpgradeChecks = IsPracticeMode();
+#ifdef TIMETRIALS_PROSTREET
+	bool doCarChecks = !bChallengeSeriesMode || folder != nullptr || opponentId != 0;
+#else
 	bool doCarChecks = !bCareerMode;
+#endif
 
 	ghost->Invalidate();
 
@@ -803,7 +807,12 @@ void OnFinishRace() {
 			ghost->bHasCountdownFinalChase = true;
 
 			auto car = GetLocalPlayerVehicle();
-			SavePB(ghost, car->GetVehicleName(), GRaceParameters::GetEventID(GRaceStatus::fObj->mRaceParms), GetRaceNumLaps(), car->GetCustomizations());
+#ifdef TIMETRIALS_PROSTREET
+			auto carName = SkipFEPlayerCar;
+#else
+			auto carName = car->GetVehicleName();
+#endif
+			SavePB(ghost, carName, GRaceParameters::GetEventID(GRaceStatus::fObj->mRaceParms), GetRaceNumLaps(), car->GetCustomizations());
 
 			if (bChallengeSeriesMode) {
 				OnChallengeSeriesEventPB();
@@ -929,7 +938,11 @@ void TimeTrialLoop() {
 
 	auto ply = GetLocalPlayerVehicle();
 	if (sGhostsLoaded != GRaceParameters::GetEventID(GRaceStatus::fObj->mRaceParms)) {
+#ifdef TIMETRIALS_PROSTREET
+		auto car = SkipFEPlayerCar;
+#else
 		auto car = ply->GetVehicleName();
+#endif
 		auto track = GRaceParameters::GetEventID(GRaceStatus::fObj->mRaceParms);
 		auto laps = GetRaceNumLaps();
 		auto upgrades = ply->GetCustomizations();
