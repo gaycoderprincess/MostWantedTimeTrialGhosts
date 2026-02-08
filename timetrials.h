@@ -1131,7 +1131,11 @@ void DisplayInputs(InputControls* inputs) {
 
 	DrawInputRectangle((fInputBaseXPosition + 0.325) * GetAspectRatioInv(), fInputBaseYPosition + 0.05, 0.03 * GetAspectRatioInv(), 0.03, inputs->fNOS);
 	DrawInputRectangle((fInputBaseXPosition + 0.425) * GetAspectRatioInv(), fInputBaseYPosition + 0.05, 0.03 * GetAspectRatioInv(), 0.03, inputs->fHandBrake);
+#ifdef TIMETRIALS_PROSTREET
+	DrawInputRectangle((fInputBaseXPosition + 0.525) * GetAspectRatioInv(), fInputBaseYPosition + 0.05, 0.03 * GetAspectRatioInv(), 0.03, inputs->fClutch);
+#else
 	DrawInputRectangle((fInputBaseXPosition + 0.525) * GetAspectRatioInv(), fInputBaseYPosition + 0.05, 0.03 * GetAspectRatioInv(), 0.03, inputs->fActionButton);
+#endif
 }
 
 // special cases for some player names that are above 16 chars
@@ -1144,7 +1148,7 @@ std::string GetRealPlayerName(const std::string& ghostName) {
 std::string GetGameDataHashName(uint32_t hash) {
 #ifdef TIMETRIALS_PROSTREET
 	if (hash == 0x82026A6) return "1.1 Vanilla";
-	if (hash == 0xD12F400) return "1.0 Vanilla";
+	//if (hash == 0xD12F400) return "1.0 Vanilla";
 #elif TIMETRIALS_CARBON
 	if (hash == 0x54278FA4) return "1.4 Collector's Edition";
 #else
