@@ -209,6 +209,7 @@ uint32_t nGlobalReplayTimer = 0;
 uint32_t nGlobalReplayTimerNoCountdown = 0;
 
 uint32_t nLocalGameFilesHash = 0;
+bool bTankUnslapperPresent = false;
 struct tReplayGhost {
 public:
 	std::vector<tReplayTick> aTicks;
@@ -442,7 +443,9 @@ std::string GetGhostFilename(const std::string& car, const std::string& track, i
 	if (opponentId) path += "_" + std::to_string(opponentId);
 	else path += "_pb";
 
-#ifdef TIMETRIALS_CARBON
+#ifdef TIMETRIALS_PROSTREET
+	path += ".ps";
+#elif TIMETRIALS_CARBON
 	path += ".carbon";
 #else
 	path += ".mw";
@@ -500,6 +503,9 @@ void SavePB(tReplayGhost* ghost, const std::string& car, const std::string& trac
 	if (sPlayerNameOverride[0]) name = sPlayerNameOverride;
 	outFile.write(name, 32);
 	outFile.write((char*)&nLocalGameFilesHash, sizeof(nLocalGameFilesHash));
+#ifdef TIMETRIALS_PROSTREET
+	outFile.write((char*)&bTankUnslapperPresent, sizeof(bTankUnslapperPresent));
+#endif
 	int count = ghost->aTicks.size();
 	outFile.write((char*)&count, sizeof(count));
 	outFile.write((char*)&ghost->aTicks[0], sizeof(ghost->aTicks[0]) * count);
@@ -648,6 +654,15 @@ void LoadPB(tReplayGhost* ghost, const std::string& car, const std::string& trac
 		inFile.read((char*)&fileHash, sizeof(fileHash));
 		if (!fileHash) fileHash = 0xFFFFFFFF;
 
+#ifdef TIMETRIALS_PROSTREET
+		bool tankUnslapper = false;
+		inFile.read((char*)&tankUnslapper, sizeof(tankUnslapper));
+		if (tankUnslapper != bTankUnslapperPresent) {
+			WriteLog("Mismatched tankslapper for " + fileName);
+			return;
+		}
+#endif
+
 		if (bSeparateByFileIntegrity && fileHash != nLocalGameFilesHash) {
 			WriteLog("Mismatched game files for " + fileName);
 			return;
@@ -727,9 +742,12 @@ void LoadPB(tReplayGhost* ghost, const std::string& car, const std::string& trac
 void OnChallengeSeriesEventPB();
 
 uint32_t nLastFinishTime = 0;
+bool bJustFinished = false;
 void OnFinishRace() {
+	if (bJustFinished) return;
 	if (!GRaceStatus::fObj) return;
 	if (!GRaceStatus::fObj->mRaceParms) return;
+	bJustFinished = true;
 
 	auto ghost = &PlayerPBGhost;
 
@@ -933,7 +951,13 @@ void TimeTrialLoop() {
 
 	if (!ShouldGhostRun()) return;
 
-#ifndef TIMETRIALS_PROSTREET
+#ifdef TIMETRIALS_PROSTREET
+	auto finishReason = GRaceStatus::fObj->mRacerInfo[0].mStats.arbitrated.mFinishReason;
+	if (finishReason == GRacerInfo::kReason_Completed || finishReason == GRacerInfo::kReason_CrossedFinish) {
+		OnFinishRace();
+		return;
+	}
+#else
 	ICopMgr::mDisableCops = !GRaceParameters::GetIsPursuitRace(GRaceStatus::fObj->mRaceParms);
 	if (!ICopMgr::mDisableCops && bViewReplayMode) {
 		auto cars = GetActiveVehicles(DRIVER_COP);
@@ -964,6 +988,8 @@ void TimeTrialLoop() {
 	}
 #endif
 #endif
+
+	bJustFinished = false;
 
 #ifdef TIMETRIALS_CARBON
 	if (bCareerMode && raceType != GRace::kRaceType_Canyon) {
@@ -1063,7 +1089,10 @@ std::string GetRealPlayerName(const std::string& ghostName) {
 }
 
 std::string GetGameDataHashName(uint32_t hash) {
-#ifdef TIMETRIALS_CARBON
+#ifdef TIMETRIALS_PROSTREET
+	if (hash == 0x82026A6) return "1.1 Vanilla";
+	if (hash == 0xD12F400) return "1.0 Vanilla";
+#elif TIMETRIALS_CARBON
 	if (hash == 0x54278FA4) return "1.4 Collector's Edition";
 #else
 	if (hash == 0x4C19AA83) return "1.3 Black Edition";

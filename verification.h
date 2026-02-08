@@ -309,6 +309,11 @@ namespace FileIntegrity {
 			AddFileData(file);
 		}
 		nLocalGameFilesHash = hash32_copy((uint8_t*)aGameData, size, 0xABCDEF00);
+
+#ifdef TIMETRIALS_PROSTREET
+		if (*(uint32_t*)0x49296F != 0x01E482D9 || *(uint32_t*)0x494059 != 0x01E482D9) bTankUnslapperPresent = true;
+#endif
+
 		delete[] aGameData;
 	}
 }
