@@ -1419,6 +1419,7 @@ void DebugMenu() {
 			}
 		}
 		if (bChallengeSeriesMode) {
+#ifndef TIMETRIALS_PROSTREET
 			const char* difficultyNames[] = {
 					"Easy",
 					"Normal",
@@ -1440,6 +1441,7 @@ void DebugMenu() {
 				}
 				ChloeMenuLib::EndMenu();
 			}
+#endif
 			if (nDifficulty != DIFFICULTY_EASY) {
 				QuickValueEditor("Show Target Ghost Only", bChallengesOneGhostOnly);
 				if (DrawMenuOption(std::format("Show Personal Ghost - {}", bChallengesPBGhost))) {
