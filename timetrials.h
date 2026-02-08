@@ -38,6 +38,13 @@ bool bChallengesPBGhost = false;
 bool bCheckFileIntegrity = TIMETRIALS_STRICT_FILEINTEGRITY;
 bool bSeparateByFileIntegrity = TIMETRIALS_STRICT_FILEINTEGRITY;
 
+#ifdef TIMETRIALS_PROSTREET
+struct tIngameSettings {
+	bool Transmission;
+	bool BestLineOn;
+} gIngameSettings;
+#endif
+
 bool bDebugInputsOnly = false;
 
 bool IsPracticeMode() {
@@ -668,7 +675,6 @@ void LoadPB(tReplayGhost* ghost, const std::string& car, const std::string& trac
 	inFile.read((char*)&tmptuning, sizeof(tmptuning));
 #endif
 	inFile.read(tmpplayername, sizeof(tmpplayername));
-	WriteLog(std::format("tmpplayername {}", tmpplayername));
 	if (fileVersion >= 5) {
 		inFile.read((char*)&fileHash, sizeof(fileHash));
 		if (!fileHash) fileHash = 0xFFFFFFFF;
@@ -968,11 +974,13 @@ void TimeTrialLoop() {
 	if (!ShouldGhostRun()) return;
 
 #ifdef TIMETRIALS_PROSTREET
-	//auto finishReason = GRaceStatus::fObj->mRacerInfo[0].mStats.arbitrated.mFinishReason;
-	//if (finishReason == GRacerInfo::kReason_Completed || finishReason == GRacerInfo::kReason_CrossedFinish) {
-	//	OnFinishRace();
-	//	return;
-	//}
+	if (auto settings = GetLocalPlayer()->GetSettings()) {
+		settings->BestLineOn = gIngameSettings.BestLineOn;
+		settings->Transmission = gIngameSettings.Transmission;
+		settings->GripTransmission = gIngameSettings.Transmission;
+		settings->DriftTransmission = gIngameSettings.Transmission;
+		settings->SpeedTransmission = gIngameSettings.Transmission;
+	}
 
 	for (int i = 0; i < NUM_DRIVER_AIDS; i++) {
 		if (ply->GetDriverAidLevel((DriverAidType)i) == 0) continue;
@@ -1327,6 +1335,9 @@ void DoConfigSave() {
 	file.write((char*)&nNitroType, sizeof(nNitroType));
 	file.write((char*)&nSpeedbreakerType, sizeof(nSpeedbreakerType));
 	file.write((char*)&bSeparateByFileIntegrity, sizeof(bSeparateByFileIntegrity));
+#ifdef TIMETRIALS_PROSTREET
+	file.write((char*)&gIngameSettings, sizeof(gIngameSettings));
+#endif
 }
 
 void DoConfigLoad() {
@@ -1345,6 +1356,9 @@ void DoConfigLoad() {
 	file.read((char*)&nNitroType, sizeof(nNitroType));
 	file.read((char*)&nSpeedbreakerType, sizeof(nSpeedbreakerType));
 	file.read((char*)&bSeparateByFileIntegrity, sizeof(bSeparateByFileIntegrity));
+#ifdef TIMETRIALS_PROSTREET
+	file.read((char*)&gIngameSettings, sizeof(gIngameSettings));
+#endif
 }
 
 void ChallengeSeriesMenu();
@@ -1355,6 +1369,13 @@ void DebugMenu() {
 	if (DrawMenuOption("Challenge Series")) {
 		ChloeMenuLib::BeginMenu();
 		ChallengeSeriesMenu();
+		ChloeMenuLib::EndMenu();
+	}
+
+	if (DrawMenuOption("Game Settings")) {
+		ChloeMenuLib::BeginMenu();
+		QuickValueEditor("Best Line", gIngameSettings.BestLineOn);
+		QuickValueEditor("Manual Transmission", gIngameSettings.Transmission);
 		ChloeMenuLib::EndMenu();
 	}
 
