@@ -155,15 +155,11 @@ void __thiscall GenericResultDrawHooked(ResultStat* pThis) {
 	}
 	else if (racer->mFinishedRacing) {
 		if (racer->mIndex == 0) {
-			auto time = GetTimeFromMilliseconds(nLastFinishTime);
-			time.pop_back();
-			FEPrintf(pThis->pData, time.c_str());
+			FEPrintf(pThis->pData, FormatTime(nLastFinishTime).c_str());
 		}
 		else {
 			if (auto ghost = GetGhostForOpponent(racer->mIndex - 1)) {
-				auto time = GetTimeFromMilliseconds(ghost->nFinishTime);
-				time.pop_back();
-				FEPrintf(pThis->pData, time.c_str());
+				FEPrintf(pThis->pData, FormatTime(ghost->nFinishTime).c_str());
 			}
 			else {
 				FEPrintf(pThis->pData, "N/A");

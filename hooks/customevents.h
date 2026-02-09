@@ -126,21 +126,18 @@ const char* GetChallengeSeriesEventDescription3(uint32_t hash) {
 	static std::string str;
 	str = std::format("Track: {}\nCar: {}", GetTrackName(pSelectedEvent->sEventName, hash), GetCarName(carName));
 	if (targetTime > 0) {
-		str += std::format("\nTarget Time: {}", GetTimeFromMilliseconds(targetTime));
-		str.pop_back();
+		str += std::format("\nTarget Time: {}", FormatTime(targetTime));
 		if (!targetName.empty()) {
 			str += std::format(" ({})", targetName);
 		}
 	}
 	if (pbTime > 0) {
-		str += std::format("\nBest Time: {}", GetTimeFromMilliseconds(pbTime));
-		str.pop_back();
+		str += std::format("\nBest Time: {}", FormatTime(pbTime));
 
 		auto total = CalculateTotalTimes();
 		if (total > 0) {
 			// expertly calculated amount of spaces :3
-			str += std::format("                   Completion Time: {}", GetTimeFromMilliseconds(total));
-			str.pop_back();
+			str += std::format("                   Completion Time: {}", FormatTime(total));
 		}
 	}
 

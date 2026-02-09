@@ -84,9 +84,15 @@ InputControls GetPlayerControls(IVehicle* veh) {
 float GetPlayerSpeedtrapScore(IVehicle* pVehicle) {
 	float f = 0;
 	if (auto racer = GetRacerInfoFromHandle(pVehicle->mCOMObject->Find<ISimable>())) {
+#ifdef TIMETRIALS_PROSTREET
 		for (int i = 0; i < racer->mStats.local.mSpeedTrapsCrossed; i++) {
 			f += racer->mStats.local.mSpeedTrapSpeed[i];
 		}
+#else
+		for (int i = 0; i < racer->mSpeedTrapsCrossed; i++) {
+			f += racer->mSpeedTrapSpeed[i];
+		}
+#endif
 	}
 	return f;
 }

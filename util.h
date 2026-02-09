@@ -86,6 +86,23 @@ IVehicle* GetClosestActiveVehicle(NyaVec3 toCoords) {
 	return out;
 }
 
+std::string FormatScore(int a1) {
+	if (a1 < 1000) {
+		return std::to_string(a1);
+	}
+	auto v4 = a1 / 1000;
+	if (a1 >= 1000000) {
+		return std::format("{},{:03},{:03}", a1 / 1000000, v4 % 1000, a1 % 1000);
+	}
+	return std::format("{},{:03}", v4, a1 % 1000);
+}
+
+std::string FormatTime(uint32_t a1) {
+	auto str = GetTimeFromMilliseconds(a1);
+	str.pop_back();
+	return str;
+}
+
 void ValueEditorMenu(float& value) {
 	ChloeMenuLib::BeginMenu();
 
