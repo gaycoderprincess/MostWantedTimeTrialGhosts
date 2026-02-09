@@ -805,7 +805,7 @@ void OnFinishRace() {
 		}
 		else {
 			auto racer = GRaceStatus::GetRacerInfo(GRaceStatus::fObj, GetLocalPlayerSimable());
-			replayPoints = racer->mDriftScoring.mDriftScoreReport.totalPoints;
+			replayPoints = racer->mStats.arbitrated.mPointTotal;
 		}
 	}
 #elif TIMETRIALS_CARBON
@@ -1226,12 +1226,10 @@ void DisplayLeaderboard() {
 			bool isPointBased = IsRacePointBased(raceType);
 			std::string str;
 			if (isPointBased) {
-				str = std::format("{}. {} - {}", ranking++, name, ghost.nFinishPoints);
+				str = std::format("{}. {} - {}", ranking++, name, FormatScore(ghost.nFinishPoints));
 			}
 			else {
-				auto time = GetTimeFromMilliseconds(ghost.nFinishTime);
-				time.pop_back();
-				str = std::format("{}. {} - {}", ranking++, name, time);
+				str = std::format("{}. {} - {}", ranking++, name, FormatTime(ghost.nFinishTime));
 			}
 			if (bCheckFileIntegrity) {
 				if (!ghost.nGameFilesHash) {
@@ -1411,7 +1409,11 @@ void DebugMenu() {
 	QuickValueEditor("Show Inputs While Driving", bShowInputsWhileDriving);
 	QuickValueEditor("Player Name Override", sPlayerNameOverride, sizeof(sPlayerNameOverride));
 
+#ifdef TIMETRIALS_PROSTREET
+	if (!GRaceStatus::fObj || !GRaceStatus::fObj->mRaceParms) {
+#else
 	if (TheGameFlowManager.CurrentGameFlowState == GAMEFLOW_STATE_IN_FRONTEND) {
+#endif
 		QuickValueEditor("Replay Viewer", bViewReplayMode);
 		if (bViewReplayMode) {
 			if (DrawMenuOption(std::format("Replay Viewer Ghost - {}", bViewReplayTargetTime ? "Target Time" : "Personal Best"))) {
