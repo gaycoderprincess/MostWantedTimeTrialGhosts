@@ -1495,16 +1495,17 @@ void DebugMenu() {
 		}
 	}
 
-	if (DrawMenuOption("Ghost Visuals")) {
+	const char* ghostNames[] = {
+			"Hidden",
+			"Shown",
+			"Hide Too Close",
+	};
+	if (DrawMenuOption(std::format("Ghost Visuals - {}", ghostNames[nGhostVisuals]))) {
 		ChloeMenuLib::BeginMenu();
-		if (DrawMenuOption("Hidden")) {
-			nGhostVisuals = GHOST_HIDE;
-		}
-		if (DrawMenuOption("Shown")) {
-			nGhostVisuals = GHOST_SHOW;
-		}
-		if (DrawMenuOption("Hide Too Close")) {
-			nGhostVisuals = GHOST_HIDE_NEARBY;
+		for (int i = 0; i < NUM_GHOST_VISUALS; i++) {
+			if (DrawMenuOption(ghostNames[i])) {
+				nGhostVisuals = i;
+			}
 		}
 		ChloeMenuLib::EndMenu();
 	}
