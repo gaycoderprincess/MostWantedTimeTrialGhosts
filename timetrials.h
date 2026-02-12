@@ -709,6 +709,7 @@ void LoadPB(tReplayGhost* ghost, const std::string& car, const std::string& trac
 #else
 	inFile.read((char*)&tmpnitro, sizeof(tmpnitro));
 	inFile.read((char*)&tmpspdbrk, sizeof(tmpspdbrk));
+	inFile.read((char*)&tmplaps, sizeof(tmplaps));
 	inFile.read((char*)&tmpphysics, sizeof(tmpphysics));
 	inFile.read((char*)&tmptuning, sizeof(tmptuning));
 #endif
@@ -736,21 +737,21 @@ void LoadPB(tReplayGhost* ghost, const std::string& car, const std::string& trac
 	//	return;
 	//}
 	if ((doCarChecks && tmpcar != car) || tmptrack != track) {
-		WriteLog("Mismatched ghost for " + fileName);
+		WriteLog("Mismatched event for " + fileName);
 		return;
 	}
 	if (tmplaps != lapCount) {
-		WriteLog("Mismatched ghost for " + fileName);
+		WriteLog("Mismatched laps for " + fileName);
 		return;
 	}
 	if (doNOSSpdbrkChecks && (tmpnitro != nNitroType || tmpspdbrk != nSpeedbreakerType)) {
-		WriteLog("Mismatched ghost for " + fileName);
+		WriteLog("Mismatched NOS/speedbreaker for " + fileName);
 		return;
 	}
 #ifndef TIMETRIALS_PROSTREET
 	if (doUpgradeChecks && upgrades) {
 		if (memcmp(&playerPhysics, &tmpphysics, sizeof(playerPhysics)) != 0 || memcmp(&playerTuning, &tmptuning, sizeof(playerTuning)) != 0) {
-			WriteLog("Mismatched ghost for " + fileName);
+			WriteLog("Mismatched upgrades for " + fileName);
 			return;
 		}
 	}
@@ -1176,6 +1177,7 @@ std::string GetGameDataHashName(uint32_t hash) {
 #elif TIMETRIALS_CARBON
 	if (hash == 0x54278FA4) return "1.4 Collector's Edition";
 #else
+	if (hash == 0x833DDD6A) return "1.2 Black Edition";
 	if (hash == 0x4C19AA83) return "1.3 Black Edition";
 	if (hash == 0x562CA1F7) return "Xbox 360 Stuff Pack v4.1";
 #endif
