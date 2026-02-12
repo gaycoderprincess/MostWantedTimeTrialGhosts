@@ -1161,7 +1161,7 @@ std::string GetGameDataHashName(uint32_t hash) {
 	if (hash == 0x4C19AA83) return "1.3 Black Edition";
 	if (hash == 0x562CA1F7) return "Xbox 360 Stuff Pack v4.1";
 #endif
-	return std::format("{:X}", hash);
+	return "";
 }
 
 float fLeaderboardX = 0.03;
@@ -1241,8 +1241,17 @@ void DisplayLeaderboard() {
 				if (!ghost.nGameFilesHash) {
 					str += " (Old ghost, no game data info)";
 				}
-				else if (ghost.nGameFilesHash != nLocalGameFilesHash) {
-					str += std::format(" (Game data mismatch, {})", GetGameDataHashName(ghost.nGameFilesHash));
+				else {
+					str += " (";
+					if (ghost.nGameFilesHash != nLocalGameFilesHash) {
+						str += "Game data mismatch, ";
+					}
+					auto dataName = GetGameDataHashName(ghost.nGameFilesHash);
+					if (dataName.empty()) str += std::format("{:X}", ghost.nGameFilesHash);
+					else {
+						str += std::format("{:X} {}", ghost.nGameFilesHash, dataName);
+					}
+					str += ")";
 				}
 			}
 			DrawString(data, str);
