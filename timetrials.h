@@ -269,6 +269,9 @@ public:
 		auto finishTick = (nFinishTime * 120) / 1000;
 		auto totalTicks = aTicks.size();
 		if (GetLocalPlayerVehicle()->IsStaging() || GetLocalPlayerInterface<IHumanAI>()->GetAiControl()) {
+			if (nGlobalReplayTimer > (totalTicks - finishTick)) {
+				return totalTicks - finishTick;
+			}
 			return nGlobalReplayTimer;
 		}
 		return nGlobalReplayTimerNoCountdown + (totalTicks - finishTick);
