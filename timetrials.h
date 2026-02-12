@@ -447,6 +447,12 @@ std::string GetGhostFilename(const std::string& car, const std::string& track, i
 		}
 	}
 
+#ifdef TIMETRIALS_PROSTREET
+	if (!bTankUnslapperPresent) {
+		path += "_ts";
+	}
+#endif
+
 	// read tunings
 #if !defined(TIMETRIALS_CARBON) & !defined(TIMETRIALS_PROSTREET)
 	if (doUpgradeChecks) {
