@@ -15,6 +15,7 @@ A mod for Need for Speed: Most Wanted that replaces Quick Race opponents with Tr
 - Drift scoring has been fixed, giving you the same amount of points regardless of whether you're using a controller or a keyboard, or have XtendedInput installed
 - Ghosts are timed based on game ticks, meaning speedbreaker is timed in real-time, and the timebug no longer applies anymore
 - Ghosts include a checksum of the player's game files, allowing you to check if someone's made any potentially unfair VLT modifications
+- Ghosts include player inputs, and while they're not directly usable for playback (the game is not deterministic) it can still be used to verify legitimacy
 - The mod includes a basic anti-cheat, preventing common methods of cheating
 - The physics tickrate has been locked to 120, meaning Widescreen Fix no longer gives you an unfair advantage
 

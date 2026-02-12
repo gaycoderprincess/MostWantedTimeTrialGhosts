@@ -240,6 +240,7 @@ uint32_t nGlobalReplayTimerNoCountdown = 0;
 
 uint32_t nLocalGameFilesHash = 0;
 bool bTankUnslapperPresent = false;
+bool bTankUnslapperPresentForCurrentCar = false;
 struct tReplayGhost {
 public:
 	std::vector<tReplayTick> aTicks;
@@ -448,7 +449,7 @@ std::string GetGhostFilename(const std::string& car, const std::string& track, i
 	}
 
 #ifdef TIMETRIALS_PROSTREET
-	if (!bTankUnslapperPresent) {
+	if (!bTankUnslapperPresent && !bTankUnslapperPresentForCurrentCar) {
 		path += "_ts";
 	}
 #endif
@@ -543,7 +544,8 @@ void SavePB(tReplayGhost* ghost, const std::string& car, const std::string& trac
 	outFile.write(name, 32);
 	outFile.write((char*)&nLocalGameFilesHash, sizeof(nLocalGameFilesHash));
 #ifdef TIMETRIALS_PROSTREET
-	outFile.write((char*)&bTankUnslapperPresent, sizeof(bTankUnslapperPresent));
+	bool unslapper = bTankUnslapperPresent || bTankUnslapperPresentForCurrentCar;
+	outFile.write((char*)&unslapper, sizeof(unslapper));
 #endif
 	int count = ghost->aTicks.size();
 	outFile.write((char*)&count, sizeof(count));
@@ -718,7 +720,7 @@ void LoadPB(tReplayGhost* ghost, const std::string& car, const std::string& trac
 #ifdef TIMETRIALS_PROSTREET
 		bool tankUnslapper = false;
 		inFile.read((char*)&tankUnslapper, sizeof(tankUnslapper));
-		if (tankUnslapper != bTankUnslapperPresent) {
+		if (tankUnslapper != (bTankUnslapperPresent || bTankUnslapperPresentForCurrentCar)) {
 			WriteLog("Mismatched tankslapper for " + fileName);
 			return;
 		}
@@ -978,6 +980,13 @@ void TimeTrialLoop() {
 	}
 
 	auto ply = GetLocalPlayerVehicle();
+
+#ifdef TIMETRIALS_PROSTREET
+	if (auto collection = Attrib::FindCollection(Attrib::StringHash32("vehicle"), ply->GetVehicleKey())) {
+		bTankUnslapperPresentForCurrentCar = *(float*)Attrib::Collection::GetData(collection, Attrib::StringHash32("TANK_SLAPPER_TIMER"), 0) == 0.0;
+	}
+#endif
+
 	if (sGhostsLoaded != GRaceParameters::GetEventID(GRaceStatus::fObj->mRaceParms)) {
 #ifdef TIMETRIALS_PROSTREET
 		auto car = SkipFEPlayerCar;
