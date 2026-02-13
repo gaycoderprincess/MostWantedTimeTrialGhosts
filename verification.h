@@ -107,10 +107,6 @@ namespace MemoryIntegrity {
 		// challenge series hooks - these will change when swapping between quick race and challenges
 		0x63F450,
 		0x63C660,
-		0x63E540,
-		0x63E990,
-		0x63F4B0,
-		0x63E660,
 
 		// racer ai
 		0x9C4F80,
