@@ -18,6 +18,7 @@ A mod for Need for Speed: Most Wanted that replaces Quick Race opponents with Tr
 - Ghosts include player inputs, and while they're not directly usable for playback (the game is not deterministic) it can still be used to verify legitimacy
 - The mod includes a basic anti-cheat, preventing common methods of cheating
 - The physics tickrate has been locked to 120, meaning Widescreen Fix no longer gives you an unfair advantage
+- The World Level Of Detail setting has been locked to a lower value, in order to keep everyone on a level playing field in regards to prop density
 
 ## Building
 
