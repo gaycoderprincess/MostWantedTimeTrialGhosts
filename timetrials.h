@@ -551,17 +551,17 @@ void SavePB(tReplayGhost* ghost, const std::string& car, const std::string& trac
 	outFile.write((char*)&count, sizeof(count));
 	outFile.write((char*)&ghost->aTicks[0], sizeof(ghost->aTicks[0]) * count);
 
-#if TIMETRIALS_SAVE_FORMAT == CIPHER
+#if TIMETRIALS_SAVE_FORMAT == 'C'
 	if (!WriteEncryptedPB(&outFile, fileName)) {
 		WriteLog("Failed to save " + fileName + "!");
 		return;
 	}
-#elif TIMETRIALS_SAVE_FORMAT == HUFF
+#elif TIMETRIALS_SAVE_FORMAT == 'H'
 	if (!WriteCompressedPB(&outFile, fileName)) {
 		WriteLog("Failed to save " + fileName + "!");
 		return;
 	}
-#elif TIMETRIALS_SAVE_FORMAT == RAW
+#elif TIMETRIALS_SAVE_FORMAT == 'R'
 	if (!WriteRawPB(&outFile, fileName)) {
 		WriteLog("Failed to save " + fileName + "!");
 		return;
