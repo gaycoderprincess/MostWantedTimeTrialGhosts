@@ -98,6 +98,12 @@ namespace MemoryIntegrity {
 #elif TIMETRIALS_UNDERGROUND2
 
 #elif TIMETRIALS_CARBON
+		// HD reflections "cubemap fix"
+		0x9E87E4,
+		0x9E87EC,
+		0x9E8804,
+		0x9E880C,
+
 		// challenge series hooks - these will change when swapping between quick race and challenges
 		0x63F450,
 		0x63C660,
@@ -110,24 +116,10 @@ namespace MemoryIntegrity {
 		0x9C4F80,
 #else
 		// challenge series hooks - these will change when swapping between quick race and challenges
-		0x5FBD20,
-		0x56DC00,
-		0x5FC560,
-		0x443004,
-		0x44430A,
-		0x71A826,
-		0x6F19DB,
-		0x6412C1,
-		0x6F48DB,
-		0x6F4945,
-		0x5FC180,
 		0x426CA6,
 		0x431533,
 		0x611902,
 		0x61DCB7,
-		0x5FD30C,
-		0x5FD31A,
-		0x60AB66,
 
 		// racer ai
 		0x892748,

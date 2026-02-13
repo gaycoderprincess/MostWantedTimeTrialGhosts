@@ -86,8 +86,10 @@ bool IsChallengeSeriesEventUnlocked(uint32_t a1, uint32_t eventHash) { // a2 is 
 }
 
 const char* __thiscall GetChallengeSeriesCarType(GRaceParameters* pThis) {
+	if (!bChallengeSeriesMode) return nullptr;
+
 	auto event = GetChallengeEvent(GRaceParameters::GetEventID(pThis));
-	if (!event) return "M3GTRCAREERSTART";
+	if (!event) return nullptr;
 	return event->sCarPreset.c_str();
 }
 
@@ -147,8 +149,8 @@ const char* GetChallengeSeriesEventDescription3(uint32_t hash) {
 	return str.c_str();
 }
 
-bool GetIsChallengeSeriesRace() {
-	return true;
+bool __thiscall GetIsChallengeSeriesRace(GRaceParameters* pThis) {
+	return GetChallengeEvent(GRaceParameters::GetEventID(pThis)) != nullptr;
 }
 
 uint32_t __thiscall GetChallengeSeriesEventIcon1(GRaceParameters* pThis) {
@@ -273,20 +275,20 @@ void SetupCustomEventsHooks() {
 
 	NyaHookLib::PatchRelative(NyaHookLib::JMP, 0x748130, &FindFEPresetCarHooked);
 
-	new NyaHookLib::PatchWithUndo(&aChallengeSeriesHooks, NyaHookLib::JMP, 0x5FBD20, &GetIsDDayRaceHooked);
-	new NyaHookLib::PatchWithUndo(&aChallengeSeriesHooks, NyaHookLib::JMP, 0x56DC00, &GetIsFinalPursuitHooked);
-	new NyaHookLib::PatchWithUndo(&aChallengeSeriesHooks, NyaHookLib::JMP, 0x5FC560, &GetIsFinalPursuitHooked);
+	NyaHookLib::PatchRelative(NyaHookLib::JMP, 0x5FBD20, &GetIsDDayRaceHooked);
+	NyaHookLib::PatchRelative(NyaHookLib::JMP, 0x56DC00, &GetIsFinalPursuitHooked);
+	NyaHookLib::PatchRelative(NyaHookLib::JMP, 0x5FC560, &GetIsFinalPursuitHooked);
 
 	NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x7AEA30, &GetIsEventCompleteHooked);
-	new NyaHookLib::PatchWithUndo(&aChallengeSeriesHooks, NyaHookLib::CALL, 0x443004, &GetIsFinalPursuitForCopSpawnsHooked);
-	new NyaHookLib::PatchWithUndo(&aChallengeSeriesHooks, NyaHookLib::CALL, 0x44430A, &GetIsFinalPursuitForCopSpawnsHooked);
-	new NyaHookLib::PatchWithUndo(&aChallengeSeriesHooks, NyaHookLib::CALL, 0x71A826, &GetIsFinalPursuitForCopSpawnsHooked);
-	new NyaHookLib::PatchWithUndo(&aChallengeSeriesHooks, NyaHookLib::JMP, 0x6F19DB, 0x6F1C1F); // disable milestone display
-	new NyaHookLib::PatchWithUndo(&aChallengeSeriesHooks, NyaHookLib::CALL, 0x6412C1, &FinalPursuitEndHooked);
+	NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x443004, &GetIsFinalPursuitForCopSpawnsHooked);
+	NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x44430A, &GetIsFinalPursuitForCopSpawnsHooked);
+	NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x71A826, &GetIsFinalPursuitForCopSpawnsHooked);
+	NyaHookLib::PatchRelative(NyaHookLib::JMP, 0x6F19DB, 0x6F1C1F); // disable milestone display
+	NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x6412C1, &FinalPursuitEndHooked);
 
-	new NyaHookLib::PatchWithUndo(&aChallengeSeriesHooks, NyaHookLib::CALL, 0x6F48DB, &GetChallengeSeriesCarType);
-	//new NyaHookLib::PatchWithUndo(&aChallengeSeriesHooks, NyaHookLib::CALL, 0x6F4945, &GetChallengeSeriesCarPerformance);
-	new NyaHookLib::PatchWithUndo(&aChallengeSeriesHooks, NyaHookLib::JMP, 0x5FC180, &GetIsChallengeSeriesRace);
+	NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x6F48DB, &GetChallengeSeriesCarType);
+	//NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x6F4945, &GetChallengeSeriesCarPerformance);
+	NyaHookLib::PatchRelative(NyaHookLib::JMP, 0x5FC180, &GetIsChallengeSeriesRace);
 
 	// change event list
 	NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x7AE97F, &GetNumChallengeSeriesEvents);
@@ -319,9 +321,9 @@ void SetupCustomEventsHooks() {
 	NyaHookLib::Patch<uint16_t>(0x7AE9E6, 0x9090); // don't check unlock states
 
 	// don't spawn boss characters
-	new NyaHookLib::PatchWithUndo(&aChallengeSeriesHooks, 0x5FD30C, 2, [](){ NyaHookLib::Patch<uint16_t>(0x5FD30C, 0x9090); });
-	new NyaHookLib::PatchWithUndo(&aChallengeSeriesHooks, 0x5FD31A, 2, [](){ NyaHookLib::Patch<uint16_t>(0x5FD31A, 0x9090); });
+	NyaHookLib::Patch<uint16_t>(0x5FD30C, 0x9090);
+	NyaHookLib::Patch<uint16_t>(0x5FD31A, 0x9090);
 
 	// don't sabotage engine
-	new NyaHookLib::PatchWithUndo(&aChallengeSeriesHooks, 0x60AB66, 1, [](){ NyaHookLib::Patch<uint8_t>(0x60AB66, 0xEB); });
+	NyaHookLib::Patch<uint8_t>(0x60AB66, 0xEB);
 }
