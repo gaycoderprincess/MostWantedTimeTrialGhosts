@@ -42,6 +42,7 @@ bool bSeparateByFileIntegrity = TIMETRIALS_STRICT_FILEINTEGRITY;
 struct tIngameSettings {
 	uint8_t Transmission;
 	bool BestLineOn;
+	bool SpeedoUnits;
 } gIngameSettings;
 #endif
 
