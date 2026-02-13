@@ -46,7 +46,32 @@ void WriteStringToFile(CwoeeOStream& file, const char* string) {
 	file.write(string, len);
 }
 
+// raw data
+
+CwoeeIStream* OpenRawPB(const std::filesystem::path& filePath) {
+	if (!std::filesystem::exists(filePath)) return nullptr;
+
+	auto size = std::filesystem::file_size(filePath);
+	auto inFile = std::ifstream(filePath, std::ios::in | std::ios::binary);
+	if (!inFile.is_open()) return nullptr;
+
+	auto data = new uint8_t[size];
+	inFile.read((char*)data, size);
+	return new CwoeeIStream(data, size);
+}
+
+bool WriteRawPB(CwoeeOStream* file, const std::filesystem::path& filePath) {
+	auto outFile = std::ofstream(filePath.string(), std::ios::out | std::ios::binary);
+	if (!outFile.is_open()) return false;
+	outFile.write((char*)&file->aData[0], file->aData.size());
+	return true;
+}
+
+// huff compression
+
 CwoeeIStream* OpenCompressedPB(const std::filesystem::path& filePath) {
+	if (!std::filesystem::exists(filePath)) return nullptr;
+
 	auto size = std::filesystem::file_size(filePath);
 	auto inFile = std::ifstream(filePath, std::ios::in | std::ios::binary);
 	if (!inFile.is_open()) return nullptr;
@@ -70,18 +95,6 @@ CwoeeIStream* OpenCompressedPB(const std::filesystem::path& filePath) {
 	}
 	delete[] data;
 	return new CwoeeIStream(decompressed, decompressedSize);
-}
-
-CwoeeIStream* OpenRawPB(const std::filesystem::path& filePath) {
-	if (!std::filesystem::exists(filePath)) return nullptr;
-
-	auto size = std::filesystem::file_size(filePath);
-	auto inFile = std::ifstream(filePath, std::ios::in | std::ios::binary);
-	if (!inFile.is_open()) return nullptr;
-
-	auto data = new uint8_t[size];
-	inFile.read((char*)data, size);
-	return new CwoeeIStream(data, size);
 }
 
 bool CompressPB(const std::filesystem::path& filePath) {
@@ -120,9 +133,71 @@ bool WriteCompressedPB(CwoeeOStream* file, const std::filesystem::path& filePath
 	return true;
 }
 
-bool WriteRawPB(CwoeeOStream* file, const std::filesystem::path& filePath) {
-	auto outFile = std::ofstream(filePath.string(), std::ios::out | std::ios::binary);
-	if (!outFile.is_open()) return false;
-	outFile.write((char*)&file->aData[0], file->aData.size());
+// basic cipher method
+
+void EncryptGhostData(uint8_t* in, size_t size, uint8_t* out) {
+	uint8_t tmp = 0;
+	for (size_t i = 0; i < size; i++) {
+		auto origValue = in[i];
+		out[i] = in[i] ^ tmp;
+		tmp += origValue + 0x10;
+	}
+}
+
+void DecryptGhostData(uint8_t* in, size_t size, uint8_t* out) {
+	uint8_t tmp = 0;
+	for (size_t i = 0; i < size; i++) {
+		out[i] = in[i] ^ tmp;
+		tmp += out[i] + 0x10;
+	}
+}
+
+CwoeeIStream* OpenEncryptedPB(const std::filesystem::path& filePath) {
+	if (!std::filesystem::exists(filePath)) return nullptr;
+
+	auto size = std::filesystem::file_size(filePath);
+	auto inFile = std::ifstream(filePath, std::ios::in | std::ios::binary);
+	if (!inFile.is_open()) return nullptr;
+
+	auto data = new uint8_t[size];
+	inFile.read((char*)data, size);
+	DecryptGhostData(data, size, data);
+
+	return new CwoeeIStream(data, size);
+}
+
+bool EncryptPB(const std::filesystem::path& filePath) {
+	auto size = std::filesystem::file_size(filePath);
+	auto inFile = std::ifstream(filePath, std::ios::in | std::ios::binary);
+	if (!inFile.is_open()) return false;
+
+	auto data = new uint8_t[size];
+	inFile.read((char*)data, size);
+
+	auto encrypted = new uint8_t[size];
+	EncryptGhostData(data, size, encrypted);
+	delete[] data;
+
+	auto outFile = std::ofstream(filePath.string() + "3", std::ios::out | std::ios::binary);
+	if (!outFile.is_open()) {
+		delete[] encrypted;
+		return false;
+	}
+	outFile.write((char*)encrypted, size);
+	delete[] encrypted;
+	return true;
+}
+
+bool WriteEncryptedPB(CwoeeOStream* file, const std::filesystem::path& filePath) {
+	auto encrypted = new uint8_t[file->aData.size()];
+	EncryptGhostData((uint8_t*)&file->aData[0], file->aData.size(), encrypted);
+
+	auto outFile = std::ofstream(filePath.string() + "3", std::ios::out | std::ios::binary);
+	if (!outFile.is_open()) {
+		delete[] encrypted;
+		return false;
+	}
+	outFile.write((char*)encrypted, file->aData.size());
+	delete[] encrypted;
 	return true;
 }
