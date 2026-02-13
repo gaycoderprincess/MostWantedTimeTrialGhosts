@@ -43,63 +43,6 @@ void VerifyTimers() {
 #endif
 }
 
-void ApplyVerificationPatches() {
-#ifdef TIMETRIALS_PROSTREET
-
-#elif TIMETRIALS_UNDERGROUND2
-	// exopts - reenable barriers
-	NyaHookLib::WriteString(0x7A0780, "PLAYER_BARRIERS_%d");
-	NyaHookLib::WriteString(0x7A0794, "BARRIERS_%d");
-	NyaHookLib::Patch<uint64_t>(0x578070, 0x890000008A80BF0F);
-
-	// undo exopts gamespeed
-	static float f = 1.0;
-	NyaHookLib::Patch(0x601A65, &f);
-
-	// exopts - drift stuff
-	NyaHookLib::Patch<uint8_t>(0x56CC58, 5);
-	NyaHookLib::Patch<uint8_t>(0x56CC90, 5);
-
-	NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x581470, 0x4022C0); // remove exopts loop, disables hotkeys
-#elif TIMETRIALS_CARBON
-	// exopts - reenable barriers
-	NyaHookLib::WriteString(0x9D85C4, "BARRIER_SPLINE_4501");
-	NyaHookLib::WriteString(0x9D85D8, "BARRIER_SPLINE_4500");
-	NyaHookLib::WriteString(0x9D85EC, "BARRIER_SPLINE_4091");
-	NyaHookLib::WriteString(0x9D8600, "BARRIER_SPLINE_4090");
-	NyaHookLib::WriteString(0x9D8614, "BARRIER_SPLINE_306");
-	NyaHookLib::WriteString(0x9D8628, "BARRIER_SPLINE_305");
-	NyaHookLib::WriteString(0x9D8B30, "BARRIER_SPLINE_%d");
-
-	// exopts - drift stuff
-	NyaHookLib::Patch<uint8_t>(0x6BE947, 10);
-	NyaHookLib::Patch<uint8_t>(0x6AB943, 20);
-	NyaHookLib::Patch<uint8_t>(0x6AB945, 20);
-	Tweak_DriftRaceCollisionThreshold = 3.5;
-	AugmentedDriftWithEBrake = false;
-
-	// undo exopts gamespeed
-	static float f = 1.0;
-	NyaHookLib::Patch(0x7683BA, &f);
-	NyaHookLib::Patch(0x7683CB, &f);
-	NyaHookLib::Patch<uint16_t>(0x46CE42, 0x9090);
-#else
-	// exopts - reenable barriers
-	NyaHookLib::WriteString(0x8B2810, "SCENERY_GROUP_");
-	NyaHookLib::WriteString(0x8B2820, "PLAYER_BARRIERS_");
-	NyaHookLib::WriteString(0x8B2834, "BARRIERS_");
-	NyaHookLib::WriteString(0x8B2840, "BARRIER_");
-
-	// undo exopts gamespeed
-	static float f = 1.0;
-	NyaHookLib::Patch(0x6F4D1A, &f);
-	NyaHookLib::Patch(0x6F4D2B, &f);
-	NyaHookLib::Patch(0x78AA77, &f);
-
-	NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x663EE8, 0x64B380); // remove exopts loop, disables hotkeys
-#endif
-}
-
 bool bVerifyPlayerCollected = false;
 void InvalidatePlayerPos() {
 	bVerifyPlayerCollected = false;
@@ -132,6 +75,110 @@ void CheckPlayerPos() {
 		if (memcmp(&tmp, &VerifyPlayer, sizeof(VerifyPlayer))) {
 #endif
 			exit(0);
+		}
+	}
+}
+
+namespace MemoryIntegrity {
+	struct MemorySection {
+		std::string sName;
+		uint8_t* aMemory = nullptr;
+		size_t nSize = 0;
+		uintptr_t nStartAddress = 0;
+
+		size_t nCursor = 0;
+
+		MemorySection(std::string name) : sName(name) {}
+	};
+	std::vector<MemorySection> aSections = { MemorySection(".text"), MemorySection(".rdata"), MemorySection(".idata") };
+
+	uintptr_t aWhitelistedAddresses[] = {
+#ifdef TIMETRIALS_PROSTREET
+
+#elif TIMETRIALS_UNDERGROUND2
+
+#elif TIMETRIALS_CARBON
+		// challenge series hooks - these will change when swapping between quick race and challenges
+		0x63F450,
+		0x63C660,
+		0x63E540,
+		0x63E990,
+		0x63F4B0,
+		0x63E660,
+
+		// racer ai
+		0x9C4F80,
+#else
+		// challenge series hooks - these will change when swapping between quick race and challenges
+		0x5FBD20,
+		0x56DC00,
+		0x5FC560,
+		0x443004,
+		0x44430A,
+		0x71A826,
+		0x6F19DB,
+		0x6412C1,
+		0x6F48DB,
+		0x6F4945,
+		0x5FC180,
+		0x426CA6,
+		0x431533,
+		0x611902,
+		0x61DCB7,
+		0x5FD30C,
+		0x5FD31A,
+		0x60AB66,
+
+		// racer ai
+		0x892748,
+#endif
+	};
+	bool IsWhitelisted(uintptr_t address) {
+		for (auto& addr : aWhitelistedAddresses) {
+			if (address >= addr && address <= addr + 5) return true;
+		}
+		return false;
+	}
+
+	void CheckerThread(int sectionId) {
+		while (true) {
+			auto& section = aSections[sectionId];
+			for (int i = 0; i < 8192; i++) {
+				uintptr_t address = section.nStartAddress + section.nCursor;
+				if (!IsWhitelisted(address) && *(uint8_t*)address != section.aMemory[section.nCursor]) {
+					WriteLog(std::format("Integrity check failed at {:X}", address));;
+					exit(0);
+				}
+				section.nCursor++;
+				if (section.nCursor >= section.nSize) section.nCursor = 0;
+			}
+			Sleep(100);
+		}
+	}
+
+	void Init() {
+		auto module = (uintptr_t)GetModuleHandleA(0);
+		auto dosHeader = (PIMAGE_DOS_HEADER)module;
+		auto ntHeader = (PIMAGE_NT_HEADERS)(module + dosHeader->e_lfanew);
+		auto sectionHeader = (PIMAGE_SECTION_HEADER)((uintptr_t)&ntHeader->OptionalHeader + ntHeader->FileHeader.SizeOfOptionalHeader);
+
+		for (int i = 0; i < ntHeader->FileHeader.NumberOfSections; i++) {
+			auto sectionData = &sectionHeader[i];
+			for (auto& section : aSections) {
+				if (section.sName == (char*)sectionData->Name) {
+					section.nSize = sectionData->SizeOfRawData;
+					section.nStartAddress = module + sectionData->VirtualAddress;
+					break;
+				}
+			}
+		}
+
+		for (auto& section : aSections) {
+			if (!section.nStartAddress) continue;
+
+			section.aMemory = new uint8_t[section.nSize];
+			memcpy(section.aMemory, (void*)section.nStartAddress, section.nSize);
+			std::thread(CheckerThread, &section - &aSections[0]).detach();
 		}
 	}
 }
@@ -316,4 +363,63 @@ namespace FileIntegrity {
 
 		delete[] aGameData;
 	}
+}
+
+void ApplyVerificationPatches() {
+#ifdef TIMETRIALS_PROSTREET
+
+#elif TIMETRIALS_UNDERGROUND2
+	// exopts - reenable barriers
+	NyaHookLib::WriteString(0x7A0780, "PLAYER_BARRIERS_%d");
+	NyaHookLib::WriteString(0x7A0794, "BARRIERS_%d");
+	NyaHookLib::Patch<uint64_t>(0x578070, 0x890000008A80BF0F);
+
+	// undo exopts gamespeed
+	static float f = 1.0;
+	NyaHookLib::Patch(0x601A65, &f);
+
+	// exopts - drift stuff
+	NyaHookLib::Patch<uint8_t>(0x56CC58, 5);
+	NyaHookLib::Patch<uint8_t>(0x56CC90, 5);
+
+	NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x581470, 0x4022C0); // remove exopts loop, disables hotkeys
+#elif TIMETRIALS_CARBON
+	// exopts - reenable barriers
+	NyaHookLib::WriteString(0x9D85C4, "BARRIER_SPLINE_4501");
+	NyaHookLib::WriteString(0x9D85D8, "BARRIER_SPLINE_4500");
+	NyaHookLib::WriteString(0x9D85EC, "BARRIER_SPLINE_4091");
+	NyaHookLib::WriteString(0x9D8600, "BARRIER_SPLINE_4090");
+	NyaHookLib::WriteString(0x9D8614, "BARRIER_SPLINE_306");
+	NyaHookLib::WriteString(0x9D8628, "BARRIER_SPLINE_305");
+	NyaHookLib::WriteString(0x9D8B30, "BARRIER_SPLINE_%d");
+
+	// exopts - drift stuff
+	NyaHookLib::Patch<uint8_t>(0x6BE947, 10);
+	NyaHookLib::Patch<uint8_t>(0x6AB943, 20);
+	NyaHookLib::Patch<uint8_t>(0x6AB945, 20);
+	Tweak_DriftRaceCollisionThreshold = 3.5;
+	AugmentedDriftWithEBrake = false;
+
+	// undo exopts gamespeed
+	static float f = 1.0;
+	NyaHookLib::Patch(0x7683BA, &f);
+	NyaHookLib::Patch(0x7683CB, &f);
+	NyaHookLib::Patch<uint16_t>(0x46CE42, 0x9090);
+#else
+	// exopts - reenable barriers
+	NyaHookLib::WriteString(0x8B2810, "SCENERY_GROUP_");
+	NyaHookLib::WriteString(0x8B2820, "PLAYER_BARRIERS_");
+	NyaHookLib::WriteString(0x8B2834, "BARRIERS_");
+	NyaHookLib::WriteString(0x8B2840, "BARRIER_");
+
+	// undo exopts gamespeed
+	static float f = 1.0;
+	NyaHookLib::Patch(0x6F4D1A, &f);
+	NyaHookLib::Patch(0x6F4D2B, &f);
+	NyaHookLib::Patch(0x78AA77, &f);
+
+	NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x663EE8, 0x64B380); // remove exopts loop, disables hotkeys
+#endif
+
+	MemoryIntegrity::Init();
 }
