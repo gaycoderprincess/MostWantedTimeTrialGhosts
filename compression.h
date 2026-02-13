@@ -94,10 +94,15 @@ bool CompressPB(const std::filesystem::path& filePath) {
 
 	auto compressed = new uint8_t[size];
 	auto newSize = HUFFCompress(data, size, compressed);
+	delete[] data;
 
 	auto outFile = std::ofstream(filePath.string() + "2", std::ios::out | std::ios::binary);
-	if (!outFile.is_open()) return false;
+	if (!outFile.is_open()) {
+		delete[] compressed;
+		return false;
+	}
 	outFile.write((char*)compressed, newSize);
+	delete[] compressed;
 	return true;
 }
 
