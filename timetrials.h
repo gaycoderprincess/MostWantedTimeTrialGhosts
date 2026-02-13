@@ -1257,6 +1257,7 @@ void DisplayPlayerNames() {
 			if (!IsVehicleValidAndActive(car)) continue;
 
 			auto name = ghost->bIsPersonalBest ? ghost->sPlayerName : GetRealPlayerName(ghost->sPlayerName);
+			if (ghost->bIsPersonalBest && name.empty()) name = "PERSONAL BEST";
 
 			UMath::Vector3 dim;
 			car->mCOMObject->Find<IRigidBody>()->GetDimension(&dim);
