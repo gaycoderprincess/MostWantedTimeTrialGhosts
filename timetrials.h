@@ -43,6 +43,16 @@ struct tIngameSettings {
 	uint8_t Transmission;
 	bool BestLineOn;
 	bool SpeedoUnits;
+	float MasterVol;
+	float SpeechVol;
+	float FEMusicVol;
+	float IGMusicVol;
+	float SoundEffectsVol;
+	float EngineVol;
+	float CarVol;
+	float AmbientVol;
+	float SpeedVol;
+	int EATraxMode;
 } gIngameSettings;
 #endif
 
