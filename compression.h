@@ -106,8 +106,12 @@ bool WriteCompressedPB(CwoeeOStream* file, const std::filesystem::path& filePath
 	auto newSize = HUFFCompress((uint8_t*)&file->aData[0], file->aData.size(), compressed);
 
 	auto outFile = std::ofstream(filePath.string() + "2", std::ios::out | std::ios::binary);
-	if (!outFile.is_open()) return false;
+	if (!outFile.is_open()) {
+		delete[] compressed;
+		return false;
+	}
 	outFile.write((char*)compressed, newSize);
+	delete[] compressed;
 	return true;
 }
 
