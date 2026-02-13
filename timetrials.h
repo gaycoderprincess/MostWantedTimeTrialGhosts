@@ -40,7 +40,7 @@ bool bSeparateByFileIntegrity = TIMETRIALS_STRICT_FILEINTEGRITY;
 
 #ifdef TIMETRIALS_PROSTREET
 struct tIngameSettings {
-	bool Transmission;
+	uint8_t Transmission;
 	bool BestLineOn;
 } gIngameSettings;
 #endif
@@ -1395,7 +1395,22 @@ void DebugMenu() {
 	if (DrawMenuOption("Game Settings")) {
 		ChloeMenuLib::BeginMenu();
 		QuickValueEditor("Best Line", gIngameSettings.BestLineOn);
-		QuickValueEditor("Manual Transmission", gIngameSettings.Transmission);
+
+		const char* transNames[] = {
+				"Automatic",
+				"Manual",
+				"Manual Clutch",
+		};
+		if (DrawMenuOption(std::format("Transmission - {}", transNames[gIngameSettings.Transmission]))) {
+			ChloeMenuLib::BeginMenu();
+			for (int i = 0; i < NUM_GHOST_VISUALS; i++) {
+				if (DrawMenuOption(transNames[i])) {
+					gIngameSettings.Transmission = i;
+				}
+			}
+			ChloeMenuLib::EndMenu();
+		}
+
 		ChloeMenuLib::EndMenu();
 	}
 
