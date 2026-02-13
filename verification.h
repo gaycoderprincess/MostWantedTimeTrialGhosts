@@ -94,7 +94,8 @@ namespace MemoryIntegrity {
 
 	uintptr_t aWhitelistedAddresses[] = {
 #ifdef TIMETRIALS_PROSTREET
-
+		// racer ai
+		0x41F040,
 #elif TIMETRIALS_UNDERGROUND2
 
 #elif TIMETRIALS_CARBON
