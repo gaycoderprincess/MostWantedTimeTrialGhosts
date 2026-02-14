@@ -32,7 +32,7 @@ void VerifyTimers() {
 	ImportIntegrityCheck<0x9C1170>(); // QueryPerformanceFrequency
 	ImportIntegrityCheck<0x81C740 + 2>(); // GetTickCount
 	ImportIntegrityCheck<0x9C107C>(); // GetTickCount
-#else
+#elif TIMETRIALS_MOST_WANTED
 	bInitTicker(60000.0);
 	ImportIntegrityCheck<0x7C3F58 + 2>(); // QueryPerformanceCounter
 	ImportIntegrityCheck<0x89017C>(); // QueryPerformanceCounter
@@ -48,28 +48,119 @@ void InvalidatePlayerPos() {
 	bVerifyPlayerCollected = false;
 }
 
+#ifdef TIMETRIALS_MOST_WANTED
+struct tVerifyTick {
+	IVehicle* ptr;
+
+	// car state
+	bool staging;
+	bool destroyed;
+	bool active;
+	bool loading;
+	bool offWorld;
+	uint8_t forceStop;
+	uint8_t style;
+	uint8_t physics;
+	uint8_t invuln;
+	uint8_t spiked[4];
+	bool gearChanging;
+	float mass;
+	float rpm;
+	float hp;
+
+	// nos data
+	bool nosEngaged;
+	float nosCapacity;
+	float nosBoost;
+	float nosFlowRate;
+
+	void Collect(IVehicle* pVehicle) {
+		ptr = pVehicle;
+
+		staging = pVehicle->IsStaging();
+		destroyed = pVehicle->IsDestroyed();
+		active = pVehicle->IsActive();
+		loading = pVehicle->IsLoading();
+		offWorld = pVehicle->IsOffWorld();
+		forceStop = pVehicle->GetForceStop();
+		style = pVehicle->GetDriverStyle();
+		physics = pVehicle->GetPhysicsMode();
+
+		mass = pVehicle->mCOMObject->Find<IRigidBody>()->GetMass();
+
+		nosCapacity = pVehicle->mCOMObject->Find<IEngine>()->GetNOSCapacity();
+		nosBoost = pVehicle->mCOMObject->Find<IEngine>()->GetNOSBoost();
+		nosFlowRate = pVehicle->mCOMObject->Find<IEngine>()->GetNOSFlowRate();
+
+		rpm = pVehicle->mCOMObject->Find<IEngine>()->GetRPM();
+		nosEngaged = pVehicle->mCOMObject->Find<IEngine>()->IsNOSEngaged();
+		hp = pVehicle->mCOMObject->Find<IEngine>()->GetHorsePower();
+
+		invuln = pVehicle->mCOMObject->Find<IRBVehicle>()->GetInvulnerability();
+
+		for (int i = 0; i < 4; i++) {
+			spiked[i] = pVehicle->mCOMObject->Find<ISpikeable>()->GetTireDamage(i);
+		}
+
+		gearChanging = pVehicle->mCOMObject->Find<ITransmission>()->IsGearChanging();
+	}
+} VerifyPlayerExtras;
+#endif
+
 tReplayTick VerifyPlayer;
+
+#ifdef TIMETRIALS_MOST_WANTED
+template<bool checkForFinalPursuit>
+#endif
 void CollectPlayerPos() {
 	bVerifyPlayerCollected = false;
 	if (TheGameFlowManager.CurrentGameFlowState != GAMEFLOW_STATE_RACING) return;
 	if (IsInLoadingScreen()) return;
 
+#ifdef TIMETRIALS_MOST_WANTED
+	auto race = GetCurrentRace();
+	if (race && GRaceParameters::GetIsPursuitRace(race) != checkForFinalPursuit) return;
+#endif
+
 	if (auto ply = GetLocalPlayerVehicle()) {
 		VerifyPlayer.Collect(ply);
+
+#ifdef TIMETRIALS_MOST_WANTED
+		VerifyPlayerExtras.Collect(ply);
+#endif
+
 		bVerifyPlayerCollected = true;
 	}
 }
 
+#ifdef TIMETRIALS_MOST_WANTED
+template<bool checkForFinalPursuit>
+#endif
 void CheckPlayerPos() {
 	if (TheGameFlowManager.CurrentGameFlowState != GAMEFLOW_STATE_RACING) return;
 	if (IsInLoadingScreen()) return;
 	if (bViewReplayMode) return;
 	if (!bVerifyPlayerCollected) return;
 
+#ifdef TIMETRIALS_MOST_WANTED
+	auto race = GetCurrentRace();
+	if (race && GRaceParameters::GetIsPursuitRace(race) != checkForFinalPursuit) return;
+#endif
+
 	if (auto ply = GetLocalPlayerVehicle()) {
 		auto tmp = VerifyPlayer;
 		tmp.Collect(ply);
-#ifdef TIMETRIAL_UNDERGROUND2
+
+#ifdef TIMETRIALS_MOST_WANTED
+		auto tmp2 = VerifyPlayerExtras;
+		tmp2.Collect(ply);
+
+		if (memcmp(&tmp2, &VerifyPlayerExtras, sizeof(VerifyPlayerExtras))) {
+			exit(0);
+		}
+#endif
+
+#ifdef TIMETRIALS_UNDERGROUND2
 		if (memcmp(&tmp, &VerifyPlayer.v1.state, sizeof(VerifyPlayer.v1.state))) {
 #else
 		if (memcmp(&tmp, &VerifyPlayer, sizeof(VerifyPlayer))) {
@@ -111,7 +202,7 @@ namespace MemoryIntegrity {
 
 		// racer ai
 		0x9C4F80,
-#else
+#elif TIMETRIALS_MOST_WANTED
 		// challenge series hooks - these will change when swapping between quick race and challenges
 		0x426CA6,
 		0x431533,
@@ -120,6 +211,9 @@ namespace MemoryIntegrity {
 
 		// racer ai
 		0x892748,
+
+		// some random thing related to look behind?
+		0x4741D0,
 #endif
 	};
 	bool IsWhitelisted(uintptr_t address) {
@@ -141,7 +235,7 @@ namespace MemoryIntegrity {
 				section.nCursor++;
 				if (section.nCursor >= section.nSize) section.nCursor = 0;
 			}
-			Sleep(100);
+			Sleep(50);
 		}
 	}
 
@@ -394,7 +488,11 @@ void ApplyVerificationPatches() {
 	NyaHookLib::Patch(0x7683BA, &f);
 	NyaHookLib::Patch(0x7683CB, &f);
 	NyaHookLib::Patch<uint16_t>(0x46CE42, 0x9090);
-#else
+
+	Tweak_GameBreakerRechargeTime = 25.0;
+	Tweak_GameBreakerRechargeSpeed = 80.0;
+	Tweak_GameBreakerCollisionMass = 2.0;
+#elif TIMETRIALS_MOST_WANTED
 	// exopts - reenable barriers
 	NyaHookLib::WriteString(0x8B2810, "SCENERY_GROUP_");
 	NyaHookLib::WriteString(0x8B2820, "PLAYER_BARRIERS_");
@@ -408,6 +506,10 @@ void ApplyVerificationPatches() {
 	NyaHookLib::Patch(0x78AA77, &f);
 
 	NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x663EE8, 0x64B380); // remove exopts loop, disables hotkeys
+
+	// tweak_infinitenos
+	static bool b = false;
+	NyaHookLib::Patch(0x692AB2, &b);
 #endif
 
 	MemoryIntegrity::Init();
