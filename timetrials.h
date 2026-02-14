@@ -62,7 +62,7 @@ bool IsPracticeMode() {
 	return !bChallengeSeriesMode && !bCareerMode;
 }
 
-#if defined(TIMETRIALS_CARBON) | defined(TIMETRIALS_PROSTREET)
+#if defined(TIMETRIALS_CARBON) | defined(TIMETRIALS_PROSTREET) | defined(TIMETRIALS_UNDERCOVER)
 struct InputControls {
 	float fBanking;
 	float fSteering;
@@ -95,7 +95,7 @@ InputControls GetPlayerControls(IVehicle* veh) {
 float GetPlayerSpeedtrapScore(IVehicle* pVehicle) {
 	float f = 0;
 	if (auto racer = GetRacerInfoFromHandle(pVehicle->mCOMObject->Find<ISimable>())) {
-#ifdef TIMETRIALS_PROSTREET
+#if defined(TIMETRIALS_PROSTREET) | defined(TIMETRIALS_UNDERCOVER)
 		for (int i = 0; i < racer->mStats.local.mSpeedTrapsCrossed; i++) {
 			f += racer->mStats.local.mSpeedTrapSpeed[i];
 		}
@@ -114,8 +114,10 @@ bool IsRacePointBased(GRace::Type raceType) {
 	return raceType == GRace::kRaceType_SpeedTrap || (raceType >= GRace::kRaceType_Drift_Min && raceType < GRace::kRaceType_Drift_Max);
 #elif TIMETRIALS_CARBON
 	return raceType == GRace::kRaceType_DriftRace || raceType == GRace::kRaceType_CanyonDrift;
-#else
+#elif TIMETRIALS_MOST_WANTED
 	return raceType == GRace::kRaceType_SpeedTrap;
+#else
+	return false;
 #endif
 }
 
@@ -139,18 +141,27 @@ struct tReplayTick {
 
 	void Collect(IVehicle* pVehicle) {
 		auto rb = pVehicle->mCOMObject->Find<IRigidBody>();
+
+#ifdef TIMETRIALS_UNDERCOVER
+		v1.car.mat = *rb->GetTransform();
+#else
 		rb->GetMatrix4(&v1.car.mat);
+#endif
+
 		v1.car.mat.p = *rb->GetPosition();
 		v1.car.vel = *rb->GetLinearVelocity();
 		v1.car.tvel = *rb->GetAngularVelocity();
 		v1.car.gear = pVehicle->mCOMObject->Find<ITransmission>()->GetGear();
 		v1.car.nitro = pVehicle->mCOMObject->Find<IEngine>()->GetNOSCapacity();
 
+#ifndef TIMETRIALS_UNDERCOVER
 		GRace::Type raceType = GRace::kRaceType_P2P;
 		if (GRaceStatus::fObj && GRaceStatus::fObj->mRaceParms) {
 			raceType = GRaceParameters::GetRaceType(GRaceStatus::fObj->mRaceParms);
 		}
-#if defined(TIMETRIALS_CARBON) | defined(TIMETRIALS_PROSTREET)
+#endif
+
+#if defined(TIMETRIALS_CARBON) | defined(TIMETRIALS_PROSTREET) | defined(TIMETRIALS_UNDERCOVER)
 		v1.inputs = GetPlayerControls(pVehicle);
 #else
 		v1.inputs = *pVehicle->mCOMObject->Find<IInput>()->GetControls();
@@ -167,7 +178,7 @@ struct tReplayTick {
 		if (raceType == GRace::kRaceType_DriftRace || raceType == GRace::kRaceType_CanyonDrift) {
 			v4.points = DALRacer::GetDriftScoreReport(nullptr, 0)->totalPoints;
 		}
-#else
+#elif TIMETRIALS_MOST_WANTED
 		if (raceType == GRace::kRaceType_SpeedTrap) {
 			v4.points = GetPlayerSpeedtrapScore(pVehicle);
 		}
@@ -175,7 +186,7 @@ struct tReplayTick {
 
 		v2.raceProgress = 0;
 		if (auto racer = GetRacerInfoFromHandle(pVehicle->mCOMObject->Find<ISimable>())) {
-#ifdef TIMETRIALS_PROSTREET
+#if defined(TIMETRIALS_PROSTREET) | defined(TIMETRIALS_UNDERCOVER)
 			v2.raceProgress = racer->mStats.local.mPctRaceComplete;
 #else
 			v2.raceProgress = racer->mPctRaceComplete;
@@ -205,7 +216,7 @@ struct tReplayTick {
 #endif
 		}
 
-#if defined(TIMETRIALS_CARBON) | defined(TIMETRIALS_PROSTREET)
+#if defined(TIMETRIALS_CARBON) | defined(TIMETRIALS_PROSTREET) | defined(TIMETRIALS_UNDERCOVER)
 		auto input = pVehicle->mCOMObject->Find<IInput>();
 		input->SetControlSteering(v1.inputs.fSteering);
 		input->SetControlOverSteer(v1.inputs.fOverSteer);
@@ -226,7 +237,7 @@ struct tReplayTick {
 			pVehicle->mCOMObject->Find<IRBVehicle>()->EnableObjectCollisions(false);
 
 			if (auto racer = GetRacerInfoFromHandle(pVehicle->mCOMObject->Find<ISimable>())) {
-#ifdef TIMETRIALS_PROSTREET
+#if defined(TIMETRIALS_PROSTREET) | defined(TIMETRIALS_UNDERCOVER)
 				racer->mStats.local.mPctRaceComplete = v2.raceProgress;
 #else
 				racer->mPctRaceComplete = v2.raceProgress;
@@ -466,7 +477,8 @@ std::string GetGhostFilename(const std::string& car, const std::string& track, i
 #endif
 
 	// read tunings
-#if !defined(TIMETRIALS_CARBON) & !defined(TIMETRIALS_PROSTREET)
+	// todo undercover
+#if !defined(TIMETRIALS_CARBON) & !defined(TIMETRIALS_PROSTREET) & !defined(TIMETRIALS_UNDERCOVER)
 	if (doUpgradeChecks) {
 		path += "_up";
 		for (int i = 0; i < Physics::Upgrades::PUT_MAX; i++) {
@@ -536,6 +548,7 @@ void SavePB(tReplayGhost* ghost, const std::string& car, const std::string& trac
 	outFile.write((char*)&nitroType, sizeof(nitroType));
 	outFile.write((char*)&speedbreakerType, sizeof(speedbreakerType));
 	outFile.write((char*)&lapCount, sizeof(lapCount));
+#ifndef TIMETRIALS_UNDERCOVER
 #ifndef TIMETRIALS_CARBON
 	if (upgrades) {
 		outFile.write((char*)&upgrades->InstalledPhysics, sizeof(upgrades->InstalledPhysics));
@@ -549,6 +562,7 @@ void SavePB(tReplayGhost* ghost, const std::string& car, const std::string& trac
 		outFile.write((char*)tmp1, sizeof(tmp1));
 		outFile.write((char*)tmp2, sizeof(tmp2));
 	}
+#endif
 #endif
 	auto name = GetLocalPlayerName();
 	if (sPlayerNameOverride[0]) name = sPlayerNameOverride;
@@ -647,7 +661,7 @@ void LoadPB(tReplayGhost* ghost, const std::string& car, const std::string& trac
 		return;
 	}
 
-#ifndef TIMETRIALS_PROSTREET
+#if !defined(TIMETRIALS_PROSTREET) & !defined(TIMETRIALS_UNDERCOVER)
 	Physics::Upgrades::Package playerPhysics = {};
 	Physics::Tunings playerTuning = {};
 #ifndef TIMETRIALS_CARBON
@@ -680,8 +694,10 @@ void LoadPB(tReplayGhost* ghost, const std::string& car, const std::string& trac
 	inFile.read((char*)&tmpnitro, sizeof(tmpnitro));
 	inFile.read((char*)&tmpspdbrk, sizeof(tmpspdbrk));
 	inFile.read((char*)&tmplaps, sizeof(tmplaps));
+#ifndef TIMETRIALS_UNDERCOVER
 	inFile.read((char*)&tmpphysics, sizeof(tmpphysics));
 	inFile.read((char*)&tmptuning, sizeof(tmptuning));
+#endif
 #endif
 	inFile.read(tmpplayername, sizeof(tmpplayername));
 	if (fileVersion >= 5) {
@@ -718,7 +734,7 @@ void LoadPB(tReplayGhost* ghost, const std::string& car, const std::string& trac
 		WriteLog("Mismatched NOS/speedbreaker for " + fileName);
 		return;
 	}
-#ifndef TIMETRIALS_PROSTREET
+#if !defined(TIMETRIALS_CARBON) & !defined(TIMETRIALS_PROSTREET) & !defined(TIMETRIALS_UNDERCOVER)
 	if (doUpgradeChecks && upgrades) {
 		if (memcmp(&playerPhysics, &tmpphysics, sizeof(playerPhysics)) != 0 || memcmp(&playerTuning, &tmptuning, sizeof(playerTuning)) != 0) {
 			WriteLog("Mismatched upgrades for " + fileName);
@@ -784,8 +800,14 @@ void OnFinishRace() {
 
 	uint32_t replayTime = nLastFinishTime = (nGlobalReplayTimerNoCountdown / 120.0) * 1000;
 	uint32_t replayPoints = 0;
+
+#ifdef TIMETRIALS_UNDERCOVER
+	bool isPointBased = false;
+#else
 	auto raceType = GRaceParameters::GetRaceType(GRaceStatus::fObj->mRaceParms);
 	bool isPointBased = IsRacePointBased(raceType);
+#endif
+
 #ifdef TIMETRIALS_PROSTREET
 	if (isPointBased) {
 		if (raceType == GRace::kRaceType_SpeedTrap) {
@@ -800,7 +822,7 @@ void OnFinishRace() {
 	if (isPointBased) {
 		replayPoints = DALRacer::GetDriftScoreReport(nullptr, 0)->totalPoints;
 	}
-#else
+#elif TIMETRIALS_MOST_WANTED
 	if (isPointBased) {
 		replayPoints = GetPlayerSpeedtrapScore(GetLocalPlayerVehicle());
 	}
@@ -1007,7 +1029,7 @@ void TimeTrialLoop() {
 
 	if (!ShouldGhostRun()) return;
 
-#ifndef TIMETRIALS_PROSTREET
+#if defined(TIMETRIALS_MOST_WANTED) | defined(TIMETRIALS_CARBON)
 	ICopMgr::mDisableCops = !GRaceParameters::GetIsPursuitRace(GRaceStatus::fObj->mRaceParms);
 	if (!ICopMgr::mDisableCops && bViewReplayMode) {
 		auto cars = GetActiveVehicles(DRIVER_COP);
@@ -1015,6 +1037,15 @@ void TimeTrialLoop() {
 			car->mCOMObject->Find<ISimable>()->Kill();
 		}
 	}
+#elif TIMETRIALS_UNDERCOVER
+	ICopMgr::mInstance->EnableCops(GRaceParameters::GetIsPursuitRace(GRaceStatus::fObj->mRaceParms));
+	if (!ICopMgr::mInstance->AreCopsEnabled() && bViewReplayMode) {
+		auto cars = GetActiveVehicles(DRIVER_COP);
+		for (auto& car : cars) {
+			car->mCOMObject->Find<ISimable>()->Kill();
+		}
+	}
+#endif
 
 #ifdef TIMETRIALS_CARBON
 	auto raceType = GRaceParameters::GetRaceType(GRaceStatus::fObj->mRaceParms);
@@ -1024,7 +1055,7 @@ void TimeTrialLoop() {
 		GetLocalPlayerVehicle()->SetDriverStyle(isDrift ? STYLE_DRIFT : STYLE_RACING);
 	}
 	DALOptions::SetJumpCamOn(nullptr, false);
-#else
+#elif TIMETRIALS_MOST_WANTED
 	GetUserProfile()->TheOptionsSettings.TheGameplaySettings.JumpCam = false;
 	if (bCareerMode) {
 		GetUserProfile()->PlayersCarStable.SoldHistoryBounty = 10000000;
@@ -1036,7 +1067,6 @@ void TimeTrialLoop() {
 			for (auto& speed : racer->mSpeedTrapSpeed) { speed = 0; }
 		}
 	}
-#endif
 #endif
 
 #ifdef TIMETRIALS_CARBON
@@ -1161,7 +1191,7 @@ float fLeaderboardSize = 0.03;
 float fLeaderboardOutlineSize = 0.02;
 void DisplayLeaderboard() {
 	if (IsPracticeMode()) return;
-#ifndef TIMETRIALS_PROSTREET
+#if !defined(TIMETRIALS_PROSTREET) & !defined(TIMETRIALS_UNDERCOVER)
 	if (gMoviePlayer) return;
 #endif
 	if (!GRaceStatus::fObj) return;
@@ -1219,8 +1249,12 @@ void DisplayLeaderboard() {
 				data.SetColor(255, 255, 255, 255);
 			}
 
+#ifndef TIMETRIALS_UNDERCOVER
 			auto raceType = GRaceParameters::GetRaceType(GRaceStatus::fObj->mRaceParms);
 			bool isPointBased = IsRacePointBased(raceType);
+#else
+			bool isPointBased = false;
+#endif
 			std::string str;
 			if (isPointBased) {
 				str = std::format("{}. {} - {}", ranking++, name, FormatScore(ghost.nFinishPoints));
@@ -1320,7 +1354,7 @@ void TimeTrialRenderLoop() {
 	if (!ShouldGhostRun()) return;
 
 	if (!GetIsGamePaused()) {
-#if defined(TIMETRIALS_CARBON) | defined(TIMETRIALS_PROSTREET)
+#if defined(TIMETRIALS_CARBON) | defined(TIMETRIALS_PROSTREET) | defined(TIMETRIALS_UNDERCOVER)
 		if (bViewReplayMode) {
 			auto ghost = GetViewReplayGhost();
 

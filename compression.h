@@ -60,12 +60,14 @@ CwoeeIStream* OpenRawPB(const std::filesystem::path& filePath) {
 	return new CwoeeIStream(data, size);
 }
 
+#if TIMETRIALS_SAVE_FORMAT == 'R'
 bool WriteRawPB(CwoeeOStream* file, const std::filesystem::path& filePath) {
 	auto outFile = std::ofstream(filePath.string(), std::ios::out | std::ios::binary);
 	if (!outFile.is_open()) return false;
 	outFile.write((char*)&file->aData[0], file->aData.size());
 	return true;
 }
+#endif
 
 // huff compression
 
@@ -97,6 +99,7 @@ CwoeeIStream* OpenCompressedPB(const std::filesystem::path& filePath) {
 	return new CwoeeIStream(decompressed, decompressedSize);
 }
 
+#if TIMETRIALS_SAVE_FORMAT == 'H'
 bool CompressPB(const std::filesystem::path& filePath) {
 	auto size = std::filesystem::file_size(filePath);
 	auto inFile = std::ifstream(filePath, std::ios::in | std::ios::binary);
@@ -132,6 +135,7 @@ bool WriteCompressedPB(CwoeeOStream* file, const std::filesystem::path& filePath
 	delete[] compressed;
 	return true;
 }
+#endif
 
 // basic cipher method
 
@@ -166,6 +170,7 @@ CwoeeIStream* OpenEncryptedPB(const std::filesystem::path& filePath) {
 	return new CwoeeIStream(data, size);
 }
 
+#if TIMETRIALS_SAVE_FORMAT == 'C'
 bool EncryptPB(const std::filesystem::path& filePath) {
 	auto size = std::filesystem::file_size(filePath);
 	auto inFile = std::ifstream(filePath, std::ios::in | std::ios::binary);
@@ -201,3 +206,4 @@ bool WriteEncryptedPB(CwoeeOStream* file, const std::filesystem::path& filePath)
 	delete[] encrypted;
 	return true;
 }
+#endif
