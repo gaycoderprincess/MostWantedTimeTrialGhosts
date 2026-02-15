@@ -1251,7 +1251,7 @@ void DisplayLeaderboard() {
 			if (ghost.bIsPersonalBest) {
 #ifdef TIMETRIALS_PROSTREET
 				data.SetColor(177, 211, 39, 255);
-#elif TIMETRIALS_CARBON
+#elif defined(TIMETRIALS_CARBON) | defined(TIMETRIALS_UNDERCOVER)
 				data.SetColor(126, 246, 240, 255);
 #else
 				data.SetColor(245, 185, 110, 255);
