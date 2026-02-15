@@ -956,6 +956,11 @@ void TimeTrialLoop() {
 	if (isInRace && bCareerMode && GRaceParameters::GetIsPursuitRace(GRaceStatus::fObj->mRaceParms)) isInRace = false;
 #endif
 
+#ifdef TIMETRIALS_UNDERCOVER
+	if (IGameStatus::mInstance->IsRoaming()) bChallengeSeriesMode = false;
+	if (!bChallengeSeriesMode) isInRace = false;
+#endif
+
 	if (!isInRace) {
 		InvalidateGhost();
 		return;
@@ -1286,6 +1291,8 @@ void DisplayLeaderboard() {
 }
 
 void DisplayPlayerNames() {
+	// todo
+#ifndef TIMETRIALS_UNDERCOVER
 	if ((bChallengeSeriesMode || bCareerMode) && nGhostVisuals != GHOST_HIDE && !GetIsGamePaused()) {
 		const float fPlayerNameOffset = 0.031;
 		const float fPlayerNameSize = 0.022;
@@ -1340,6 +1347,7 @@ void DisplayPlayerNames() {
 			DrawString(data, name);
 		}
 	}
+#endif
 }
 
 void TimeTrialRenderLoop() {
@@ -1430,13 +1438,27 @@ void ChallengeSeriesMenu();
 void DebugMenu() {
 	ChloeMenuLib::BeginMenu();
 
-#ifdef TIMETRIALS_PROSTREET
+#if defined(TIMETRIALS_PROSTREET) | defined(TIMETRIALS_UNDERCOVER)
 	if (DrawMenuOption("Challenge Series")) {
 		ChloeMenuLib::BeginMenu();
 		ChallengeSeriesMenu();
 		ChloeMenuLib::EndMenu();
 	}
 
+#ifdef TIMETRIALS_UNDERCOVER
+	if (DrawMenuOption("Debug")) {
+		ChloeMenuLib::BeginMenu();
+		QuickValueEditor("CurrentGameFlowState", *(int*)&TheGameFlowManager.CurrentGameFlowState);
+		if (DrawMenuOption("Add Player")) {
+			GRaceStatus::fObj->AddSimablePlayer(GetLocalPlayerSimable());
+		}
+		DrawMenuOption(std::format("mRacerCount: {}", GRaceStatus::fObj->mRacerCount));
+		DrawMenuOption(std::format("Player RacerInfo: {:X}", (uintptr_t)GRaceStatus::fObj->GetRacerInfo(GetLocalPlayerSimable())));
+		ChloeMenuLib::EndMenu();
+	}
+#endif
+
+#ifdef TIMETRIALS_PROSTREET
 	if (DrawMenuOption("Game Settings")) {
 		ChloeMenuLib::BeginMenu();
 		QuickValueEditor("Best Line", gIngameSettings.BestLineOn);
@@ -1458,6 +1480,7 @@ void DebugMenu() {
 
 		ChloeMenuLib::EndMenu();
 	}
+#endif
 
 	if (DrawMenuOption("Options")) {
 		ChloeMenuLib::BeginMenu();
@@ -1574,7 +1597,7 @@ void DebugMenu() {
 	QuickValueEditor("Verify Game Data Integrity", bCheckFileIntegrity);
 	DrawMenuOption(std::format("Game Data Hash: {:X}", nLocalGameFilesHash));
 
-#ifdef TIMETRIALS_PROSTREET
+#if defined(TIMETRIALS_PROSTREET) | defined(TIMETRIALS_UNDERCOVER)
 		ChloeMenuLib::EndMenu();
 	}
 #endif

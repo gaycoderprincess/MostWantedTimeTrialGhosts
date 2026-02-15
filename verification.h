@@ -184,7 +184,22 @@ namespace MemoryIntegrity {
 	std::vector<MemorySection> aSections = { MemorySection(".text"), MemorySection(".rdata"), MemorySection(".idata") };
 
 	uintptr_t aWhitelistedAddresses[] = {
-#ifdef TIMETRIALS_PROSTREET
+#ifdef TIMETRIALS_UNDERCOVER
+		// some random stuff that genericfix sets, which is set late for some reason??
+		// anyone reading this: please for the love of god never do this
+		0x59C04C,
+		0x59C068,
+		0x59C085,
+		0x59D0F1,
+		0x59D103,
+		0x59D10C,
+		0x59D153,
+		0x753013,
+		0x75301B,
+		0x753026,
+		0x768C62,
+		0x768C72,
+#elif TIMETRIALS_PROSTREET
 		// racer ai
 		0x41F040,
 #elif TIMETRIALS_UNDERGROUND2
@@ -282,6 +297,9 @@ namespace FileIntegrity {
 #else
 	const char* aFilesToCheck[] = {
 			"GLOBAL/ATTRIBUTES.BIN",
+#ifdef TIMETRIALS_UNDERCOVER
+			"GLOBAL/CARS_VAULT.BIN",
+#endif
 			"GLOBAL/FE_ATTRIB.BIN",
 			"GLOBAL/GAMEPLAY.BIN",
 			"GLOBAL/GAMEPLAY.LZC",
@@ -289,6 +307,8 @@ namespace FileIntegrity {
 			//"TRACKS/STREAML2RA.BUN",
 			"TRACKS/L5RB.BUN",
 			//"TRACKS/STREAML5RB.BUN",
+			"TRACKS/L8R_MW2.BUN",
+			//"TRACKS/STREAML8R_MW2.BUN",
 
 			// prostreet tracks
 			"TRACKS/L6R_AutobahnDrift.BUN",
@@ -449,7 +469,22 @@ namespace FileIntegrity {
 }
 
 void ApplyVerificationPatches() {
-#ifdef TIMETRIALS_PROSTREET
+#ifdef TIMETRIALS_UNDERCOVER
+	// undo exopts gamespeed
+	static float f = 1.0;
+	NyaHookLib::Patch(0x7BCDD4, &f);
+	NyaHookLib::Patch(0x7BCDEE, &f);
+
+	// undo exopts rev limit
+	NyaHookLib::Patch(0xC1C688, 0x7358F0);
+	NyaHookLib::Patch(0xC1C8A0, 0x7358F0);
+	NyaHookLib::Patch(0xC1CAC8, 0x7358F0);
+	NyaHookLib::Patch(0xC1CCE0, 0x7358F0);
+
+	Tweak_ForceStraightPursuit = 0;
+
+	NyaHookLib::PatchRelative(NyaHookLib::CALL, 0x7B44EE, 0x4C7740); // remove exopts loop, disables hotkeys
+#elif TIMETRIALS_PROSTREET
 
 #elif TIMETRIALS_UNDERGROUND2
 	// exopts - reenable barriers
