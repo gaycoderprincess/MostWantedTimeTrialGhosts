@@ -1296,8 +1296,6 @@ void DisplayLeaderboard() {
 }
 
 void DisplayPlayerNames() {
-	// todo
-#ifndef TIMETRIALS_UNDERCOVER
 	if ((bChallengeSeriesMode || bCareerMode) && nGhostVisuals != GHOST_HIDE && !GetIsGamePaused()) {
 		const float fPlayerNameOffset = 0.031;
 		const float fPlayerNameSize = 0.022;
@@ -1352,7 +1350,6 @@ void DisplayPlayerNames() {
 			DrawString(data, name);
 		}
 	}
-#endif
 }
 
 void TimeTrialRenderLoop() {
