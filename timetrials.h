@@ -506,7 +506,9 @@ std::string GetGhostFilename(const std::string& car, const std::string& track, i
 	if (opponentId) path += "_" + std::to_string(opponentId);
 	else path += "_pb";
 
-#ifdef TIMETRIALS_PROSTREET
+#ifdef TIMETRIALS_UNDERCOVER
+	path += ".uc";
+#elif TIMETRIALS_PROSTREET
 	path += ".ps";
 #elif TIMETRIALS_CARBON
 	path += ".carbon";
@@ -957,7 +959,6 @@ void TimeTrialLoop() {
 #endif
 
 #ifdef TIMETRIALS_UNDERCOVER
-	if (IGameStatus::mInstance->IsRoaming()) bChallengeSeriesMode = false;
 	if (!bChallengeSeriesMode) isInRace = false;
 #endif
 
@@ -1180,7 +1181,9 @@ std::string GetRealPlayerName(const std::string& ghostName) {
 }
 
 std::string GetGameDataHashName(uint32_t hash) {
-#ifdef TIMETRIALS_PROSTREET
+#ifdef TIMETRIALS_UNDERCOVER
+	if (hash == 0xFF5AB9DF) return "1.0.0.1 Vanilla";
+#elif TIMETRIALS_PROSTREET
 	if (hash == 0x82026A6) return "1.1 Vanilla";
 	//if (hash == 0xD12F400) return "1.0 Vanilla";
 #elif TIMETRIALS_CARBON
