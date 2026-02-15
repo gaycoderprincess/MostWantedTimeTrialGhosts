@@ -1161,7 +1161,11 @@ void DisplayInputs(InputControls* inputs) {
 
 	DrawInputRectangle((fInputBaseXPosition + 0.325) * GetAspectRatioInv(), fInputBaseYPosition + 0.05, 0.03 * GetAspectRatioInv(), 0.03, inputs->fNOS);
 	DrawInputRectangle((fInputBaseXPosition + 0.425) * GetAspectRatioInv(), fInputBaseYPosition + 0.05, 0.03 * GetAspectRatioInv(), 0.03, inputs->fHandBrake);
-#ifdef TIMETRIALS_PROSTREET
+
+#ifdef TIMETRIALS_UNDERCOVER
+	DrawInputRectangle((fInputBaseXPosition + 0.525) * GetAspectRatioInv(), fInputBaseYPosition + 0.05, 0.03 * GetAspectRatioInv(), 0.03, inputs->fActionButton);
+	DrawInputRectangle((fInputBaseXPosition + 0.625) * GetAspectRatioInv(), fInputBaseYPosition + 0.05, 0.03 * GetAspectRatioInv(), 0.03, inputs->fClutch);
+#elif TIMETRIALS_PROSTREET
 	DrawInputRectangle((fInputBaseXPosition + 0.525) * GetAspectRatioInv(), fInputBaseYPosition + 0.05, 0.03 * GetAspectRatioInv(), 0.03, inputs->fClutch);
 #else
 	DrawInputRectangle((fInputBaseXPosition + 0.525) * GetAspectRatioInv(), fInputBaseYPosition + 0.05, 0.03 * GetAspectRatioInv(), 0.03, inputs->fActionButton);
@@ -1448,6 +1452,7 @@ void DebugMenu() {
 #ifdef TIMETRIALS_UNDERCOVER
 	if (DrawMenuOption("Debug")) {
 		ChloeMenuLib::BeginMenu();
+		QuickValueEditor("bChallengeSeriesMode", bChallengeSeriesMode);
 		QuickValueEditor("CurrentGameFlowState", *(int*)&TheGameFlowManager.CurrentGameFlowState);
 		if (DrawMenuOption("Add Player")) {
 			GRaceStatus::fObj->AddSimablePlayer(GetLocalPlayerSimable());
