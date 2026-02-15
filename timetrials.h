@@ -1450,20 +1450,6 @@ void DebugMenu() {
 		ChloeMenuLib::EndMenu();
 	}
 
-#ifdef TIMETRIALS_UNDERCOVER
-	if (DrawMenuOption("Debug")) {
-		ChloeMenuLib::BeginMenu();
-		QuickValueEditor("bChallengeSeriesMode", bChallengeSeriesMode);
-		QuickValueEditor("CurrentGameFlowState", *(int*)&TheGameFlowManager.CurrentGameFlowState);
-		if (DrawMenuOption("Add Player")) {
-			GRaceStatus::fObj->AddSimablePlayer(GetLocalPlayerSimable());
-		}
-		DrawMenuOption(std::format("mRacerCount: {}", GRaceStatus::fObj->mRacerCount));
-		DrawMenuOption(std::format("Player RacerInfo: {:X}", (uintptr_t)GRaceStatus::fObj->GetRacerInfo(GetLocalPlayerSimable())));
-		ChloeMenuLib::EndMenu();
-	}
-#endif
-
 #ifdef TIMETRIALS_PROSTREET
 	if (DrawMenuOption("Game Settings")) {
 		ChloeMenuLib::BeginMenu();
@@ -1506,7 +1492,7 @@ void DebugMenu() {
 			}
 		}
 		if (bChallengeSeriesMode) {
-#ifndef TIMETRIALS_PROSTREET
+#if !defined(TIMETRIALS_PROSTREET) & !defined(TIMETRIALS_UNDERCOVER)
 			const char* difficultyNames[] = {
 					"Easy",
 					"Normal",
