@@ -349,7 +349,14 @@ void InvalidateLocalGhost() {
 }
 
 void RunGhost(IVehicle* veh, tReplayGhost* ghost) {
-	if (!ghost) return;
+	if (!ghost) {
+#ifdef TIMETRIALS_CARBON
+		if (GRaceParameters::GetRaceType(GRaceStatus::fObj->mRaceParms) == GRace::kRaceType_Canyon) return;
+#endif
+
+		veh->mCOMObject->Find<IRBVehicle>()->EnableObjectCollisions(false);
+		return;
+	}
 	ghost->pLastVehicle = veh;
 
 	if (auto racer = GetRacerInfoFromHandle(veh->mCOMObject->Find<ISimable>())) {
@@ -1076,17 +1083,6 @@ void TimeTrialLoop() {
 #endif
 
 #ifdef TIMETRIALS_CARBON
-	if (bCareerMode && raceType != GRace::kRaceType_Canyon) {
-#else
-	if (bCareerMode) {
-#endif
-		auto opponents = VEHICLE_LIST::GetList(VEHICLE_AIRACERS);
-		for (int i = 0; i < opponents.size(); i++) {
-			opponents[i]->mCOMObject->Find<IRBVehicle>()->EnableObjectCollisions(false);
-		}
-	}
-
-#ifdef TIMETRIALS_CARBON
 	if (ply->IsStaging()) {
 #else
 	if (ply->IsStaging() || ply->mCOMObject->Find<IHumanAI>()->GetAiControl()) {
@@ -1105,11 +1101,13 @@ void TimeTrialLoop() {
 			OpponentGhosts[0].aTicks[0].ApplyPhysics(GetLocalPlayerVehicle());
 		}
 #endif
+	}
 
-		auto opponents = VEHICLE_LIST::GetList(VEHICLE_AIRACERS);
-		for (int i = 0; i < opponents.size(); i++) {
-			RunGhost(opponents[i], GetGhostForOpponent(i));
-		}
+	auto opponents = VEHICLE_LIST::GetList(VEHICLE_AIRACERS);
+	for (int i = 0; i < opponents.size(); i++) {
+		auto ghost = GetGhostForOpponent(i);
+		if (bViewReplayMode && ghost == GetViewReplayGhost()) continue;
+		RunGhost(opponents[i], ghost);
 	}
 
 	RecordGhost(ply);
@@ -1185,7 +1183,7 @@ std::string GetGameDataHashName(uint32_t hash) {
 	if (hash == 0xFF5AB9DF) return "1.0.0.1 Vanilla";
 #elif TIMETRIALS_PROSTREET
 	if (hash == 0x82026A6) return "1.1 Vanilla";
-	//if (hash == 0xD12F400) return "1.0 Vanilla";
+	if (hash == 0xD12F400) return "1.1 ElAmigos";
 #elif TIMETRIALS_CARBON
 	if (hash == 0x54278FA4) return "1.4 Collector's Edition";
 #else
@@ -1496,7 +1494,7 @@ void DebugMenu() {
 	QuickValueEditor("Show Inputs While Driving", bShowInputsWhileDriving);
 	QuickValueEditor("Player Name Override", sPlayerNameOverride, sizeof(sPlayerNameOverride));
 
-#ifdef TIMETRIALS_PROSTREET
+#if defined(TIMETRIALS_PROSTREET) | defined(TIMETRIALS_UNDERCOVER)
 	if (!GRaceStatus::fObj || !GRaceStatus::fObj->mRaceParms) {
 #else
 	if (TheGameFlowManager.CurrentGameFlowState == GAMEFLOW_STATE_IN_FRONTEND) {
