@@ -273,6 +273,9 @@ struct UndercoverModData {
 		auto engineBrakingSlowSpeed = *(float*)Attrib::Collection::GetData(collection, Attrib::StringHash32("ENGINE_BRAKING_SLOWSPEED"), 0);
 		bReformedMostWantedHandling = engineBrakingSlowSpeed == 0.4f;
 		bReformedTheRunHandling = engineBrakingSlowSpeed == 0.325f;
+		if (bReformedMostWantedHandling || bReformedTheRunHandling) {
+			bReformedInstalled = true;
+		}
 	}
 } gUndercoverModData;
 #elif TIMETRIALS_PROSTREET
@@ -1112,7 +1115,7 @@ void TimeTrialLoop() {
 	}
 #elif TIMETRIALS_UNDERCOVER
 	ICopMgr::mInstance->EnableCops(GRaceParameters::GetIsPursuitRace(GRaceStatus::fObj->mRaceParms));
-	if (!ICopMgr::mInstance->AreCopsEnabled() && bViewReplayMode) {
+	if (!ICopMgr::mInstance->AreCopsEnabled()) {
 		auto cars = GetActiveVehicles(DRIVER_COP);
 		for (auto& car : cars) {
 			car->mCOMObject->Find<ISimable>()->Kill();
@@ -1645,9 +1648,12 @@ void DebugMenu() {
 
 	QuickValueEditor("Verify Game Data Integrity", bCheckFileIntegrity);
 	DrawMenuOption(std::format("Game Data Hash: {:X}", nLocalGameFilesHash));
-	DrawMenuOption(std::format("Reformed Installed: {}", gUndercoverModData.bReformedInstalled));
-	DrawMenuOption(std::format("Reformed Most Wanted Handling: {}", gUndercoverModData.bReformedMostWantedHandling));
-	DrawMenuOption(std::format("Reformed The Run Handling: {}", gUndercoverModData.bReformedTheRunHandling));
+	if (gUndercoverModData.bReformedInstalled) {
+		std::string type = "Undercover Reformed";
+		if (gUndercoverModData.bReformedMostWantedHandling) type += " (Most Wanted)";
+		if (gUndercoverModData.bReformedTheRunHandling) type += " (The Run)";
+		DrawMenuOption(type);
+	}
 
 #if defined(TIMETRIALS_PROSTREET) | defined(TIMETRIALS_UNDERCOVER)
 		ChloeMenuLib::EndMenu();
