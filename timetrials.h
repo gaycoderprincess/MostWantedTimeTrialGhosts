@@ -1010,7 +1010,7 @@ void TimeTrialLoop() {
 		if (bCareerMode || bChallengeSeriesMode) {
 			aLeaderboardGhosts = CollectReplayGhosts(car, track, laps, upgrades, true);
 
-			if (bChallengesOneGhostOnly || bViewReplayMode || nDifficulty == DIFFICULTY_EASY) {
+			if (bChallengesOneGhostOnly || nDifficulty == DIFFICULTY_EASY) {
 				auto opponent = SelectTopGhost(car, track, laps, upgrades);
 				if (opponent.nFinishTime != 0) {
 					OpponentGhosts.push_back(opponent);
