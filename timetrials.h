@@ -1,6 +1,6 @@
 #include "compression.h"
 
-const int nLocalReplayVersion = 6;
+const int nLocalReplayVersion = 7;
 const int nMaxNumGhostsToCheck = 16;
 
 enum eNitroType {
@@ -261,8 +261,25 @@ uint32_t nGlobalReplayTimer = 0;
 uint32_t nGlobalReplayTimerNoCountdown = 0;
 
 uint32_t nLocalGameFilesHash = 0;
+
+#ifdef TIMETRIALS_UNDERCOVER
+struct UndercoverModData {
+	bool bReformedInstalled = false;
+	bool bReformedMostWantedHandling = false;
+	bool bReformedTheRunHandling = false;
+
+	void Check() {
+		auto collection = Attrib::FindCollection(Attrib::StringHash32("car_tuning"), Attrib::StringHash32("default"));
+		auto engineBrakingSlowSpeed = *(float*)Attrib::Collection::GetData(collection, Attrib::StringHash32("ENGINE_BRAKING_SLOWSPEED"), 0);
+		bReformedMostWantedHandling = engineBrakingSlowSpeed == 0.4f;
+		bReformedTheRunHandling = engineBrakingSlowSpeed == 0.325f;
+	}
+} gUndercoverModData;
+#elif TIMETRIALS_PROSTREET
 bool bTankUnslapperPresent = false;
 bool bTankUnslapperPresentForCurrentCar = false;
+#endif
+
 struct tReplayGhost {
 public:
 	std::vector<tReplayTick> aTicks;
@@ -430,6 +447,19 @@ std::string GetGhostFilename(const std::string& car, const std::string& track, i
 
 	std::string path = gDLLPath.string();
 	path += "/CwoeeGhosts/";
+
+#ifdef TIMETRIALS_UNDERCOVER
+	if (gUndercoverModData.bReformedInstalled) {
+		path += "Reformed/";
+		if (gUndercoverModData.bReformedTheRunHandling) {
+			path += "TheRun/";
+		}
+		else if (gUndercoverModData.bReformedMostWantedHandling) {
+			path += "MostWanted/";
+		}
+	}
+#endif
+
 	if (bChallengeSeriesMode || (bCareerMode && bossRace)) {
 		path += opponentId == 0 && !folder ? "ChallengePBs/" : "Challenges/";
 	}
@@ -533,6 +563,13 @@ void SavePB(tReplayGhost* ghost, const std::string& car, const std::string& trac
 #endif
 	std::filesystem::create_directory("CwoeeGhosts/ChallengePBs");
 	std::filesystem::create_directory("CwoeeGhosts/Practice");
+#ifdef TIMETRIALS_UNDERCOVER
+	std::filesystem::create_directory("CwoeeGhosts/Reformed");
+	std::filesystem::create_directory("CwoeeGhosts/Reformed/MostWanted");
+	std::filesystem::create_directory("CwoeeGhosts/Reformed/MostWanted/ChallengePBs");
+	std::filesystem::create_directory("CwoeeGhosts/Reformed/TheRun");
+	std::filesystem::create_directory("CwoeeGhosts/Reformed/TheRun/ChallengePBs");
+#endif
 
 	auto fileName = GetGhostFilename(car, track, lapCount, 0, upgrades);
 	auto outFile = CwoeeOStream();
@@ -577,7 +614,11 @@ void SavePB(tReplayGhost* ghost, const std::string& car, const std::string& trac
 	if (sPlayerNameOverride[0]) name = sPlayerNameOverride;
 	outFile.write(name, 32);
 	outFile.write((char*)&nLocalGameFilesHash, sizeof(nLocalGameFilesHash));
-#ifdef TIMETRIALS_PROSTREET
+#ifdef TIMETRIALS_UNDERCOVER
+	outFile.write((char*)&gUndercoverModData.bReformedInstalled, sizeof(bool));
+	outFile.write((char*)&gUndercoverModData.bReformedMostWantedHandling, sizeof(bool));
+	outFile.write((char*)&gUndercoverModData.bReformedTheRunHandling, sizeof(bool));
+#elif TIMETRIALS_PROSTREET
 	bool unslapper = bTankUnslapperPresent || bTankUnslapperPresentForCurrentCar;
 	outFile.write((char*)&unslapper, sizeof(unslapper));
 #endif
@@ -713,7 +754,26 @@ void LoadPB(tReplayGhost* ghost, const std::string& car, const std::string& trac
 		inFile.read((char*)&fileHash, sizeof(fileHash));
 		if (!fileHash) fileHash = 0xFFFFFFFF;
 
-#ifdef TIMETRIALS_PROSTREET
+#ifdef TIMETRIALS_UNDERCOVER
+		if (fileVersion >= 7) {
+			bool reformed = false, reformedMW = false, reformedTR = false;
+			inFile.read((char*)&reformed, sizeof(bool));
+			inFile.read((char*)&reformedMW, sizeof(bool));
+			inFile.read((char*)&reformedTR, sizeof(bool));
+			if (reformed != gUndercoverModData.bReformedInstalled) {
+				WriteLog("Mismatched modpack for " + fileName);
+				return;
+			}
+			if (reformedMW != gUndercoverModData.bReformedMostWantedHandling) {
+				WriteLog("Mismatched Reformed handling for " + fileName);
+				return;
+			}
+			if (reformedTR != gUndercoverModData.bReformedTheRunHandling) {
+				WriteLog("Mismatched Reformed handling for " + fileName);
+				return;
+			}
+		}
+#elif TIMETRIALS_PROSTREET
 		bool tankUnslapper = false;
 		inFile.read((char*)&tankUnslapper, sizeof(tankUnslapper));
 		if (tankUnslapper != (bTankUnslapperPresent || bTankUnslapperPresentForCurrentCar)) {
@@ -1585,6 +1645,9 @@ void DebugMenu() {
 
 	QuickValueEditor("Verify Game Data Integrity", bCheckFileIntegrity);
 	DrawMenuOption(std::format("Game Data Hash: {:X}", nLocalGameFilesHash));
+	DrawMenuOption(std::format("Reformed Installed: {}", gUndercoverModData.bReformedInstalled));
+	DrawMenuOption(std::format("Reformed Most Wanted Handling: {}", gUndercoverModData.bReformedMostWantedHandling));
+	DrawMenuOption(std::format("Reformed The Run Handling: {}", gUndercoverModData.bReformedTheRunHandling));
 
 #if defined(TIMETRIALS_PROSTREET) | defined(TIMETRIALS_UNDERCOVER)
 		ChloeMenuLib::EndMenu();

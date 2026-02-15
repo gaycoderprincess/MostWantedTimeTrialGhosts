@@ -199,6 +199,8 @@ namespace MemoryIntegrity {
 		0x753026,
 		0x768C62,
 		0x768C72,
+
+		0x5A49F8,
 #elif TIMETRIALS_PROSTREET
 		// racer ai
 		0x41F040,
@@ -231,10 +233,34 @@ namespace MemoryIntegrity {
 		0x4741D0,
 #endif
 	};
+
+#ifdef TIMETRIALS_UNDERCOVER
+	uintptr_t aWhitelistedAddressesUCReformed[] = {
+		0x5A49F8,
+		0x5A4C39,
+		0xC21A44,
+		0xC21A48,
+		0xC21A4C,
+		0xC21A50,
+		0xC21A54,
+		0xC21A58,
+		0xC21A5C,
+		0xC21A60,
+	};
+#endif
 	bool IsWhitelisted(uintptr_t address) {
 		for (auto& addr : aWhitelistedAddresses) {
 			if (address >= addr && address <= addr + 5) return true;
 		}
+#ifdef TIMETRIALS_UNDERCOVER
+		for (auto& addr : aWhitelistedAddressesUCReformed) {
+			if (address >= addr && address <= addr + 5) {
+				gUndercoverModData.bReformedInstalled = true;
+				aNewChallengeSeries = &aReformedChallengeSeries;
+				return true;
+			}
+		}
+#endif
 		return false;
 	}
 
@@ -243,7 +269,7 @@ namespace MemoryIntegrity {
 			auto& section = aSections[sectionId];
 			for (int i = 0; i < 8192; i++) {
 				uintptr_t address = section.nStartAddress + section.nCursor;
-				if (!IsWhitelisted(address) && *(uint8_t*)address != section.aMemory[section.nCursor]) {
+				if (*(uint8_t*)address != section.aMemory[section.nCursor] && !IsWhitelisted(address)) {
 					WriteLog(std::format("Integrity check failed at {:X}", address));;
 					exit(0);
 				}
