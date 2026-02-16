@@ -173,7 +173,6 @@ int __thiscall GetNumOpponentsHooked(GRaceParameters* pThis) {
 	auto event = GetChallengeEvent(GRaceParameters::GetEventID(pThis));
 	if (!event) return 8;
 
-	if (bViewReplayMode) return 0;
 	if (bChallengesOneGhostOnly) return 1;
 
 	auto count = nDifficulty != DIFFICULTY_EASY ? event->nNumGhosts[nDifficulty] : 1; // only spawn one ghost for easy difficulty

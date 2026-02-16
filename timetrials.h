@@ -1194,9 +1194,12 @@ void TimeTrialLoop() {
 	}
 
 	auto opponents = VEHICLE_LIST::GetList(VEHICLE_AIRACERS);
+	int ghostId = 0;
 	for (int i = 0; i < opponents.size(); i++) {
-		auto ghost = GetGhostForOpponent(i);
-		if (bViewReplayMode && ghost == GetViewReplayGhost()) continue;
+		auto ghost = GetGhostForOpponent(ghostId++);
+		if (bViewReplayMode && ghost == GetViewReplayGhost()) {
+			ghost = GetGhostForOpponent(ghostId++);
+		}
 		RunGhost(opponents[i], ghost);
 	}
 
