@@ -273,7 +273,6 @@ namespace MemoryIntegrity {
 		for (auto& addr : aWhitelistedAddressesUCReformed) {
 			if (address >= addr && address <= addr + 5) {
 				gUndercoverModData.bReformedInstalled = true;
-				aNewChallengeSeries = &aReformedChallengeSeries;
 				return true;
 			}
 		}
