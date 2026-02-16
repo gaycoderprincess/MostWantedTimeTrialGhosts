@@ -1,6 +1,6 @@
 #include "compression.h"
 
-const int nLocalReplayVersion = 7;
+const int nLocalReplayVersion = 8;
 const int nMaxNumGhostsToCheck = 16;
 
 enum eNitroType {
@@ -596,7 +596,9 @@ void SavePB(tReplayGhost* ghost, const std::string& car, const std::string& trac
 	outFile.write((char*)&nitroType, sizeof(nitroType));
 	outFile.write((char*)&speedbreakerType, sizeof(speedbreakerType));
 	outFile.write((char*)&lapCount, sizeof(lapCount));
-#ifndef TIMETRIALS_UNDERCOVER
+#ifdef TIMETRIALS_UNDERCOVER
+	outFile.write((char*)&upgrades->PhysicsTuning, sizeof(upgrades->PhysicsTuning));
+#else
 #ifndef TIMETRIALS_CARBON
 	if (upgrades) {
 		outFile.write((char*)&upgrades->InstalledPhysics, sizeof(upgrades->InstalledPhysics));
@@ -713,7 +715,13 @@ void LoadPB(tReplayGhost* ghost, const std::string& car, const std::string& trac
 		return;
 	}
 
-#if !defined(TIMETRIALS_PROSTREET) & !defined(TIMETRIALS_UNDERCOVER)
+#ifdef TIMETRIALS_UNDERCOVER
+	float tmpphysics[32] = {};
+	float playerPhysics[32] = {};
+	if (upgrades) {
+		memcpy(playerPhysics, upgrades->PhysicsTuning, sizeof(playerPhysics));
+	}
+#elif !defined(TIMETRIALS_PROSTREET)
 	Physics::Upgrades::Package playerPhysics = {};
 	Physics::Tunings playerTuning = {};
 #ifndef TIMETRIALS_CARBON
@@ -746,7 +754,11 @@ void LoadPB(tReplayGhost* ghost, const std::string& car, const std::string& trac
 	inFile.read((char*)&tmpnitro, sizeof(tmpnitro));
 	inFile.read((char*)&tmpspdbrk, sizeof(tmpspdbrk));
 	inFile.read((char*)&tmplaps, sizeof(tmplaps));
-#ifndef TIMETRIALS_UNDERCOVER
+#ifdef TIMETRIALS_UNDERCOVER
+	if (fileVersion >= 8) {
+		inFile.read((char*)&tmpphysics, sizeof(tmpphysics));
+	}
+#else
 	inFile.read((char*)&tmpphysics, sizeof(tmpphysics));
 	inFile.read((char*)&tmptuning, sizeof(tmptuning));
 #endif
@@ -805,7 +817,14 @@ void LoadPB(tReplayGhost* ghost, const std::string& car, const std::string& trac
 		WriteLog("Mismatched NOS/speedbreaker for " + fileName);
 		return;
 	}
-#if !defined(TIMETRIALS_CARBON) & !defined(TIMETRIALS_PROSTREET) & !defined(TIMETRIALS_UNDERCOVER)
+#ifdef TIMETRIALS_UNDERCOVER
+	if (doUpgradeChecks && upgrades && fileVersion >= 8) {
+		if (memcmp(&playerPhysics, &tmpphysics, sizeof(playerPhysics)) != 0 ) {
+			WriteLog("Mismatched upgrades for " + fileName);
+			return;
+		}
+	}
+#elif !defined(TIMETRIALS_CARBON) & !defined(TIMETRIALS_PROSTREET)
 	if (doUpgradeChecks && upgrades) {
 		if (memcmp(&playerPhysics, &tmpphysics, sizeof(playerPhysics)) != 0 || memcmp(&playerTuning, &tmptuning, sizeof(playerTuning)) != 0) {
 			WriteLog("Mismatched upgrades for " + fileName);
