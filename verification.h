@@ -241,6 +241,7 @@ namespace MemoryIntegrity {
 		0x431533,
 		0x611902,
 		0x61DCB7,
+		0x60A67A,
 
 		// racer ai
 		0x892748,

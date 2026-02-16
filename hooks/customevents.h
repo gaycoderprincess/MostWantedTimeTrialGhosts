@@ -146,6 +146,11 @@ const char* GetChallengeSeriesEventDescription3(uint32_t hash) {
 	// disable SpawnCop, fixes dday issues
 	NyaHookLib::Patch<uint8_t>(0x60A67A, GRaceParameters::GetIsPursuitRace(pSelectedEventParams) ? 0x74 : 0xEB);
 
+	auto pursuitRace = GRaceParameters::GetIsPursuitRace(pSelectedEventParams);
+	*(uint32_t*)0x9381E8 = pursuitRace ? 0x6B4AA0 : 0x6B4C20; // SoundCop
+	//*(uint32_t*)0x938208 = pursuitRace ? 0x6B6B50 : 0x6B6A10; // SuspensionSimple
+	*(uint32_t*)0x93821C = pursuitRace ? 0x6BAF40 : 0x6BAD60; // DamageCopCar
+
 	return str.c_str();
 }
 
