@@ -37,6 +37,7 @@ bool bChallengesOneGhostOnly = false;
 bool bChallengesPBGhost = false;
 bool bCheckFileIntegrity = TIMETRIALS_STRICT_FILEINTEGRITY;
 bool bSeparateByFileIntegrity = TIMETRIALS_STRICT_FILEINTEGRITY;
+bool bFastRestart = false;
 
 #ifdef TIMETRIALS_PROSTREET
 struct tIngameSettings {
@@ -1105,6 +1106,15 @@ void TimeTrialLoop() {
 
 	if (!ShouldGhostRun()) return;
 
+	if (bFastRestart && ply->mCOMObject->Find<IRBVehicle>()->GetInvulnerability() == INVULNERABLE_FROM_MANUAL_RESET) {
+#ifdef TIMETRIALS_UNDERCOVER
+		FE::FEPauseStateManager::CallERestartRace(nullptr);
+#else
+		ERestartRace::Create();
+#endif
+		return;
+	}
+
 #if defined(TIMETRIALS_MOST_WANTED) | defined(TIMETRIALS_CARBON)
 	ICopMgr::mDisableCops = !GRaceParameters::GetIsPursuitRace(GRaceStatus::fObj->mRaceParms);
 	if (!ICopMgr::mDisableCops && bViewReplayMode) {
@@ -1476,6 +1486,7 @@ void DoConfigSave() {
 #ifdef TIMETRIALS_PROSTREET
 	file.write((char*)&gIngameSettings, sizeof(gIngameSettings));
 #endif
+	file.write((char*)&bFastRestart, sizeof(bFastRestart));
 }
 
 void DoConfigLoad() {
@@ -1497,6 +1508,7 @@ void DoConfigLoad() {
 #ifdef TIMETRIALS_PROSTREET
 	file.read((char*)&gIngameSettings, sizeof(gIngameSettings));
 #endif
+	file.read((char*)&bFastRestart, sizeof(bFastRestart));
 }
 
 void ChallengeSeriesMenu();
@@ -1539,6 +1551,7 @@ void DebugMenu() {
 #endif
 	QuickValueEditor("Show Inputs While Driving", bShowInputsWhileDriving);
 	QuickValueEditor("Player Name Override", sPlayerNameOverride, sizeof(sPlayerNameOverride));
+	QuickValueEditor("Fast Restart On Car Reset", bFastRestart);
 
 #if defined(TIMETRIALS_PROSTREET) | defined(TIMETRIALS_UNDERCOVER)
 	if (!GRaceStatus::fObj || !GRaceStatus::fObj->mRaceParms) {

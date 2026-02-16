@@ -8,7 +8,15 @@ void ImportIntegrityCheck() {
 }
 
 void VerifyTimers() {
-#ifdef TIMETRIALS_PROSTREET
+#ifdef TIMETRIALS_UNDERCOVER
+	bInitTicker(60000.0);
+	ImportIntegrityCheck<0x4B05A7 + 2>(); // QueryPerformanceCounter
+	ImportIntegrityCheck<0xBD61FC>(); // QueryPerformanceCounter
+	ImportIntegrityCheck<0x4B050D + 2>(); // QueryPerformanceFrequency
+	ImportIntegrityCheck<0xBD6200>(); // QueryPerformanceFrequency
+	ImportIntegrityCheck<0x8C9670 + 2>(); // GetTickCount
+	ImportIntegrityCheck<0xBD61D0>(); // GetTickCount
+#elif TIMETRIALS_PROSTREET
 	bInitTicker(60000.0);
 	ImportIntegrityCheck<0x430F07 + 2>(); // QueryPerformanceCounter
 	ImportIntegrityCheck<0x967178>(); // QueryPerformanceCounter
