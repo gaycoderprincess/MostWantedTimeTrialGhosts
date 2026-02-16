@@ -37,7 +37,7 @@ bool bChallengesOneGhostOnly = false;
 bool bChallengesPBGhost = false;
 bool bCheckFileIntegrity = TIMETRIALS_STRICT_FILEINTEGRITY;
 bool bSeparateByFileIntegrity = TIMETRIALS_STRICT_FILEINTEGRITY;
-bool bFastRestart = false;
+bool bFastRestart = true;
 
 #ifdef TIMETRIALS_PROSTREET
 struct tIngameSettings {
@@ -517,8 +517,6 @@ std::string GetGhostFilename(const std::string& car, const std::string& track, i
 	}
 #endif
 
-	// read tunings
-	// todo undercover
 #if !defined(TIMETRIALS_CARBON) & !defined(TIMETRIALS_PROSTREET) & !defined(TIMETRIALS_UNDERCOVER)
 	if (doUpgradeChecks) {
 		path += "_up";
