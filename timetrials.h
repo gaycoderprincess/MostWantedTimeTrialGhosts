@@ -1661,12 +1661,14 @@ void DebugMenu() {
 
 	QuickValueEditor("Verify Game Data Integrity", bCheckFileIntegrity);
 	DrawMenuOption(std::format("Game Data Hash: {:X}", nLocalGameFilesHash));
+#ifdef TIMETRIALS_UNDERCOVER
 	if (gUndercoverModData.bReformedInstalled) {
 		std::string type = "Undercover Reformed";
 		if (gUndercoverModData.bReformedMostWantedHandling) type += " (Most Wanted)";
 		if (gUndercoverModData.bReformedTheRunHandling) type += " (The Run)";
 		DrawMenuOption(type);
 	}
+#endif
 
 #if defined(TIMETRIALS_PROSTREET) | defined(TIMETRIALS_UNDERCOVER)
 		ChloeMenuLib::EndMenu();
