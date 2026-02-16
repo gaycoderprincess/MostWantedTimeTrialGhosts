@@ -24,6 +24,14 @@ void VerifyTimers() {
 	ImportIntegrityCheck<0x967130>(); // QueryPerformanceFrequency
 	ImportIntegrityCheck<0x9048A0 + 2>(); // GetTickCount
 	ImportIntegrityCheck<0x96708C>(); // GetTickCount
+#elif TIMETRIALS_UNDERGROUND
+	bInitTicker();
+	ImportIntegrityCheck<0x5648C8 + 2>(); // QueryPerformanceCounter
+	ImportIntegrityCheck<0x69717C>(); // QueryPerformanceCounter
+	ImportIntegrityCheck<0x63F3D8 + 2>(); // QueryPerformanceFrequency
+	ImportIntegrityCheck<0x697194>(); // QueryPerformanceFrequency
+	ImportIntegrityCheck<0x66E8B0 + 2>(); // GetTickCount
+	ImportIntegrityCheck<0x697220>(); // GetTickCount
 #elif TIMETRIALS_UNDERGROUND2
 	bInitTicker();
 	ImportIntegrityCheck<0x43BDF8 + 2>(); // QueryPerformanceCounter
