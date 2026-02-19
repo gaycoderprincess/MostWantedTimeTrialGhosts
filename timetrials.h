@@ -1185,7 +1185,7 @@ void TimeTrialLoop() {
 	}
 	else {
 		// set fixed start points, super ultra hack
-#ifdef TIMETRIALS_CARBON
+#if defined(TIMETRIALS_CARBON) | defined(TIMETRIALS_UNDERCOVER)
 		if (!bCareerMode && GetLocalPlayerVehicle()->IsStaging() && !OpponentGhosts.empty() && OpponentGhosts[0].IsValid()) {
 			InvalidatePlayerPos();
 			OpponentGhosts[0].aTicks[0].ApplyPhysics(GetLocalPlayerVehicle());
