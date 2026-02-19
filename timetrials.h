@@ -1585,7 +1585,7 @@ void DebugMenu() {
 			}
 		}
 		if (bChallengeSeriesMode) {
-#if !defined(TIMETRIALS_PROSTREET) & !defined(TIMETRIALS_UNDERCOVER)
+#ifndef TIMETRIALS_PROSTREET
 			const char* difficultyNames[] = {
 					"Easy",
 					"Normal",
