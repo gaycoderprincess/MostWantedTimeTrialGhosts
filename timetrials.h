@@ -452,6 +452,16 @@ std::string GetGhostFilename(const std::string& car, const std::string& track, i
 	std::string path = gDLLPath.string();
 	path += "/CwoeeGhosts/";
 
+	if (bChallengeSeriesMode || (bCareerMode && bossRace)) {
+		path += opponentId == 0 && !folder ? "ChallengePBs/" : "Challenges/";
+	}
+	else if (bCareerMode) {
+		path += opponentId == 0 && !folder ? "CareerPBs/" : "Career/";
+	}
+	else {
+		path += "Practice/";
+	}
+
 #ifdef TIMETRIALS_UNDERCOVER
 	if (gUndercoverModData.bReformedInstalled) {
 		path += "Reformed/";
@@ -464,15 +474,6 @@ std::string GetGhostFilename(const std::string& car, const std::string& track, i
 	}
 #endif
 
-	if (bChallengeSeriesMode || (bCareerMode && bossRace)) {
-		path += opponentId == 0 && !folder ? "ChallengePBs/" : "Challenges/";
-	}
-	else if (bCareerMode) {
-		path += opponentId == 0 && !folder ? "CareerPBs/" : "Career/";
-	}
-	else {
-		path += "Practice/";
-	}
 	if (folder) {
 		path += std::format("{}/", folder);
 	}
@@ -566,11 +567,9 @@ void SavePB(tReplayGhost* ghost, const std::string& car, const std::string& trac
 	std::filesystem::create_directory("CwoeeGhosts/ChallengePBs");
 	std::filesystem::create_directory("CwoeeGhosts/Practice");
 #ifdef TIMETRIALS_UNDERCOVER
-	std::filesystem::create_directory("CwoeeGhosts/Reformed");
-	std::filesystem::create_directory("CwoeeGhosts/Reformed/MostWanted");
-	std::filesystem::create_directory("CwoeeGhosts/Reformed/MostWanted/ChallengePBs");
-	std::filesystem::create_directory("CwoeeGhosts/Reformed/TheRun");
-	std::filesystem::create_directory("CwoeeGhosts/Reformed/TheRun/ChallengePBs");
+	std::filesystem::create_directory("CwoeeGhosts/ChallengePBs/Reformed");
+	std::filesystem::create_directory("CwoeeGhosts/ChallengePBs/Reformed/MostWanted");
+	std::filesystem::create_directory("CwoeeGhosts/ChallengePBs/Reformed/TheRun");
 #endif
 
 	auto fileName = GetGhostFilename(car, track, lapCount, 0, upgrades);
