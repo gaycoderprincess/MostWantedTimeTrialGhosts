@@ -1156,11 +1156,9 @@ void TimeTrialLoop() {
 	}
 #elif TIMETRIALS_UNDERCOVER
 	ICopMgr::mInstance->EnableCops(GRaceParameters::GetIsPursuitRace(GRaceStatus::fObj->mRaceParms));
-	if (!ICopMgr::mInstance->AreCopsEnabled()) {
-		auto cars = GetActiveVehicles(DRIVER_COP);
-		for (auto& car : cars) {
-			car->mCOMObject->Find<ISimable>()->Kill();
-		}
+	auto cops = GetActiveVehicles(DRIVER_COP);
+	for (auto& car : cops) {
+		car->mCOMObject->Find<ISimable>()->Kill();
 	}
 #endif
 
