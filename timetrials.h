@@ -438,6 +438,23 @@ GRaceParameters* GetCurrentRace() {
 	return GRaceDatabase::GetStartupRace(GRaceDatabase::mObj);
 }
 
+std::string GetGhostModPath() {
+#ifdef TIMETRIALS_UNDERCOVER
+	if (gUndercoverModData.bReformedInstalled) {
+		std::string path = "Reformed/";
+		if (gUndercoverModData.bReformedTheRunHandling) {
+			path += "TheRun/";
+		}
+		else if (gUndercoverModData.bReformedMostWantedHandling) {
+			path += "MostWanted/";
+		}
+		return path;
+	}
+#endif
+
+	return "";
+}
+
 std::string GetGhostFilename(const std::string& car, const std::string& track, int lapCount, int opponentId, const GameCustomizationRecord* upgrades, const char* folder = nullptr) {
 	bool doNOSSpdbrkChecks = IsPracticeMode();
 	bool doUpgradeChecks = IsPracticeMode();
@@ -463,15 +480,7 @@ std::string GetGhostFilename(const std::string& car, const std::string& track, i
 	}
 
 #ifdef TIMETRIALS_UNDERCOVER
-	if (gUndercoverModData.bReformedInstalled) {
-		path += "Reformed/";
-		if (gUndercoverModData.bReformedTheRunHandling) {
-			path += "TheRun/";
-		}
-		else if (gUndercoverModData.bReformedMostWantedHandling) {
-			path += "MostWanted/";
-		}
-	}
+	path += GetGhostModPath();
 #endif
 
 	if (folder) {
@@ -957,11 +966,17 @@ std::vector<tReplayGhost> CollectReplayGhosts(const std::string& car, const std:
 	auto difficulty = nDifficulty;
 	if (forFullLeaderboard) difficulty = DIFFICULTY_HARD;
 
-	if (difficulty != DIFFICULTY_NORMAL && std::filesystem::exists(gDLLPath.string() + "/CwoeeGhosts/Challenges")) {
+	auto baseFolder = gDLLPath.string() + "/CwoeeGhosts/Challenges/" + GetGhostModPath();
+	baseFolder.pop_back();
+
+	if (difficulty != DIFFICULTY_NORMAL && std::filesystem::exists(baseFolder)) {
 		// check all subdirectories for community ghosts
 		std::vector<std::string> folders;
-		for (const auto& entry : std::filesystem::directory_iterator(gDLLPath.string() + "/CwoeeGhosts/Challenges")) {
+		for (const auto& entry : std::filesystem::directory_iterator(baseFolder)) {
 			if (!entry.is_directory()) continue;
+#ifdef TIMETRIALS_UNDERCOVER
+			if (entry.path().filename() == "Reformed") continue;
+#endif
 
 			folders.push_back(entry.path().filename().string());
 		}
@@ -1357,12 +1372,20 @@ void DisplayLeaderboard() {
 #else
 			bool isPointBased = false;
 #endif
+
+			auto finishTime = ghost.nFinishTime;
+#ifdef TIMETRIALS_UNDERCOVER
+			if (gUndercoverModData.bReformedInstalled) {
+				finishTime *= (120.0 / 144.0);
+			}
+#endif
+
 			std::string str;
 			if (isPointBased) {
 				str = std::format("{}. {} - {}", ranking++, name, FormatScore(ghost.nFinishPoints));
 			}
 			else {
-				str = std::format("{}. {} - {}", ranking++, name, FormatTime(ghost.nFinishTime));
+				str = std::format("{}. {} - {}", ranking++, name, FormatTime(finishTime));
 			}
 			if (bCheckFileIntegrity) {
 				if (!ghost.nGameFilesHash) {
