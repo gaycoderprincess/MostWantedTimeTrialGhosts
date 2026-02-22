@@ -213,7 +213,7 @@ NyaMat4x4 PrepareCameraMatrix(Camera* pCamera) {
 }
 
 GRacerInfo* GetRacerInfoFromHandle(ISimable* handle) {
-	return GRaceStatus::GetRacerInfo(GRaceStatus::fObj, handle);
+	return GRaceStatus::fObj->GetRacerInfo(handle);
 }
 
 void SetRacerName(GRacerInfo* racer, const char* name) {
