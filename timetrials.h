@@ -1200,7 +1200,7 @@ void TimeTrialLoop() {
 #if defined(TIMETRIALS_CARBON) | defined(TIMETRIALS_UNDERCOVER)
 		if (!bCareerMode && GetLocalPlayerVehicle()->IsStaging() && !OpponentGhosts.empty() && OpponentGhosts[0].IsValid()) {
 			InvalidatePlayerPos();
-			OpponentGhosts[0].aTicks[16].ApplyPhysics(GetLocalPlayerVehicle());
+			OpponentGhosts[0].aTicks[32].ApplyPhysics(GetLocalPlayerVehicle());
 		}
 #endif
 	}
