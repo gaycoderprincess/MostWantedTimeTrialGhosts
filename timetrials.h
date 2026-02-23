@@ -1257,7 +1257,7 @@ void DrawInputRectangle(float posX, float posY, float scaleX, float scaleY, floa
 void DisplayInputs(InputControls* inputs) {
 	static auto nos = LoadTexture("CwoeeGhosts/nos.dds");
 	static auto spdbrk = LoadTexture("CwoeeGhosts/speedbreaker.dds");
-	static auto hndbrk = LoadTexture("CwoeeGhosts/handbrake.png");
+	static auto hndbrk = LoadTexture("CwoeeGhosts/handbrake.dds");
 
 	DrawInputTriangle((fInputBaseXPosition - 0.005) * GetAspectRatioInv(), fInputBaseYPosition, 0.08 * GetAspectRatioInv(), 0.07, 1 - (-inputs->fSteering), true);
 	DrawInputTriangle((fInputBaseXPosition + 0.08) * GetAspectRatioInv(), fInputBaseYPosition, -0.08 * GetAspectRatioInv(), 0.07, inputs->fSteering, false);
@@ -1267,16 +1267,15 @@ void DisplayInputs(InputControls* inputs) {
 	//DrawInputTriangleY((fInputBaseXPosition + 0.225) * GetAspectRatioInv(), fInputBaseYPosition - 0.04, 0.035 * GetAspectRatioInv(), 0.035, 1 - (inputs->keys[INPUT_GEAR_UP] / 128.0), true);
 	//DrawInputTriangleY((fInputBaseXPosition + 0.225) * GetAspectRatioInv(), fInputBaseYPosition + 0.04, 0.035 * GetAspectRatioInv(), -0.035, inputs->keys[INPUT_GEAR_DOWN] / 128.0, false);
 
-	DrawInputRectangle((fInputBaseXPosition + 0.325) * GetAspectRatioInv(), fInputBaseYPosition + 0.05, 0.03 * GetAspectRatioInv(), 0.03, inputs->fNOS, nos);
-	DrawInputRectangle((fInputBaseXPosition + 0.425) * GetAspectRatioInv(), fInputBaseYPosition + 0.05, 0.03 * GetAspectRatioInv(), 0.03, inputs->fHandBrake, hndbrk);
+	float boxX = 0.325;
+	DrawInputRectangle((fInputBaseXPosition + boxX) * GetAspectRatioInv(), fInputBaseYPosition + 0.05, 0.03 * GetAspectRatioInv(), 0.03, inputs->fNOS, nos); boxX += 0.1;
+#if defined(TIMETRIALS_MOST_WANTED) | defined(TIMETRIALS_CARBON) | defined(TIMETRIALS_UNDERCOVER)
+	DrawInputRectangle((fInputBaseXPosition + boxX) * GetAspectRatioInv(), fInputBaseYPosition + 0.05, 0.03 * GetAspectRatioInv(), 0.03, inputs->fActionButton, spdbrk); boxX += 0.1;
+#endif
+	DrawInputRectangle((fInputBaseXPosition + boxX) * GetAspectRatioInv(), fInputBaseYPosition + 0.05, 0.03 * GetAspectRatioInv(), 0.03, inputs->fHandBrake, hndbrk); boxX += 0.1;
 
-#ifdef TIMETRIALS_UNDERCOVER
-	DrawInputRectangle((fInputBaseXPosition + 0.525) * GetAspectRatioInv(), fInputBaseYPosition + 0.05, 0.03 * GetAspectRatioInv(), 0.03, inputs->fActionButton, spdbrk);
-	DrawInputRectangle((fInputBaseXPosition + 0.625) * GetAspectRatioInv(), fInputBaseYPosition + 0.05, 0.03 * GetAspectRatioInv(), 0.03, inputs->fClutch);
-#elif TIMETRIALS_PROSTREET
-	DrawInputRectangle((fInputBaseXPosition + 0.525) * GetAspectRatioInv(), fInputBaseYPosition + 0.05, 0.03 * GetAspectRatioInv(), 0.03, inputs->fClutch);
-#else
-	DrawInputRectangle((fInputBaseXPosition + 0.525) * GetAspectRatioInv(), fInputBaseYPosition + 0.05, 0.03 * GetAspectRatioInv(), 0.03, inputs->fActionButton, spdbrk);
+#if defined(TIMETRIALS_PROSTREET) | defined(TIMETRIALS_UNDERCOVER)
+	DrawInputRectangle((fInputBaseXPosition + boxX) * GetAspectRatioInv(), fInputBaseYPosition + 0.05, 0.03 * GetAspectRatioInv(), 0.03, inputs->fClutch);
 #endif
 }
 
