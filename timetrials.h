@@ -848,7 +848,7 @@ void LoadPB(tReplayGhost* ghost, const std::string& car, const std::string& trac
 	}
 	// hack for my player name
 	if (bChallengeSeriesMode && opponentId > 0) {
-		if (!strcmp(tmpplayername, "woof")) strcpy_s(tmpplayername, "Chloe");
+		if (!strcmp(tmpplayername, "woof") || !strcmp(tmpplayername, "Ryan Cooper")) strcpy_s(tmpplayername, "Chloe");
 	}
 	if (folder) {
 		strcpy_s(tmpplayername, folder);
@@ -1608,18 +1608,15 @@ void DebugMenu() {
 			}
 		}
 		if (bChallengeSeriesMode) {
-#ifndef TIMETRIALS_PROSTREET
 			const char* difficultyNames[] = {
 					"Easy",
 					"Normal",
 					"Hard",
-					"Very Hard",
 			};
 			const char* difficultyDescs[] = {
 					"Easier ghosts",
 					"Average ghosts",
 					"Faster community ghosts",
-					"Speedrunners' community ghosts",
 			};
 			if (DrawMenuOption(std::format("Difficulty - {}", difficultyNames[nDifficulty]))) {
 				ChloeMenuLib::BeginMenu();
@@ -1630,7 +1627,6 @@ void DebugMenu() {
 				}
 				ChloeMenuLib::EndMenu();
 			}
-#endif
 			if (nDifficulty != DIFFICULTY_EASY) {
 				QuickValueEditor("Show Target Ghost Only", bChallengesOneGhostOnly);
 				if (DrawMenuOption(std::format("Show Personal Ghost - {}", bChallengesPBGhost))) {
