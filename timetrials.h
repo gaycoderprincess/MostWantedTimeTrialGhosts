@@ -640,22 +640,14 @@ void SavePB(tReplayGhost* ghost, const std::string& car, const std::string& trac
 
 #if TIMETRIALS_SAVE_FORMAT == 'C'
 	if (!WriteEncryptedPB(&outFile, fileName)) {
-		WriteLog("Failed to save " + fileName + "!");
-		return;
-	}
 #elif TIMETRIALS_SAVE_FORMAT == 'H'
 	if (!WriteCompressedPB(&outFile, fileName)) {
-		WriteLog("Failed to save " + fileName + "!");
-		return;
-	}
 #elif TIMETRIALS_SAVE_FORMAT == 'R'
 	if (!WriteRawPB(&outFile, fileName)) {
-		WriteLog("Failed to save " + fileName + "!");
+#endif
+		MessageBoxA(0, std::format("Failed to save {}!", fileName).c_str(), "nya?!~", MB_ICONERROR);
 		return;
 	}
-#else
-	static_assert(false);
-#endif
 }
 
 void LoadPB(tReplayGhost* ghost, const std::string& car, const std::string& track, int lapCount, int opponentId, const GameCustomizationRecord* upgrades, const char* folder = nullptr) {
