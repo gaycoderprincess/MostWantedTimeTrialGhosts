@@ -175,9 +175,12 @@ int __thiscall GetNumOpponentsHooked(GRaceParameters* pThis) {
 
 	if (bChallengesOneGhostOnly) return 1;
 
+	int maxOpponents = 3;
+	if (*(uintptr_t*)0x8918DC != 0x424520) maxOpponents = 15; // limit adjuster present
+
 	auto count = nDifficulty != DIFFICULTY_EASY ? event->nNumGhosts[nDifficulty] : 1; // only spawn one ghost for easy difficulty
 	if (bChallengesPBGhost && event->GetPBGhost().nFinishTime != 0) count++;
-	if (count > 3) count = 3;
+	if (count > maxOpponents) count = maxOpponents;
 	return count;
 }
 
