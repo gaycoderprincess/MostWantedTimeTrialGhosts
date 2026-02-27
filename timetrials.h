@@ -1,6 +1,6 @@
 #include "compression.h"
 
-const int nLocalReplayVersion = 8;
+const int nLocalReplayVersion = 9;
 const int nMaxNumGhostsToCheck = 16;
 
 enum eNitroType {
@@ -584,6 +584,10 @@ void SavePB(tReplayGhost* ghost, const std::string& car, const std::string& trac
 #endif
 	std::filesystem::create_directory("CwoeeGhosts/ChallengePBs");
 	std::filesystem::create_directory("CwoeeGhosts/Practice");
+	if (bVanillaTickrate) {
+		std::filesystem::create_directory("CwoeeGhosts/ChallengePBs/60Tick");
+		std::filesystem::create_directory("CwoeeGhosts/Practice/60Tick");
+	}
 #ifdef TIMETRIALS_UNDERCOVER
 	std::filesystem::create_directory("CwoeeGhosts/ChallengePBs/Reformed");
 	std::filesystem::create_directory("CwoeeGhosts/ChallengePBs/Reformed/MostWanted");
@@ -598,6 +602,7 @@ void SavePB(tReplayGhost* ghost, const std::string& car, const std::string& trac
 
 	int nitroType = bChallengeSeriesMode ? NITRO_ON : nNitroType;
 	int speedbreakerType = bChallengeSeriesMode ? NITRO_ON : nSpeedbreakerType;
+	int tickRate = GetTickRate();
 
 	size_t size = sizeof(tReplayTick);
 	outFile.write(signature, sizeof(signature));
@@ -643,6 +648,7 @@ void SavePB(tReplayGhost* ghost, const std::string& car, const std::string& trac
 	bool unslapper = bTankUnslapperPresent || bTankUnslapperPresentForCurrentCar;
 	outFile.write((char*)&unslapper, sizeof(unslapper));
 #endif
+	outFile.write((char*)&tickRate, sizeof(tickRate));
 	int count = ghost->aTicks.size();
 	outFile.write((char*)&count, sizeof(count));
 	outFile.write((char*)&ghost->aTicks[0], sizeof(ghost->aTicks[0]) * count);
@@ -809,6 +815,12 @@ void LoadPB(tReplayGhost* ghost, const std::string& car, const std::string& trac
 			WriteLog("Mismatched game files for " + fileName);
 			return;
 		}
+	}
+	int tickRate = 120;
+	if (fileVersion >= 9) inFile.read((char*)&tickRate, sizeof(tickRate));
+	if (tickRate != GetTickRate()) {
+		WriteLog("Mismatched tickrate for " + fileName);
+		return;
 	}
 	//if (tmpsize != sizeof(tReplayTick)) {
 	//	WriteLog("Outdated ghost for " + fileName);
