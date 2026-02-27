@@ -38,6 +38,11 @@ bool bChallengesPBGhost = false;
 bool bCheckFileIntegrity = TIMETRIALS_STRICT_FILEINTEGRITY;
 bool bSeparateByFileIntegrity = TIMETRIALS_STRICT_FILEINTEGRITY;
 bool bFastRestart = true;
+bool bVanillaTickrate = false;
+
+int GetTickRate() {
+	return bVanillaTickrate ? 60 : 120;
+}
 
 #ifdef TIMETRIALS_PROSTREET
 struct tIngameSettings {
@@ -310,7 +315,7 @@ public:
 
 		// take countdown time and use globaltimernocountdown to accomodate for it
 		// the countdown seems to be inconsistent otherwise
-		auto finishTick = (nFinishTime * 120) / 1000;
+		auto finishTick = (nFinishTime * GetTickRate()) / 1000;
 		auto totalTicks = aTicks.size();
 		if (GetLocalPlayerVehicle()->IsStaging() || GetLocalPlayerInterface<IHumanAI>()->GetAiControl()) {
 			if (nGlobalReplayTimer > (totalTicks - finishTick)) {
@@ -482,6 +487,10 @@ std::string GetGhostFilename(const std::string& car, const std::string& track, i
 #ifdef TIMETRIALS_UNDERCOVER
 	path += GetGhostModPath();
 #endif
+
+	if (bVanillaTickrate) {
+		path += "60Tick/";
+	}
 
 	if (folder) {
 		path += std::format("{}/", folder);
@@ -888,7 +897,7 @@ void OnFinishRace() {
 
 	auto ghost = &PlayerPBGhost;
 
-	uint32_t replayTime = nLastFinishTime = (nGlobalReplayTimerNoCountdown / 120.0) * 1000;
+	uint32_t replayTime = nLastFinishTime = (nGlobalReplayTimerNoCountdown / (double)GetTickRate()) * 1000;
 	uint32_t replayPoints = 0;
 
 #ifdef TIMETRIALS_UNDERCOVER

@@ -2,6 +2,7 @@
 #include <format>
 #include <fstream>
 #include <thread>
+#include <toml++/toml.hpp>
 
 #include "nya_dx9_hookbase.h"
 #include "nya_commonhooklib.h"
@@ -130,7 +131,7 @@ float __thiscall FinishTimeHooked(GTimer* pThis) {
 }
 
 float __thiscall RaceTimeHooked(GTimer* pThis) {
-	return (nGlobalReplayTimerNoCountdown / 120.0);
+	return (nGlobalReplayTimerNoCountdown / (double)GetTickRate());
 }
 
 float __thiscall GetTimeLimitHooked(GRaceParameters* pThis) {
@@ -183,6 +184,11 @@ BOOL WINAPI DllMain(HINSTANCE, DWORD fdwReason, LPVOID) {
 			gDLLPath = std::filesystem::current_path();
 			GetCurrentDirectoryW(MAX_PATH, gDLLDir);
 
+			if (std::filesystem::exists("NFSMWTimeTrialGhosts_gcp.toml")) {
+				auto config = toml::parse_file("NFSMWTimeTrialGhosts_gcp.toml");
+				bVanillaTickrate = config["vanilla_physics_tickrate"].value_or(bVanillaTickrate);
+			}
+
 			NyaHooks::SimServiceHook::Init();
 			NyaHooks::SimServiceHook::aPreFunctions.push_back(MainLoop);
 			NyaHooks::LateInitHook::Init();
@@ -199,7 +205,7 @@ BOOL WINAPI DllMain(HINSTANCE, DWORD fdwReason, LPVOID) {
 
 				ApplyVerificationPatches();
 
-				Scheduler::fgScheduler->fTimeStep = 1.0 / 120.0; // set sim framerate
+				Scheduler::fgScheduler->fTimeStep = 1.0 / (double)GetTickRate(); // set sim framerate
 				*(void**)0x92C534 = (void*)&VehicleConstructHooked;
 				if (GetModuleHandleA("NFSMWLimitAdjuster.asi") || std::filesystem::exists("NFSMWLimitAdjuster.ini")) {
 					MessageBoxA(nullptr, "Incompatible mod detected! Please remove NFSMWLimitAdjuster from your game before using this mod.", "nya?!~", MB_ICONERROR);
