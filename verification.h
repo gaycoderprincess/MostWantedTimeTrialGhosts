@@ -286,12 +286,24 @@ namespace MemoryIntegrity {
 			for (int i = 0; i < 8192; i++) {
 				uintptr_t address = section.nStartAddress + section.nCursor;
 				if (*(uint8_t*)address != section.aMemory[section.nCursor] && !IsWhitelisted(address)) {
-					WriteLog(std::format("Integrity check failed at {:X}", address));;
+					WriteLog(std::format("Integrity check failed at {:X}", address));
 					exit(0);
 				}
 				section.nCursor++;
 				if (section.nCursor >= section.nSize) section.nCursor = 0;
 			}
+			Sleep(50);
+		}
+	}
+
+	void GenericCheckerThread() {
+		while (true) {
+#ifdef TIMETRIALS_MOST_WANTED
+			if (*(uint32_t*)0x6A99F8 != 0x8933D4) { // speedbreaker tweaks
+				WriteLog("Generic integrity check failed");
+				exit(0);
+			}
+#endif
 			Sleep(50);
 		}
 	}
@@ -320,6 +332,8 @@ namespace MemoryIntegrity {
 			memcpy(section.aMemory, (void*)section.nStartAddress, section.nSize);
 			std::thread(CheckerThread, &section - &aSections[0]).detach();
 		}
+
+		std::thread(GenericCheckerThread).detach();
 	}
 }
 
@@ -587,6 +601,18 @@ void ApplyVerificationPatches() {
 	// tweak_infinitenos
 	static bool b = false;
 	NyaHookLib::Patch(0x692AB2, &b);
+
+	// speedbreaker tweaks
+	static float f19 = -19.620001;
+	static float f25 = 25.0;
+	static float f100 = 100.0;
+	static float f2 = 2.0;
+	static float f60 = 60.0;
+	NyaHookLib::Patch(0x6B1F18, &f19);
+	NyaHookLib::Patch(0x6EDDF0, &f25);
+	NyaHookLib::Patch(0x6EDDDA, &f100);
+	NyaHookLib::Patch(0x64175F, &f2);
+	NyaHookLib::Patch(0x69E990, &f60);
 #endif
 
 	MemoryIntegrity::Init();
