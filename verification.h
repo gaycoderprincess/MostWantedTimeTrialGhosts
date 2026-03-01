@@ -608,7 +608,7 @@ void ApplyVerificationPatches() {
 	static float f100 = 100.0;
 	static float f2 = 2.0;
 	static float f60 = 60.0;
-	NyaHookLib::Patch(0x6B1F18, &f19);
+	NyaHookLib::Patch(0x6B1F17, &f19);
 	NyaHookLib::Patch(0x6EDDF0, &f25);
 	NyaHookLib::Patch(0x6EDDDA, &f100);
 	NyaHookLib::Patch(0x64175F, &f2);
