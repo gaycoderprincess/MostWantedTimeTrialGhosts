@@ -273,12 +273,14 @@ struct UndercoverModData {
 	bool bReformedInstalled = false;
 	bool bReformedMostWantedHandling = false;
 	bool bReformedTheRunHandling = false;
+	bool bCwoeeMostWantedHandling = false;
 
 	void Check() {
 		auto collection = Attrib::FindCollection(Attrib::StringHash32("car_tuning"), Attrib::StringHash32("default"));
 		auto engineBrakingSlowSpeed = *(float*)Attrib::Collection::GetData(collection, Attrib::StringHash32("ENGINE_BRAKING_SLOWSPEED"), 0);
 		bReformedMostWantedHandling = engineBrakingSlowSpeed == 0.4f;
 		bReformedTheRunHandling = engineBrakingSlowSpeed == 0.325f;
+		bCwoeeMostWantedHandling = *(uint8_t*)0x73F830 == 0xE9;
 		if (bReformedMostWantedHandling || bReformedTheRunHandling) {
 			bReformedInstalled = true;
 		}
@@ -444,20 +446,22 @@ GRaceParameters* GetCurrentRace() {
 }
 
 std::string GetGhostModPath() {
+	std::string path;
 #ifdef TIMETRIALS_UNDERCOVER
 	if (gUndercoverModData.bReformedInstalled) {
-		std::string path = "Reformed/";
+		path += "Reformed/";
 		if (gUndercoverModData.bReformedTheRunHandling) {
 			path += "TheRun/";
 		}
 		else if (gUndercoverModData.bReformedMostWantedHandling) {
 			path += "MostWanted/";
 		}
-		return path;
+	}
+	if (gUndercoverModData.bCwoeeMostWantedHandling) {
+		path += "CwoeeMW/";
 	}
 #endif
-
-	return "";
+	return path;
 }
 
 std::string GetGhostFilename(const std::string& car, const std::string& track, int lapCount, int opponentId, const GameCustomizationRecord* upgrades, const char* folder = nullptr) {
@@ -589,9 +593,20 @@ void SavePB(tReplayGhost* ghost, const std::string& car, const std::string& trac
 		std::filesystem::create_directory("CwoeeGhosts/Practice/60Tick");
 	}
 #ifdef TIMETRIALS_UNDERCOVER
-	std::filesystem::create_directory("CwoeeGhosts/ChallengePBs/Reformed");
-	std::filesystem::create_directory("CwoeeGhosts/ChallengePBs/Reformed/MostWanted");
-	std::filesystem::create_directory("CwoeeGhosts/ChallengePBs/Reformed/TheRun");
+	if (gUndercoverModData.bReformedInstalled) {
+		std::filesystem::create_directory("CwoeeGhosts/ChallengePBs/Reformed");
+		std::filesystem::create_directory("CwoeeGhosts/ChallengePBs/Reformed/MostWanted");
+		std::filesystem::create_directory("CwoeeGhosts/ChallengePBs/Reformed/TheRun");
+		if (gUndercoverModData.bCwoeeMostWantedHandling) {
+			std::filesystem::create_directory("CwoeeGhosts/ChallengePBs/Reformed/MostWanted/CwoeeMW");
+			std::filesystem::create_directory("CwoeeGhosts/ChallengePBs/Reformed/TheRun/CwoeeMW");
+		}
+	}
+	else {
+		if (gUndercoverModData.bCwoeeMostWantedHandling) {
+			std::filesystem::create_directory("CwoeeGhosts/ChallengePBs/CwoeeMW");
+		}
+	}
 #endif
 
 	auto fileName = GetGhostFilename(car, track, lapCount, 0, upgrades);
@@ -989,6 +1004,7 @@ std::vector<tReplayGhost> CollectReplayGhosts(const std::string& car, const std:
 			if (!entry.is_directory()) continue;
 #ifdef TIMETRIALS_UNDERCOVER
 			if (entry.path().filename() == "Reformed") continue;
+			if (entry.path().filename() == "CwoeeMW") continue;
 #endif
 
 			folders.push_back(entry.path().filename().string());
@@ -1719,6 +1735,9 @@ void DebugMenu() {
 		if (gUndercoverModData.bReformedMostWantedHandling) type += " (Most Wanted)";
 		if (gUndercoverModData.bReformedTheRunHandling) type += " (The Run)";
 		DrawMenuOption(type);
+	}
+	if (gUndercoverModData.bCwoeeMostWantedHandling) {
+		DrawMenuOption("Most Wanted physics port");
 	}
 #endif
 
