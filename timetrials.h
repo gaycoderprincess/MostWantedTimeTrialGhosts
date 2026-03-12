@@ -280,7 +280,7 @@ struct UndercoverModData {
 		auto engineBrakingSlowSpeed = *(float*)Attrib::Collection::GetData(collection, Attrib::StringHash32("ENGINE_BRAKING_SLOWSPEED"), 0);
 		bReformedMostWantedHandling = engineBrakingSlowSpeed == 0.4f;
 		bReformedTheRunHandling = engineBrakingSlowSpeed == 0.325f;
-		bCwoeeMostWantedHandling = *(uint8_t*)0x73F830 == 0xE9;
+		bCwoeeMostWantedHandling = *(uint8_t*)0x73F830 == 0xE9 || *(uint16_t*)0x40AAC2 == 0xE8D9;
 		if (bReformedMostWantedHandling || bReformedTheRunHandling) {
 			bReformedInstalled = true;
 		}

@@ -316,9 +316,11 @@ namespace MemoryIntegrity {
 
 		for (int i = 0; i < ntHeader->FileHeader.NumberOfSections; i++) {
 			auto sectionData = &sectionHeader[i];
+			if ((sectionData->Characteristics & IMAGE_SCN_MEM_READ) == 0) continue;
+
 			for (auto& section : aSections) {
 				if (section.sName == (char*)sectionData->Name) {
-					section.nSize = sectionData->SizeOfRawData;
+					section.nSize = sectionData->Misc.VirtualSize;
 					section.nStartAddress = module + sectionData->VirtualAddress;
 					break;
 				}
