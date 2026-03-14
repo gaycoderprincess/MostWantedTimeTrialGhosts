@@ -287,8 +287,19 @@ struct UndercoverModData {
 	}
 } gUndercoverModData;
 #elif TIMETRIALS_PROSTREET
-bool bTankUnslapperPresent = false;
-bool bTankUnslapperPresentForCurrentCar = false;
+struct UndercoverModData {
+	bool bTankUnslapperPresent = false;
+	bool bTankUnslapperPresentForCurrentCar = false;
+	bool bCwoeeMostWantedHandling = false;
+
+	void Check() {
+		bCwoeeMostWantedHandling = *(uint16_t*)0x55C9CE == 0x9090;
+		if (bCwoeeMostWantedHandling) {
+			bTankUnslapperPresent = true;
+			bTankUnslapperPresentForCurrentCar = true;
+		}
+	}
+} gProStreetModData;
 #endif
 
 struct tReplayGhost {
@@ -460,6 +471,10 @@ std::string GetGhostModPath() {
 	if (gUndercoverModData.bCwoeeMostWantedHandling) {
 		path += "CwoeeMW/";
 	}
+#elif TIMETRIALS_PROSTREET
+	if (gProStreetModData.bCwoeeMostWantedHandling) {
+		path += "CwoeeMW/";
+	}
 #endif
 	return path;
 }
@@ -488,7 +503,11 @@ std::string GetGhostFilename(const std::string& car, const std::string& track, i
 		path += "Practice/";
 	}
 
-#ifdef TIMETRIALS_UNDERCOVER
+#ifdef TIMETRIALS_PROSTREET
+	if (track.find(".sd.") == std::string::npos && track.find(".td.") == std::string::npos) {
+		path += GetGhostModPath();
+	}
+#else
 	path += GetGhostModPath();
 #endif
 
@@ -535,7 +554,7 @@ std::string GetGhostFilename(const std::string& car, const std::string& track, i
 	}
 
 #ifdef TIMETRIALS_PROSTREET
-	if (!bTankUnslapperPresent && !bTankUnslapperPresentForCurrentCar) {
+	if (!gProStreetModData.bTankUnslapperPresent && !gProStreetModData.bTankUnslapperPresentForCurrentCar) {
 		path += "_ts";
 	}
 #endif
@@ -607,6 +626,10 @@ void SavePB(tReplayGhost* ghost, const std::string& car, const std::string& trac
 			std::filesystem::create_directory("CwoeeGhosts/ChallengePBs/CwoeeMW");
 		}
 	}
+#elif TIMETRIALS_PROSTREET
+	if (gProStreetModData.bCwoeeMostWantedHandling) {
+		std::filesystem::create_directory("CwoeeGhosts/ChallengePBs/CwoeeMW");
+	}
 #endif
 
 	auto fileName = GetGhostFilename(car, track, lapCount, 0, upgrades);
@@ -660,7 +683,7 @@ void SavePB(tReplayGhost* ghost, const std::string& car, const std::string& trac
 	outFile.write((char*)&gUndercoverModData.bReformedMostWantedHandling, sizeof(bool));
 	outFile.write((char*)&gUndercoverModData.bReformedTheRunHandling, sizeof(bool));
 #elif TIMETRIALS_PROSTREET
-	bool unslapper = bTankUnslapperPresent || bTankUnslapperPresentForCurrentCar;
+	bool unslapper = gProStreetModData.bTankUnslapperPresent || gProStreetModData.bTankUnslapperPresentForCurrentCar;
 	outFile.write((char*)&unslapper, sizeof(unslapper));
 #endif
 	outFile.write((char*)&tickRate, sizeof(tickRate));
@@ -820,7 +843,7 @@ void LoadPB(tReplayGhost* ghost, const std::string& car, const std::string& trac
 #elif TIMETRIALS_PROSTREET
 		bool tankUnslapper = false;
 		inFile.read((char*)&tankUnslapper, sizeof(tankUnslapper));
-		if (tankUnslapper != (bTankUnslapperPresent || bTankUnslapperPresentForCurrentCar)) {
+		if (tankUnslapper != (gProStreetModData.bTankUnslapperPresent || gProStreetModData.bTankUnslapperPresentForCurrentCar)) {
 			WriteLog("Mismatched tankslapper for " + fileName);
 			return;
 		}
@@ -994,7 +1017,14 @@ std::vector<tReplayGhost> CollectReplayGhosts(const std::string& car, const std:
 	auto difficulty = nDifficulty;
 	if (forFullLeaderboard) difficulty = DIFFICULTY_HARD;
 
-	auto baseFolder = gDLLPath.string() + "/CwoeeGhosts/Challenges/" + GetGhostModPath();
+	auto baseFolder = gDLLPath.string() + "/CwoeeGhosts/Challenges/";
+#ifdef TIMETRIALS_PROSTREET
+	if (track.find(".sd.") == std::string::npos && track.find(".td.") == std::string::npos) {
+		baseFolder += GetGhostModPath();
+	}
+#else
+	baseFolder += GetGhostModPath();
+#endif
 	baseFolder.pop_back();
 
 	if (difficulty != DIFFICULTY_NORMAL && std::filesystem::exists(baseFolder)) {
@@ -1002,10 +1032,8 @@ std::vector<tReplayGhost> CollectReplayGhosts(const std::string& car, const std:
 		std::vector<std::string> folders;
 		for (const auto& entry : std::filesystem::directory_iterator(baseFolder)) {
 			if (!entry.is_directory()) continue;
-#ifdef TIMETRIALS_UNDERCOVER
 			if (entry.path().filename() == "Reformed") continue;
 			if (entry.path().filename() == "CwoeeMW") continue;
-#endif
 
 			folders.push_back(entry.path().filename().string());
 		}
@@ -1112,8 +1140,10 @@ void TimeTrialLoop() {
 	auto ply = GetLocalPlayerVehicle();
 
 #ifdef TIMETRIALS_PROSTREET
-	if (auto collection = Attrib::FindCollection(Attrib::StringHash32("vehicle"), ply->GetVehicleKey())) {
-		bTankUnslapperPresentForCurrentCar = *(float*)Attrib::Collection::GetData(collection, Attrib::StringHash32("TANK_SLAPPER_TIMER"), 0) == 0.0;
+	if (!gProStreetModData.bCwoeeMostWantedHandling) {
+		if (auto collection = Attrib::FindCollection(Attrib::StringHash32("vehicle"), ply->GetVehicleKey())) {
+			gProStreetModData.bTankUnslapperPresentForCurrentCar = *(float*)Attrib::Collection::GetData(collection, Attrib::StringHash32("TANK_SLAPPER_TIMER"), 0) == 0.0;
+		}
 	}
 #endif
 
@@ -1737,6 +1767,10 @@ void DebugMenu() {
 		DrawMenuOption(type);
 	}
 	if (gUndercoverModData.bCwoeeMostWantedHandling) {
+		DrawMenuOption("Most Wanted physics port");
+	}
+#elif TIMETRIALS_PROSTREET
+	if (gProStreetModData.bCwoeeMostWantedHandling) {
 		DrawMenuOption("Most Wanted physics port");
 	}
 #endif

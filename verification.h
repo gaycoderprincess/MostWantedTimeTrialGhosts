@@ -141,6 +141,10 @@ void CollectPlayerPos() {
 	if (auto ply = GetLocalPlayerVehicle()) {
 		VerifyPlayer.Collect(ply);
 
+#ifdef TIMETRIALS_PROSTREET
+		VerifyPlayer.v1.inputs.fActionButton = 0;
+#endif
+
 #ifdef TIMETRIALS_MOST_WANTED
 		VerifyPlayerExtras.Collect(ply);
 #endif
@@ -166,6 +170,10 @@ void CheckPlayerPos() {
 	if (auto ply = GetLocalPlayerVehicle()) {
 		auto tmp = VerifyPlayer;
 		tmp.Collect(ply);
+
+#ifdef TIMETRIALS_PROSTREET
+		tmp.v1.inputs.fActionButton = 0;
+#endif
 
 #ifdef TIMETRIALS_MOST_WANTED
 		auto tmp2 = VerifyPlayerExtras;
@@ -519,7 +527,7 @@ namespace FileIntegrity {
 		nLocalGameFilesHash = hash32_copy((uint8_t*)aGameData, size, 0xABCDEF00);
 
 #ifdef TIMETRIALS_PROSTREET
-		if (*(uint32_t*)0x49296F != 0x01E482D9 || *(uint32_t*)0x494059 != 0x01E482D9) bTankUnslapperPresent = true;
+		if (*(uint32_t*)0x49296F != 0x01E482D9 || *(uint32_t*)0x494059 != 0x01E482D9) gProStreetModData.bTankUnslapperPresent = true;
 #endif
 
 		delete[] aGameData;
