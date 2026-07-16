@@ -243,6 +243,9 @@ namespace MemoryIntegrity {
 
 		// racer ai
 		0x9C4F80,
+
+		// drift scoring fix
+		0x660E0F,
 #elif TIMETRIALS_MOST_WANTED
 		// challenge series hooks - these will change when swapping between quick race and challenges
 		0x426CA6,
